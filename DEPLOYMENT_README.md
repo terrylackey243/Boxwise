@@ -134,9 +134,9 @@ If you encounter SSL certificate issues:
 
 2. Regenerate the certificates:
    ```bash
-   certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
-   cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem nginx/ssl/cert.pem
-   cp /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/ssl/key.pem
+   certbot certonly --standalone -d boxwise.app -d www.boxwise.app
+   cp /etc/letsencrypt/live/boxwise.app/fullchain.pem nginx/ssl/cert.pem
+   cp /etc/letsencrypt/live/boxwise.app/privkey.pem nginx/ssl/key.pem
    docker-compose restart nginx
    ```
 

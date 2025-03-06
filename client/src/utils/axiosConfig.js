@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Set default base URL for all axios requests
-axios.defaults.baseURL = 'http://localhost:5001';
+// Use a relative URL to make requests to the same domain
+axios.defaults.baseURL = '';
 
 // Set default headers for all axios requests
 axios.defaults.headers.common['Content-Type'] = 'application/json';
