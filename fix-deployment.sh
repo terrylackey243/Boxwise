@@ -54,40 +54,43 @@ if [ ! -f "nginx/ssl/cert.pem" ] || [ ! -f "nginx/ssl/key.pem" ]; then
   echo "Self-signed certificates generated."
 fi
 
-# Step 4: Rebuild the client
-echo "Rebuilding the client application..."
+# Step 4: Check Node.js version
+echo "Checking Node.js version..."
+NODE_VERSION=$(node -v)
+echo "Host Node.js version: $NODE_VERSION"
+
+# Step 5: Rebuild the client (using Docker container instead of host)
+echo "Rebuilding the client application using Docker container..."
 if [ -d "client" ]; then
-  cd client
-  echo "Installing client dependencies..."
-  npm install
+  echo "Building Docker image..."
+  docker-compose build app
   
-  echo "Building client..."
-  npm run build
+  echo "Building client inside Docker container..."
+  docker-compose run --rm app sh -c "cd client && npm install && npm run build"
   
   # Ensure the build directory exists
-  if [ ! -d "build" ]; then
+  if [ ! -d "client/build" ]; then
     echo "Error: Build directory not created. Check for build errors."
     exit 1
   fi
   
-  cd ..
   echo "Client rebuilt successfully."
 else
   echo "Error: client directory not found."
   exit 1
 fi
 
-# Step 5: Rebuild and restart containers
+# Step 6: Rebuild and restart containers
 echo "Rebuilding and restarting containers..."
 docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
 
-# Step 6: Wait for containers to start
+# Step 7: Wait for containers to start
 echo "Waiting for containers to start (30 seconds)..."
 sleep 30
 
-# Step 7: Check if MongoDB module is installed in scripts directory
+# Step 8: Check if MongoDB module is installed in scripts directory
 echo "Checking if MongoDB module is installed in scripts directory..."
 if ! docker-compose exec -T app sh -c "cd scripts && node -e 'require(\"mongodb\")'"; then
   echo "MongoDB module not found in scripts directory. Installing..."
@@ -95,13 +98,13 @@ if ! docker-compose exec -T app sh -c "cd scripts && node -e 'require(\"mongodb\
   echo "MongoDB module installed."
 fi
 
-# Step 8: Initialize the database
+# Step 9: Initialize the database
 echo "Initializing the database..."
 docker-compose exec -T app node scripts/init-db.js || {
   echo "Database initialization failed. This is normal if the database is already initialized."
 }
 
-# Step 9: Verify the deployment
+# Step 10: Verify the deployment
 echo "Verifying the deployment..."
 echo "Checking if Nginx is serving the application..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVER_IP)
