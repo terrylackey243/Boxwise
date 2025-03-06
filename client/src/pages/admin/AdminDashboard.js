@@ -291,6 +291,12 @@ const AdminDashboard = () => {
           to="/admin/database" 
           onClick={(e) => e.stopPropagation()} 
         />
+        <Tab 
+          label="System" 
+          component={RouterLink} 
+          to="/admin/system" 
+          onClick={(e) => e.stopPropagation()} 
+        />
       </Tabs>
       
       {/* Overview Tab */}

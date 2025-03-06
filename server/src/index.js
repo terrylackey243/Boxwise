@@ -19,6 +19,7 @@ const reportRoutes = require('./routes/reports');
 const upcRoutes = require('./routes/upc');
 const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
+const systemRoutes = require('./routes/system');
 const achievementRoutes = require('./routes/achievements');
 const reminderRoutes = require('./routes/reminders');
 
@@ -45,6 +46,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/upc', upcRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/system', systemRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/reminders', reminderRoutes);
 

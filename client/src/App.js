@@ -51,6 +51,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import CreateUser from './pages/admin/CreateUser';
 import EditUser from './pages/admin/EditUser';
 import DatabaseAdmin from './pages/admin/DatabaseAdmin';
+import SystemAdmin from './pages/admin/SystemAdmin';
 
 // Create theme with light purple primary color
 const getTheme = (mode) => createTheme({
@@ -221,6 +222,7 @@ const App = () => {
               <Route path="/admin/users/create" element={<AdminRoute><CreateUser /></AdminRoute>} />
               <Route path="/admin/users/edit/:id" element={<AdminRoute><EditUser /></AdminRoute>} />
               <Route path="/admin/database" element={<AdminRoute><DatabaseAdmin /></AdminRoute>} />
+              <Route path="/admin/system" element={<AdminRoute><SystemAdmin /></AdminRoute>} />
               
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
