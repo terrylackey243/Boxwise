@@ -68,8 +68,8 @@ if [ ! -f "$ENV_FILE" ]; then
   echo "Creating environment file..."
   cp .env.production "$ENV_FILE"
   
-  # Generate a secure JWT secret
-  JWT_SECRET=$(openssl rand -base64 32)
+  # Use the JWT_SECRET from .env.production
+  JWT_SECRET=$(grep "JWT_SECRET" .env.production | cut -d= -f2)
   sed -i "s/replace_with_a_secure_random_string_in_production/$JWT_SECRET/g" "$ENV_FILE"
   
   echo "Environment file created. Please review and update if needed."
@@ -111,7 +111,7 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     
