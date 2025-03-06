@@ -74,7 +74,23 @@ docker-compose up -d --build
 # Step 5: Initialize the database if needed
 echo "Checking if database initialization is needed..."
 sleep 10 # Wait for MongoDB to start
-docker-compose exec -T app node scripts/init-db.js
+
+# Try to initialize the database, with error handling for missing modules
+if ! docker-compose exec -T app node scripts/init-db.js; then
+  echo "Database initialization failed. Attempting to fix common issues..."
+  
+  # Check if the error is related to missing mongodb module
+  if docker-compose logs app | grep -q "Cannot find module 'mongodb'"; then
+    echo "MongoDB module not found in scripts directory. Installing..."
+    docker-compose exec -T app sh -c "cd scripts && npm install mongodb"
+    
+    echo "Retrying database initialization..."
+    docker-compose exec -T app node scripts/init-db.js
+  else
+    echo "Unknown error during database initialization. Check the logs for details."
+    docker-compose logs app
+  fi
+fi
 
 # Step 6: Set up backup cron job
 echo "Setting up backup cron job..."

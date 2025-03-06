@@ -247,7 +247,37 @@ Ensure it's set to:
 MONGO_URI=mongodb://mongodb:27017/boxwise
 ```
 
-### Issue 3: Nginx SSL Certificate Issues
+### Issue 3: "Cannot find module 'mongodb'" Error
+
+**Solution:**
+This error occurs when the MongoDB driver is not installed in the scripts directory. You can fix this by:
+
+1. Rebuilding the Docker image with the updated Dockerfile:
+```bash
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+2. Or, if you prefer to fix it without rebuilding:
+```bash
+# Enter the app container
+docker-compose exec app sh
+
+# Install mongodb in the scripts directory
+cd scripts
+npm install mongodb
+
+# Exit the container
+exit
+```
+
+3. Then run the database initialization again:
+```bash
+docker-compose exec app node scripts/init-db.js
+```
+
+### Issue 4: Nginx SSL Certificate Issues
 
 **Solution:**
 Verify certificate paths and permissions:
@@ -260,7 +290,7 @@ Regenerate certificates if needed:
 sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
 ```
 
-### Issue 4: Permission Denied Errors
+### Issue 5: Permission Denied Errors
 
 **Solution:**
 ```bash
@@ -268,7 +298,7 @@ sudo chown -R $USER:$USER .
 chmod +x *.sh
 ```
 
-### Issue 5: Port Already in Use
+### Issue 6: Port Already in Use
 
 **Solution:**
 Check what's using the ports:
@@ -281,6 +311,85 @@ Stop the conflicting service:
 ```bash
 sudo systemctl stop nginx  # If Nginx is running outside Docker
 ```
+
+### Issue 7: 403 Forbidden Error When Accessing the Site
+
+**Solution:**
+If you're getting a 403 Forbidden error when accessing your site, try these solutions:
+
+1. **Check Nginx Configuration**:
+   ```bash
+   # Edit the nginx.conf file
+   nano nginx/nginx.conf
+   ```
+   
+   Make sure the `server_name` directive matches your actual domain or IP:
+   ```
+   server_name your_actual_domain.com www.your_actual_domain.com;
+   ```
+   
+   Or for IP-only access:
+   ```
+   server_name your_server_ip;
+   ```
+   
+   After editing, restart the containers:
+   ```bash
+   docker-compose restart
+   ```
+
+2. **Check File Permissions**:
+   ```bash
+   # Enter the nginx container
+   docker-compose exec nginx sh
+   
+   # Check permissions on the static files
+   ls -la /usr/share/nginx/html
+   
+   # If needed, fix permissions
+   chmod -R 755 /usr/share/nginx/html
+   
+   # Exit the container
+   exit
+   ```
+
+3. **Check if Static Files Exist**:
+   ```bash
+   # Enter the nginx container
+   docker-compose exec nginx sh
+   
+   # Check if index.html exists
+   ls -la /usr/share/nginx/html/index.html
+   
+   # Exit the container
+   exit
+   ```
+   
+   If files are missing, rebuild the client:
+   ```bash
+   docker-compose down
+   docker-compose up -d --build
+   ```
+
+4. **Check Firewall Settings**:
+   ```bash
+   # Make sure ports 80 and 443 are open
+   sudo ufw status
+   
+   # If not, allow them
+   sudo ufw allow 80/tcp
+   sudo ufw allow 443/tcp
+   ```
+
+5. **Check DigitalOcean Firewall**:
+   - Go to DigitalOcean dashboard > Networking > Firewalls
+   - Ensure ports 80 and 443 are allowed for your droplet
+
+6. **Verify Domain DNS Settings**:
+   - Make sure your domain's DNS records point to your server's IP
+   - A record for @ pointing to your server IP
+   - A record for www pointing to your server IP
+   - Allow time for DNS propagation (can take up to 48 hours)
 
 ## Alternative Deployment Option: Linode/Akamai
 
