@@ -10,6 +10,7 @@ import { AlertProvider } from './context/AlertContext';
 
 // Components
 import PrivateRoute from './components/routing/PrivateRoute';
+import AdminRoute from './components/routing/AdminRoute';
 import Navbar from './components/layout/Navbar';
 import Alert from './components/layout/Alert';
 import Layout from './components/layout/Layout';
@@ -49,6 +50,7 @@ import EditReminder from './pages/reminders/EditReminder';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import CreateUser from './pages/admin/CreateUser';
 import EditUser from './pages/admin/EditUser';
+import DatabaseAdmin from './pages/admin/DatabaseAdmin';
 
 // Create theme with light purple primary color
 const getTheme = (mode) => createTheme({
@@ -215,9 +217,10 @@ const App = () => {
               <Route path="/reminders/:id" element={<PrivateRoute><ReminderDetail /></PrivateRoute>} />
               
               {/* Admin */}
-              <Route path="/admin/dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
-              <Route path="/admin/users/create" element={<PrivateRoute><CreateUser /></PrivateRoute>} />
-              <Route path="/admin/users/edit/:id" element={<PrivateRoute><EditUser /></PrivateRoute>} />
+              <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin/users/create" element={<AdminRoute><CreateUser /></AdminRoute>} />
+              <Route path="/admin/users/edit/:id" element={<AdminRoute><EditUser /></AdminRoute>} />
+              <Route path="/admin/database" element={<AdminRoute><DatabaseAdmin /></AdminRoute>} />
               
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
