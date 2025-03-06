@@ -223,6 +223,26 @@ This guide provides step-by-step instructions for deploying the Boxwise applicat
    - Email: owner@example.com
    - Password: password123
 
+## Quick Fix for Deployment Issues
+
+If you're experiencing multiple issues with your deployment, you can use the comprehensive fix script:
+
+```bash
+sudo ./fix-deployment.sh
+```
+
+This script will:
+1. Check and set environment variables
+2. Update Nginx configuration to include your server's IP
+3. Ensure SSL certificates exist
+4. Rebuild the client application
+5. Rebuild and restart all containers
+6. Install missing dependencies
+7. Initialize the database
+8. Verify the deployment and provide detailed diagnostics
+
+This is the recommended approach if you're encountering multiple issues or if you're not sure what's causing the problem.
+
 ## Common Issues and Troubleshooting
 
 ### Issue 1: Docker Compose Not Starting All Services

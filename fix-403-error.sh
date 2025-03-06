@@ -49,15 +49,35 @@ fi
 
 # Step 3: Check static files
 echo "Checking static files in Nginx container..."
-if ! docker-compose exec -T nginx ls -la /usr/share/nginx/html/index.html; then
+
+# First, ensure the directory exists in the Nginx container
+echo "Creating /usr/share/nginx/html directory in Nginx container if it doesn't exist..."
+docker-compose exec -T nginx sh -c "mkdir -p /usr/share/nginx/html"
+
+# Check if index.html exists
+if ! docker-compose exec -T nginx ls -la /usr/share/nginx/html/index.html 2>/dev/null; then
   echo "Error: index.html not found in Nginx container."
   echo "Rebuilding client..."
   
   # Rebuild the client
   docker-compose exec -T app sh -c "cd client && npm run build"
   
-  # Copy the build files to the Nginx container
-  docker-compose exec -T app sh -c "cp -r client/build/* /usr/share/nginx/html/"
+  # Create a volume to share files between containers
+  echo "Creating a shared volume for file transfer..."
+  docker volume create --name=boxwise_build_transfer
+  
+  # Mount the volume to both containers
+  echo "Mounting the volume to containers..."
+  docker-compose exec -T app sh -c "mkdir -p /tmp/build_transfer"
+  docker-compose exec -T nginx sh -c "mkdir -p /tmp/build_transfer"
+  
+  # Copy build files to the shared volume
+  echo "Copying build files to shared volume..."
+  docker-compose exec -T app sh -c "cp -r client/build/* /tmp/build_transfer/"
+  
+  # Copy from shared volume to nginx html directory
+  echo "Copying files from shared volume to nginx html directory..."
+  docker-compose exec -T nginx sh -c "cp -r /tmp/build_transfer/* /usr/share/nginx/html/"
   
   echo "Client rebuilt and files copied to Nginx container."
 else
