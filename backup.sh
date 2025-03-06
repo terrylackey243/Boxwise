@@ -44,10 +44,15 @@ find $BACKUP_DIR -name "mongodb_*.tar.gz" -type f -mtime +$RETENTION_DAYS -delet
 echo "MongoDB backup completed at $(date)"
 echo "Backup saved to $BACKUP_DIR/mongodb_$TIMESTAMP.tar.gz"
 
-# Optional: Copy backup to remote storage (uncomment and configure as needed)
-# scp $BACKUP_DIR/mongodb_$TIMESTAMP.tar.gz user@remote-server:/path/to/backup/directory/
+# Copy backup to remote storage
+# Replace with your actual remote server details
+scp $BACKUP_DIR/mongodb_$TIMESTAMP.tar.gz backup-user@backup-server.example.com:/backups/boxwise/
 
-# Optional: Copy to Digital Ocean Spaces (uncomment and configure as needed)
-# s3cmd put $BACKUP_DIR/mongodb_$TIMESTAMP.tar.gz s3://your-space-name/mongodb-backups/
+# Log remote backup status
+if [ $? -eq 0 ]; then
+    echo "Remote backup successful"
+else
+    echo "Warning: Remote backup failed, but local backup is available"
+fi
 
 echo "Backup process completed successfully"

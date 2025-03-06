@@ -85,36 +85,25 @@ export const AuthProvider = ({ children }) => {
         const decoded = jwt_decode(localStorage.token);
         const currentTime = Date.now() / 1000;
         
-        console.log('AuthContext: Token exists, checking expiration...');
-        console.log('AuthContext: Token expiration:', decoded.exp);
-        console.log('AuthContext: Current time:', currentTime);
-        
         if (decoded.exp < currentTime) {
           // Token is expired
-          console.log('AuthContext: Token is expired');
           dispatch({ type: 'AUTH_ERROR', payload: 'Session expired, please login again' });
           return;
         }
         
-        console.log('AuthContext: Token is valid, loading user...');
         const res = await axios.get('/api/auth/me');
-        console.log('AuthContext: User loaded:', res.data.data);
         
         dispatch({
           type: 'USER_LOADED',
           payload: res.data.data
         });
-        
-        console.log('AuthContext: After dispatch USER_LOADED, isAuthenticated =', state.isAuthenticated);
       } catch (err) {
-        console.error('AuthContext: Error loading user:', err);
         dispatch({
           type: 'AUTH_ERROR',
           payload: err.response?.data?.message || 'Authentication error'
         });
       }
     } else {
-      console.log('AuthContext: No token found');
       dispatch({ type: 'AUTH_ERROR' });
     }
   };
@@ -141,9 +130,7 @@ export const AuthProvider = ({ children }) => {
   // Login user
   const login = async (formData) => {
     try {
-      console.log('AuthContext: Attempting login with:', formData);
       const res = await axios.post('/api/auth/login', formData);
-      console.log('AuthContext: Login response:', res.data);
       
       // Set token in localStorage and axios headers
       localStorage.setItem('token', res.data.token);
@@ -154,12 +141,9 @@ export const AuthProvider = ({ children }) => {
         payload: res.data
       });
       
-      console.log('AuthContext: Dispatched LOGIN_SUCCESS, now loading user...');
-      
       try {
         // Load user data
         const userRes = await axios.get('/api/auth/me');
-        console.log('AuthContext: User data:', userRes.data);
         
         dispatch({
           type: 'USER_LOADED',
@@ -171,14 +155,12 @@ export const AuthProvider = ({ children }) => {
         
         return true;
       } catch (loadErr) {
-        console.error('AuthContext: Error loading user after login:', loadErr);
         dispatch({
           type: 'AUTH_ERROR',
           payload: loadErr.response?.data?.message || 'Error loading user'
         });
       }
     } catch (err) {
-      console.error('AuthContext: Login error:', err);
       dispatch({
         type: 'LOGIN_FAIL',
         payload: err.response?.data?.message || 'Invalid credentials'
