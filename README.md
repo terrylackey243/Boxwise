@@ -194,6 +194,8 @@ For production deployment, you'll need:
 
 ## Deployment Steps
 
+### Manual Deployment
+
 1. Build the client:
    ```
    cd client
@@ -242,6 +244,47 @@ For production deployment, you'll need:
        }
    }
    ```
+
+### Docker Deployment (Recommended)
+
+For production deployment, we recommend using Docker and the provided deployment scripts:
+
+1. Clone the repository on your server:
+   ```
+   git clone https://github.com/yourusername/boxwise.git
+   cd boxwise
+   ```
+
+2. Set up the JWT secret securely (never commit this to the repository):
+   ```
+   # Generate a new JWT secret
+   ./set-jwt-secret.sh
+   
+   # Or use an existing JWT secret
+   ./set-jwt-secret.sh -s "your-secure-jwt-secret"
+   ```
+
+3. Deploy the application with the provided script:
+   ```
+   ./deploy.sh -d yourdomain.com
+   ```
+
+This will:
+- Install Docker and Docker Compose if needed
+- Set up SSL certificates using Certbot
+- Configure Nginx with proper security headers
+- Start all services (MongoDB, backend, frontend)
+- Initialize the database if needed
+
+### Security Considerations
+
+1. **Environment Variables**: Never commit sensitive environment variables like JWT_SECRET to your repository. Use the provided scripts to set these securely on your production server.
+
+2. **SSL/TLS**: Always use HTTPS in production. The deploy.sh script sets this up automatically.
+
+3. **Database Backups**: Regular backups are essential. The deployment includes an automatic backup script that runs daily.
+
+4. **Updates**: Regularly update dependencies and apply security patches.
 
 ## License
 

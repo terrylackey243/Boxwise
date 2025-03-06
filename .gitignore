@@ -17,8 +17,7 @@ client/build/
 .env.development.local
 .env.test.local
 .env.production.local
-# Keep production env file that might be needed for deployment
-!.env.production
+.env.production
 
 # Logs
 logs

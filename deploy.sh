@@ -67,10 +67,15 @@ fi
 if [ ! -f "$ENV_FILE" ]; then
   echo "Creating environment file..."
   cp .env.production "$ENV_FILE"
+
+# Generate a secure JWT secret if not provided
+ if [ -z "$JWT_SECRET" ]; then
+   echo "Generating a secure JWT secret..."
+   JWT_SECRET=$(openssl rand -base64 32)
+ fi
   
-  # Use the JWT_SECRET from .env.production
-  JWT_SECRET=$(grep "JWT_SECRET" .env.production | cut -d= -f2)
-  sed -i "s/replace_with_a_secure_random_string_in_production/$JWT_SECRET/g" "$ENV_FILE"
+# Use the JWT_SECRET from .env.production
+sed -i "s/__REPLACE_WITH_SECURE_JWT_SECRET__/$JWT_SECRET/g" "$ENV_FILE"
   
   echo "Environment file created. Please review and update if needed."
 fi
