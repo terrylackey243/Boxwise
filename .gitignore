@@ -30,6 +30,8 @@ yarn-error.log*
 # MongoDB data
 data/db/
 data/log/
+scripts/data/db/
+scripts/data/
 
 # OS generated files
 .DS_Store
