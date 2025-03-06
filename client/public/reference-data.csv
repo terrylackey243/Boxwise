@@ -1,0 +1,17 @@
+LOCATIONS
+ID,Name
+location_id_1,Main Warehouse
+location_id_2,Storage Room A
+location_id_3,Storage Room B
+
+CATEGORIES
+ID,Name
+category_id_1,Electronics
+category_id_2,Furniture
+category_id_3,Office Supplies
+
+LABELS
+ID,Name
+label_id_1,Fragile
+label_id_2,Heavy
+label_id_3,Perishable
