@@ -105,6 +105,30 @@ This script checks the status of all Boxwise services in production mode:
 - Displays PM2 status for the backend server
 - Provides information about the client build
 
+### Check Servers Script (`check-servers.sh`)
+
+This script provides a simple, color-coded status check of all Boxwise services:
+
+1. Checks and displays the status of MongoDB, Nginx, frontend, backend, and client build
+2. Uses color coding to indicate status (green for up, yellow for warning, red for down)
+3. Provides a summary of the overall system status
+
+#### Usage
+
+```bash
+./check-servers.sh
+```
+
+#### What it does
+
+- Uses color coding for easy status identification:
+  - GREEN: Service is up and running
+  - YELLOW: Service is running but with potential issues
+  - RED: Service is down
+- Provides concise details about each service
+- Gives an overall summary of the system status
+- Ideal for quick health checks of your production environment
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -128,8 +152,11 @@ For a full production deployment, it's recommended to:
 # To restart the application
 ./restart-production.sh
 
-# To check the status of all services
+# To check the status of all services (detailed)
 ./status-production.sh
+
+# To check the status of all services (color-coded summary)
+./check-servers.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -162,7 +189,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -175,6 +202,7 @@ put start-production.sh
 put stop-production.sh
 put restart-production.sh
 put status-production.sh
+put check-servers.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -187,14 +215,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh
 ```
 
 ## Troubleshooting
