@@ -101,24 +101,42 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-# Check if package.json exists and install dependencies
-if [ -f "package.json" ]; then
-    echo -e "${BLUE}Installing script dependencies...${NC}"
-    npm install
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to install dependencies. Please check npm error messages above.${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}Dependencies installed successfully${NC}"
-else
-    echo -e "${YELLOW}Warning: package.json not found in scripts directory. Attempting to install required dependencies manually...${NC}"
-    npm install mongoose bcryptjs jsonwebtoken
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to install dependencies. Please check npm error messages above.${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}Dependencies installed successfully${NC}"
+# Create a temporary directory for the script
+TEMP_DIR=$(mktemp -d)
+echo -e "${BLUE}Creating temporary directory for script: $TEMP_DIR${NC}"
+
+# Copy the create-owner.js script to the temporary directory
+cp create-owner.js "$TEMP_DIR/"
+
+# Create a package.json file in the temporary directory
+echo -e "${BLUE}Creating package.json with required dependencies...${NC}"
+cat > "$TEMP_DIR/package.json" << EOF
+{
+  "name": "boxwise-create-owner",
+  "version": "1.0.0",
+  "description": "Script to create an owner user in Boxwise",
+  "main": "create-owner.js",
+  "dependencies": {
+    "mongoose": "^7.0.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0"
+  }
+}
+EOF
+
+# Change to the temporary directory
+cd "$TEMP_DIR"
+
+# Install dependencies
+echo -e "${BLUE}Installing dependencies...${NC}"
+npm install
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to install dependencies. Please check npm error messages above.${NC}"
+    cd "$SCRIPT_DIR"
+    rm -rf "$TEMP_DIR"
+    exit 1
 fi
+echo -e "${GREEN}Dependencies installed successfully${NC}"
 
 # Set the MongoDB URI environment variable
 export MONGO_URI="mongodb://localhost:27017/boxwise"
@@ -126,6 +144,11 @@ export MONGO_URI="mongodb://localhost:27017/boxwise"
 # Run the script
 echo -e "${BLUE}Running create-owner.js script...${NC}"
 node create-owner.js "$EMAIL" "$PASSWORD" "$NAME"
+
+# Clean up
+cd "$SCRIPT_DIR"
+echo -e "${BLUE}Cleaning up temporary directory...${NC}"
+rm -rf "$TEMP_DIR"
 
 # Check if the script was successful
 if [ $? -eq 0 ]; then
