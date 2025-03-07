@@ -591,6 +591,49 @@ Options:
 - Tests all endpoints to verify fixes worked
 - Provides comprehensive troubleshooting steps for any remaining issues
 
+### Fix Manual Script (`fix-manual.sh`)
+
+This script provides a step-by-step interactive guide to manually fix persistent issues:
+
+1. Walks you through each step of the troubleshooting process
+2. Provides detailed explanations and instructions
+3. Performs actions with your confirmation
+4. Offers direct commands you can run manually if needed
+
+#### Usage
+
+```bash
+./fix-manual.sh
+```
+
+#### What it does
+
+- Gathers system information:
+  - Checks if required software (PM2, Nginx, MongoDB) is installed
+  - Offers to install missing components
+- Verifies and fixes environment variables:
+  - Checks if server/.env file exists and contains required variables
+  - Adds missing environment variables with your confirmation
+- Creates a proper ecosystem.config.js file:
+  - Includes all necessary environment variables
+  - Configures the application correctly
+- Manages PM2 processes:
+  - Stops existing processes if needed
+  - Starts the application with the correct configuration
+  - Provides detailed error logs if startup fails
+- Fixes Nginx configuration:
+  - Locates and modifies existing configuration files
+  - Creates new configuration files if needed
+  - Tests configuration before applying changes
+- Tests API connectivity:
+  - Verifies backend API is working directly
+  - Tests Nginx API endpoints
+  - Provides detailed troubleshooting steps for any issues
+- Offers manual commands for advanced troubleshooting:
+  - Direct PM2 environment variable settings
+  - Minimal Nginx configuration examples
+  - API endpoint testing commands
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -667,6 +710,9 @@ For a full production deployment, it's recommended to:
 
 # To aggressively fix critical issues when other scripts don't work
 ./fix-critical-issues.sh
+
+# To follow an interactive guide for manual troubleshooting
+./fix-manual.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -699,7 +745,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -729,6 +775,7 @@ put fix-nginx-api.sh
 put boxwise-doctor.sh
 put fix-persistent-issues.sh
 put fix-critical-issues.sh
+put fix-manual.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -741,14 +788,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh
 ```
 
 ## Troubleshooting
