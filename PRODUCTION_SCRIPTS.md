@@ -382,6 +382,34 @@ This script provides a comprehensive solution for diagnosing and fixing common p
 - Provides a detailed summary of the system status
 - Suggests next steps for troubleshooting if issues persist
 
+### Start Backend Script (`start-backend.sh`)
+
+This script focuses specifically on getting the backend server running properly:
+
+1. Ensures MongoDB is running and configured correctly
+2. Sets up all required environment variables
+3. Starts the backend server using PM2 or directly
+4. Tests API connectivity to verify it's working
+5. Provides detailed logs and troubleshooting steps
+
+#### Usage
+
+```bash
+./start-backend.sh
+```
+
+#### What it does
+
+- Checks if MongoDB is installed and running, offers to install if needed
+- Ensures all required environment variables are set in server/.env
+- Checks if the backend port is available or already in use
+- Tests the MongoDB connection to verify it's working
+- Starts the backend server using PM2 if available, or directly if not
+- Creates or updates ecosystem.config.js with proper environment variables
+- Waits for the server to start and tests API connectivity
+- Displays backend server logs if there are issues
+- Provides a detailed summary and specific troubleshooting steps
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -437,6 +465,9 @@ For a full production deployment, it's recommended to:
 
 # To run the comprehensive production fix script
 ./fix-production.sh
+
+# To focus specifically on starting the backend server
+./start-backend.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -469,7 +500,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -492,6 +523,7 @@ put check-api.sh
 put fix-mongodb-connection.sh
 put boxwise-menu.sh
 put fix-production.sh
+put start-backend.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -504,14 +536,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh
 ```
 
 ## Troubleshooting
