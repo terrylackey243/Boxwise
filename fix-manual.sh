@@ -200,12 +200,19 @@ if [ -f "$SCRIPT_DIR/server/.env" ]; then
         echo -e "${RED}MONGO_URI is not set in server/.env${NC}"
         MONGO_URI_SET=false
         
-        echo -e "${YELLOW}Please add MONGO_URI to server/.env with the following command:${NC}"
-        echo -e "echo 'MONGO_URI=mongodb://localhost:27017/boxwise' >> server/.env"
+        echo -e "${YELLOW}Please add MONGO_URI to server/.env${NC}"
+        echo -e "${YELLOW}For a production server, you should use a specific IP address or hostname rather than localhost${NC}"
+        echo -e "${YELLOW}Enter the MongoDB URI (default: mongodb://localhost:27017/boxwise):${NC}"
+        read -r mongo_uri
         
-        if confirm "Would you like to add MONGO_URI to server/.env now?"; then
+        # Use default if empty
+        if [ -z "$mongo_uri" ]; then
+            mongo_uri="mongodb://localhost:27017/boxwise"
+        fi
+        
+        if confirm "Would you like to add MONGO_URI=$mongo_uri to server/.env now?"; then
             echo -e "${BLUE}Adding MONGO_URI to server/.env...${NC}"
-            echo "MONGO_URI=mongodb://localhost:27017/boxwise" >> "$SCRIPT_DIR/server/.env"
+            echo "MONGO_URI=$mongo_uri" >> "$SCRIPT_DIR/server/.env"
             if [ $? -eq 0 ]; then
                 echo -e "${GREEN}MONGO_URI added to server/.env${NC}"
                 MONGO_URI_SET=true
@@ -310,9 +317,19 @@ else
             echo -e "${GREEN}server/.env created${NC}"
             ENV_FILE_EXISTS=true
             
+            # Ask for MongoDB URI
+            echo -e "${YELLOW}For a production server, you should use a specific IP address or hostname rather than localhost${NC}"
+            echo -e "${YELLOW}Enter the MongoDB URI (default: mongodb://localhost:27017/boxwise):${NC}"
+            read -r mongo_uri
+            
+            # Use default if empty
+            if [ -z "$mongo_uri" ]; then
+                mongo_uri="mongodb://localhost:27017/boxwise"
+            fi
+            
             # Add environment variables to server/.env
             echo -e "${BLUE}Adding environment variables to server/.env...${NC}"
-            echo "MONGO_URI=mongodb://localhost:27017/boxwise" >> "$SCRIPT_DIR/server/.env"
+            echo "MONGO_URI=$mongo_uri" >> "$SCRIPT_DIR/server/.env"
             echo "JWT_SECRET=boxwise_jwt_secret_$(openssl rand -hex 12)" >> "$SCRIPT_DIR/server/.env"
             echo "PORT=5001" >> "$SCRIPT_DIR/server/.env"
             echo "NODE_ENV=production" >> "$SCRIPT_DIR/server/.env"
@@ -712,7 +729,8 @@ else
     
     echo -e "\n${YELLOW}If you're still having issues, here are some manual steps to try:${NC}"
     echo -e "1. Manually set environment variables in PM2:"
-    echo -e "   pm2 set boxwise:MONGO_URI \"${MONGO_URI:-mongodb://localhost:27017/boxwise}\""
+    echo -e "   # For a production server, use a specific IP address or hostname rather than localhost"
+    echo -e "   pm2 set boxwise:MONGO_URI \"${MONGO_URI:-mongodb://127.0.0.1:27017/boxwise}\""
     echo -e "   pm2 set boxwise:JWT_SECRET \"${JWT_SECRET:-boxwise_jwt_secret_$(openssl rand -hex 12)}\""
     echo -e "   pm2 set boxwise:PORT \"${PORT:-5001}\""
     echo -e "   pm2 set boxwise:NODE_ENV \"${NODE_ENV:-production}\""

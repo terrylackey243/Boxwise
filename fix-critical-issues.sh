@@ -170,8 +170,18 @@ else
                     PORT=$(grep "^PORT=" "$SCRIPT_DIR/server/.env" | cut -d= -f2-)
                     
                     if [ -z "$MONGO_URI" ]; then
-                        MONGO_URI="mongodb://localhost:27017/boxwise"
-                        echo -e "${YELLOW}MONGO_URI not found in .env, using default: $MONGO_URI${NC}"
+                        echo -e "${YELLOW}MONGO_URI not found in .env${NC}"
+                        echo -e "${YELLOW}For a production server, you should use a specific IP address or hostname rather than localhost${NC}"
+                        echo -e "${YELLOW}Enter the MongoDB URI (default: mongodb://localhost:27017/boxwise):${NC}"
+                        read -r MONGO_URI
+                        
+                        # Use default if empty
+                        if [ -z "$MONGO_URI" ]; then
+                            MONGO_URI="mongodb://localhost:27017/boxwise"
+                            echo -e "${YELLOW}Using default: $MONGO_URI${NC}"
+                        else
+                            echo -e "${GREEN}Using provided MongoDB URI: $MONGO_URI${NC}"
+                        fi
                     fi
                     
                     if [ -z "$JWT_SECRET" ]; then
@@ -796,7 +806,8 @@ else
         echo -e "Here are some additional things to try:"
         echo -e "1. Check if the server/.env file exists and contains the correct environment variables"
         echo -e "2. Try manually setting the environment variables in PM2:"
-        echo -e "   pm2 set boxwise:MONGO_URI \"mongodb://localhost:27017/boxwise\""
+        echo -e "   # For a production server, use a specific IP address or hostname rather than localhost"
+        echo -e "   pm2 set boxwise:MONGO_URI \"mongodb://127.0.0.1:27017/boxwise\""
         echo -e "   pm2 set boxwise:JWT_SECRET \"your_jwt_secret\""
         echo -e "   pm2 set boxwise:PORT \"5001\""
         echo -e "   pm2 set boxwise:NODE_ENV \"production\""
