@@ -186,6 +186,61 @@ Options:
 - Provides color-coded output for easy status identification
 - Confirms successful user creation with login details
 
+### Get Database URL Script (`get-db-url.sh`)
+
+This script retrieves and tests the MongoDB connection URL from the server's environment file:
+
+1. Extracts the MongoDB connection URL from the environment file
+2. Tests the connection to the database
+3. Displays information about the database
+
+#### Usage
+
+```bash
+./get-db-url.sh
+```
+
+#### What it does
+
+- Determines which environment is being used (production or development)
+- Extracts the MongoDB connection URL from the environment file
+- Tests the connection to the database
+- Displays database information including name, size, and collections
+- Provides color-coded output for easy status identification
+
+### Update from GitHub Script (`update-from-github.sh`)
+
+This script pulls the latest changes from GitHub and updates the application:
+
+1. Backs up the database (optional)
+2. Pulls the latest changes from GitHub
+3. Installs dependencies
+4. Builds the client application
+5. Restarts the application (optional)
+
+#### Usage
+
+```bash
+./update-from-github.sh [options]
+```
+
+Options:
+- `-b, --branch BRANCH`: Branch to pull from (default: main)
+- `--no-backup`: Skip database backup before updating
+- `--no-restart`: Skip restarting the application after updating
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Backs up the database before updating (can be skipped with --no-backup)
+- Handles uncommitted changes by stashing them
+- Pulls the latest changes from the specified branch
+- Installs server and client dependencies
+- Builds the client application
+- Copies built files to the Nginx directory if it exists
+- Restarts the application (can be skipped with --no-restart)
+- Restores any stashed changes
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -220,6 +275,12 @@ For a full production deployment, it's recommended to:
 
 # To create an owner user in production
 ./create-owner-production.sh
+
+# To check the database connection
+./get-db-url.sh
+
+# To update the application from GitHub
+./update-from-github.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -252,7 +313,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -268,6 +329,8 @@ put status-production.sh
 put check-servers.sh
 put check-ssl.sh
 put create-owner-production.sh
+put get-db-url.sh
+put update-from-github.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -280,14 +343,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh
 ```
 
 ## Troubleshooting

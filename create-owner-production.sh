@@ -16,7 +16,7 @@ cd "$SCRIPT_DIR"
 
 # Default values
 EMAIL="terry@jknelotions.com"
-PASSWORD="cde3CDE#vfr4VFR\$"
+PASSWORD="Password123"  # Simplified password for testing
 NAME="Terry"
 
 # Display help
@@ -124,6 +124,64 @@ cat > "$TEMP_DIR/package.json" << EOF
 }
 EOF
 
+# Create a simple test script to verify the database connection and check existing users
+cat > "$TEMP_DIR/test-db.js" << EOF
+const mongoose = require('mongoose');
+
+// MongoDB connection
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/boxwise';
+
+// Connect to MongoDB
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(async () => {
+  console.log('Connected to MongoDB');
+  
+  // Define a simple User schema for querying
+  const UserSchema = new mongoose.Schema({
+    name: String,
+    email: String,
+    password: String,
+    role: String
+  });
+  
+  const User = mongoose.model('User', UserSchema);
+  
+  // List all users
+  console.log('\\nListing all users:');
+  const users = await User.find({}, 'name email role');
+  if (users.length === 0) {
+    console.log('No users found in the database');
+  } else {
+    users.forEach(user => {
+      console.log(\`- \${user.name} (\${user.email}) - Role: \${user.role}\`);
+    });
+  }
+  
+  // Check if our specific user exists
+  const ourUser = await User.findOne({ email: '${EMAIL}' });
+  if (ourUser) {
+    console.log('\\nFound our user:');
+    console.log(\`- Name: \${ourUser.name}\`);
+    console.log(\`- Email: \${ourUser.email}\`);
+    console.log(\`- Role: \${ourUser.role}\`);
+    console.log(\`- Password hash length: \${ourUser.password.length}\`);
+  } else {
+    console.log('\\nOur user was not found in the database');
+  }
+  
+  // Close the connection
+  mongoose.connection.close();
+  console.log('Disconnected from MongoDB');
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
+EOF
+
 # Change to the temporary directory
 cd "$TEMP_DIR"
 
@@ -141,9 +199,17 @@ echo -e "${GREEN}Dependencies installed successfully${NC}"
 # Set the MongoDB URI environment variable
 export MONGO_URI="mongodb://localhost:27017/boxwise"
 
-# Run the script
+# Run the test script to check the database before creating the user
+echo -e "${BLUE}Checking database before creating user...${NC}"
+node test-db.js
+
+# Run the script to create the user
 echo -e "${BLUE}Running create-owner.js script...${NC}"
 node create-owner.js "$EMAIL" "$PASSWORD" "$NAME"
+
+# Run the test script again to verify the user was created
+echo -e "${BLUE}Checking database after creating user...${NC}"
+node test-db.js
 
 # Clean up
 cd "$SCRIPT_DIR"
@@ -155,7 +221,13 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}Owner user created successfully!${NC}"
     echo -e "You can now log in to the application with:"
     echo -e "Email: ${GREEN}$EMAIL${NC}"
-    echo -e "Password: ${GREEN}[hidden]${NC}"
+    echo -e "Password: ${GREEN}$PASSWORD${NC}"
+    
+    echo -e "\n${YELLOW}Important: If you still can't log in, try these troubleshooting steps:${NC}"
+    echo -e "1. Make sure the application is using the same MongoDB database (mongodb://localhost:27017/boxwise)"
+    echo -e "2. Check if the application is running in production mode"
+    echo -e "3. Try restarting the application: ./restart-production.sh"
+    echo -e "4. Check the application logs for any authentication errors: pm2 logs boxwise"
 else
     echo -e "${RED}Failed to create owner user. See error message above.${NC}"
     exit 1
