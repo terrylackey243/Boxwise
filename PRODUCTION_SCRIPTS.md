@@ -297,6 +297,63 @@ This script checks the API configuration and connectivity:
 - Provides detailed recommendations for fixing common API issues
 - Especially useful for diagnosing 502 Bad Gateway errors and API connectivity problems
 
+### Fix MongoDB Connection Script (`fix-mongodb-connection.sh`)
+
+This script fixes MongoDB connection issues in the production environment:
+
+1. Checks and updates the MongoDB connection URI in the server environment file
+2. Ensures other required environment variables are set
+3. Tests the MongoDB connection
+4. Restarts the application to apply the changes
+
+#### Usage
+
+```bash
+./fix-mongodb-connection.sh [options]
+```
+
+Options:
+- `-u, --uri URI`: MongoDB URI (default: mongodb://localhost:27017/boxwise)
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Checks if the server environment file exists and creates it if needed
+- Ensures MONGO_URI is properly set in the environment file
+- Adds or updates other essential environment variables (NODE_ENV, PORT, JWT_SECRET)
+- Tests the MongoDB connection to verify it works
+- Offers to restart the application to apply the changes
+- Provides detailed output and error messages for troubleshooting
+
+### Boxwise Menu Script (`boxwise-menu.sh`)
+
+This script provides a menu-driven interface for running all Boxwise production scripts:
+
+1. Lists all available scripts organized by category
+2. Displays a brief description of each script
+3. Allows the user to select a script to run
+4. Executes the selected script
+
+#### Usage
+
+```bash
+./boxwise-menu.sh
+```
+
+#### What it does
+
+- Displays a clear, organized menu of all available scripts
+- Groups scripts by category:
+  - Service Management
+  - Status & Diagnostics
+  - Maintenance & Fixes
+  - Deployment
+  - Other Scripts
+- Provides a description for each script
+- Allows running any script by selecting its number
+- Returns to the menu after script execution
+- Includes options to refresh the menu or quit
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -343,6 +400,12 @@ For a full production deployment, it's recommended to:
 
 # To check API configuration and connectivity
 ./check-api.sh
+
+# To fix MongoDB connection issues
+./fix-mongodb-connection.sh
+
+# To access the interactive menu of all scripts
+./boxwise-menu.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -375,7 +438,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -395,6 +458,8 @@ put get-db-url.sh
 put update-from-github.sh
 put check-user.sh
 put check-api.sh
+put fix-mongodb-connection.sh
+put boxwise-menu.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -407,14 +472,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh
 ```
 
 ## Troubleshooting
