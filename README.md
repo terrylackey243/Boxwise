@@ -19,7 +19,6 @@ Boxwise is a comprehensive inventory management system designed to help organiza
 - **Backend**: Node.js, Express
 - **Database**: MongoDB
 - **Authentication**: JWT
-- **Containerization**: Docker, Docker Compose
 - **Web Server**: Nginx
 
 ## Development Setup
@@ -28,7 +27,7 @@ Boxwise is a comprehensive inventory management system designed to help organiza
 
 - Node.js (v16+)
 - npm or yarn
-- MongoDB (local installation or Docker)
+- MongoDB (local installation)
 - Git
 
 ### Installation
@@ -55,9 +54,9 @@ Boxwise is a comprehensive inventory management system designed to help organiza
    npm install
    ```
 
-4. Start MongoDB (if not using Docker):
+4. Start MongoDB:
    ```
-   # Start MongoDB locally
+   # Start MongoDB
    mongod --dbpath=/path/to/data/db
    ```
 
@@ -86,7 +85,7 @@ Boxwise is a comprehensive inventory management system designed to help organiza
 
 ### Prerequisites
 
-- Server with Docker and Docker Compose installed
+- Server with MongoDB installed
 - Domain name configured to point to your server
 - UPC API key (optional - using free trial version for now)
 - SSL certificates (or ability to generate Let's Encrypt certificates)

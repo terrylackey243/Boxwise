@@ -13,17 +13,10 @@ mkdir -p $BACKUP_DIR
 # Log start of backup
 echo "Starting MongoDB backup at $(date)"
 
-# Create MongoDB dump
-docker-compose exec -T mongodb mongodump --out=/dump
+# Create MongoDB dump directly
+mongodump --out=$BACKUP_DIR/mongodb_$TIMESTAMP
 if [ $? -ne 0 ]; then
     echo "Error: MongoDB dump failed"
-    exit 1
-fi
-
-# Copy dump from container to host
-docker cp boxwise-mongodb:/dump $BACKUP_DIR/mongodb_$TIMESTAMP
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to copy dump from container"
     exit 1
 fi
 
