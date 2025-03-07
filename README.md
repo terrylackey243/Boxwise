@@ -40,7 +40,7 @@ Boxwise is a comprehensive inventory management system designed to help organiza
 
 2. Switch to development environment:
    ```
-   ./switch-env.sh dev
+   ./scripts/switch-env.sh dev
    ```
 
 3. Install dependencies:
@@ -100,12 +100,12 @@ Boxwise is a comprehensive inventory management system designed to help organiza
 
 2. Make the deployment scripts executable:
    ```
-   chmod +x deploy.sh switch-env.sh backup.sh
+   chmod +x scripts/deploy.sh scripts/switch-env.sh scripts/backup.sh
    ```
 
 3. Run the deployment script with the appropriate options:
    ```
-   ./deploy.sh -d yourdomain.com -e your@email.com -i -l -p -n -b
+   ./scripts/deploy.sh -d yourdomain.com -e your@email.com -i -l -p -n -b
    ```
    
    Options:
@@ -117,18 +117,16 @@ Boxwise is a comprehensive inventory management system designed to help organiza
    - `-n, --setup-nginx`: Set up Nginx configuration
    - `-b, --backup-db`: Backup the MongoDB database
 
-4. Follow the post-deployment steps in the [Production Checklist](./PRODUCTION_CHECKLIST.md) file.
-
 ### Switching Between Environments
 
 To switch between production and development environments, use the provided `switch-env.sh` script:
 
 ```
 # Switch to development environment
-./switch-env.sh dev
+./scripts/switch-env.sh dev
 
 # Switch to production environment
-./switch-env.sh prod
+./scripts/switch-env.sh prod
 ```
 
 The script will automatically:
@@ -136,9 +134,13 @@ The script will automatically:
 - Stop/start the appropriate services
 - Build the client application when switching to production
 
+### Production Scripts
+
+All production scripts are located in the `scripts` directory. For detailed information about the available scripts and their usage, see the [Production Scripts Documentation](./scripts/PRODUCTION_SCRIPTS.md).
+
 ## Documentation
 
-- [Production Checklist](./PRODUCTION_CHECKLIST.md) - Detailed steps for production deployment
+- [Production Scripts](./scripts/PRODUCTION_SCRIPTS.md) - Information about production scripts
 - [API Documentation](./server/API.md) - API endpoints and usage
 - [User Guide](./docs/USER_GUIDE.md) - Guide for end users
 
