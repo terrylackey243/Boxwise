@@ -27,16 +27,92 @@ apt install -y curl wget gnupg2 software-properties-common apt-transport-https c
 
 # Step 3: Install MongoDB
 echo "Installing MongoDB..."
-wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add -
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-apt update
-apt install -y mongodb-org
 
-# Start and enable MongoDB service
-systemctl start mongod
+# Check if MongoDB is already installed
+if command -v mongod &> /dev/null; then
+  echo "MongoDB is already installed. Checking version..."
+  MONGO_VERSION=$(mongod --version | head -n 1 | awk '{print $3}')
+  echo "MongoDB version: $MONGO_VERSION"
+else
+  echo "Adding MongoDB repository..."
+  # Import MongoDB public GPG key
+  wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add -
+  
+  # Add MongoDB repository
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+  
+  # Update package lists
+  apt update
+  
+  # Install MongoDB packages
+  echo "Installing MongoDB packages..."
+  apt install -y mongodb-org
+  
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to install MongoDB packages. Trying alternative method..."
+    
+    # Alternative installation method
+    apt install -y gnupg
+    wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+    apt update
+    apt install -y mongodb-org
+    
+    if [ $? -ne 0 ]; then
+      echo "Error: Failed to install MongoDB. Trying to install MongoDB Community Edition..."
+      apt install -y mongodb
+      
+      if [ $? -ne 0 ]; then
+        echo "Error: All MongoDB installation methods failed. Please install MongoDB manually."
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+# Ensure MongoDB data directory exists with proper permissions
+echo "Setting up MongoDB data directory..."
+mkdir -p /var/lib/mongodb
+chown -R mongodb:mongodb /var/lib/mongodb
+chmod 755 /var/lib/mongodb
+
+# Configure MongoDB to start on boot and start the service
+echo "Starting MongoDB service..."
+systemctl daemon-reload
 systemctl enable mongod
+systemctl start mongod
 
-echo "MongoDB installed and started."
+# Verify MongoDB is running
+echo "Verifying MongoDB installation..."
+sleep 5 # Give MongoDB time to start
+if systemctl is-active --quiet mongod; then
+  echo "MongoDB service is running."
+else
+  echo "Warning: MongoDB service is not running. Attempting to start..."
+  systemctl start mongod
+  sleep 5
+  
+  if systemctl is-active --quiet mongod; then
+    echo "MongoDB service is now running."
+  else
+    echo "Error: Failed to start MongoDB service. Please check MongoDB installation."
+    echo "You can try to start it manually with: sudo systemctl start mongod"
+    echo "And check the status with: sudo systemctl status mongod"
+  fi
+fi
+
+# Verify MongoDB connection
+echo "Testing MongoDB connection..."
+mongo --eval "db.adminCommand('ping')" || {
+  echo "Warning: Could not connect to MongoDB. Checking alternative command..."
+  mongosh --eval "db.adminCommand('ping')" || {
+    echo "Error: Could not connect to MongoDB with either mongo or mongosh commands."
+    echo "MongoDB may not be installed correctly or the service may not be running."
+    echo "Please check MongoDB installation and try again."
+  }
+}
+
+echo "MongoDB installation completed."
 
 # Step 4: Install Node.js 18.x
 echo "Installing Node.js 18.x..."

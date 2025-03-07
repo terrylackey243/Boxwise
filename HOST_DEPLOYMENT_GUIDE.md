@@ -75,9 +75,41 @@ echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release
 sudo apt update
 sudo apt install -y mongodb-org
 
+# If the above fails, try the alternative method
+if [ $? -ne 0 ]; then
+  echo "Trying alternative MongoDB installation method..."
+  sudo apt install -y gnupg
+  wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+  sudo apt update
+  sudo apt install -y mongodb-org
+fi
+
+# If MongoDB 6.0 installation fails, try the community edition
+if [ $? -ne 0 ]; then
+  echo "Trying MongoDB Community Edition..."
+  sudo apt install -y mongodb
+fi
+
+# Ensure MongoDB data directory exists with proper permissions
+sudo mkdir -p /var/lib/mongodb
+sudo chown -R mongodb:mongodb /var/lib/mongodb
+sudo chmod 755 /var/lib/mongodb
+
 # Start and enable MongoDB service
-sudo systemctl start mongod
+sudo systemctl daemon-reload
 sudo systemctl enable mongod
+sudo systemctl start mongod
+
+# Verify MongoDB is running
+sleep 5 # Give MongoDB time to start
+if ! systemctl is-active --quiet mongod; then
+  echo "Attempting to start MongoDB again..."
+  sudo systemctl start mongod
+fi
+
+# Test MongoDB connection
+mongo --eval "db.adminCommand('ping')" || mongosh --eval "db.adminCommand('ping')"
 ```
 
 #### Step 3: Install Node.js 18.x
