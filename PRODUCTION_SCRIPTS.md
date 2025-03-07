@@ -492,6 +492,38 @@ This script fixes the double API path issue in Nginx configuration:
 - Tests API connectivity to verify the fix worked
 - Provides detailed logs and additional troubleshooting steps if needed
 
+### Boxwise Doctor Script (`boxwise-doctor.sh`)
+
+This script runs all checks and fixes only what's needed:
+
+1. Performs comprehensive diagnostics of all system components
+2. Identifies issues with MongoDB, Nginx, PM2, and API connectivity
+3. Offers to fix each identified issue
+4. Runs a final check to verify all issues have been resolved
+
+#### Usage
+
+```bash
+./boxwise-doctor.sh [options]
+```
+
+Options:
+- `-a, --auto-fix`: Automatically fix issues without prompting
+- `-c, --check-only`: Only check for issues, don't fix anything
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Checks MongoDB status and connection
+- Checks Nginx status and API path configuration
+- Checks PM2 installation, application status, and environment variables
+- Checks backend server status
+- Tests API connectivity for both direct backend and Nginx endpoints
+- Provides a detailed diagnosis summary with color-coded status indicators
+- Offers to fix each identified issue using the appropriate fix script
+- Runs a final check to verify all issues have been resolved
+- Provides a final summary with recommendations for any remaining issues
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -559,6 +591,9 @@ For a full production deployment, it's recommended to:
 
 # To fix Nginx API path issues
 ./fix-nginx-api.sh
+
+# To run a comprehensive diagnostic and fix all issues
+./boxwise-doctor.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -591,7 +626,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -618,6 +653,7 @@ put start-backend.sh
 put fix-pm2-env.sh
 put pull-from-github.sh
 put fix-nginx-api.sh
+put boxwise-doctor.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -630,14 +666,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh
 ```
 
 ## Troubleshooting
