@@ -115,8 +115,41 @@ fi
 # Install system dependencies
 if [ "$INSTALL_DEPS" = true ]; then
     echo "=== Installing system dependencies ==="
+    
+    # Update package lists
     sudo apt-get update
-    sudo apt-get install -y nginx certbot python3-certbot-nginx mongodb nodejs npm
+    
+    # Install Nginx, Certbot, and Node.js
+    sudo apt-get install -y nginx certbot python3-certbot-nginx curl gnupg
+    
+    # Install Node.js if not already installed
+    if ! command -v node &> /dev/null; then
+        echo "Installing Node.js..."
+        curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
+    
+    # Install MongoDB
+    echo "Installing MongoDB..."
+    # Import MongoDB public GPG key
+    curl -fsSL https://pgp.mongodb.com/server-6.0.asc | \
+        sudo gpg -o /usr/share/keyrings/mongodb-server-6.0.gpg \
+        --dearmor
+    
+    # Create list file for MongoDB
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-6.0.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | \
+        sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+    
+    # Update package lists again
+    sudo apt-get update
+    
+    # Install MongoDB packages
+    sudo apt-get install -y mongodb-org
+    
+    # Start and enable MongoDB service
+    sudo systemctl start mongod
+    sudo systemctl enable mongod
+    
     echo "System dependencies installed"
 fi
 

@@ -8,6 +8,7 @@ This checklist will guide you through the process of deploying the Boxwise appli
 - [ ] A domain name pointing to your server's IP address
 - [ ] SSH access to your server
 - [ ] Root or sudo privileges on your server
+- [ ] Ports 80 and 443 open on your server's firewall
 
 ## Pre-Deployment Steps
 
@@ -56,6 +57,11 @@ This checklist will guide you through the process of deploying the Boxwise appli
   sudo systemctl status nginx
   ```
 
+- [ ] Check that MongoDB is running:
+  ```
+  sudo systemctl status mongod
+  ```
+
 - [ ] Check that PM2 is running your application:
   ```
   pm2 status
@@ -98,6 +104,18 @@ This checklist will guide you through the process of deploying the Boxwise appli
   sudo apt-get install fail2ban
   sudo systemctl enable fail2ban
   sudo systemctl start fail2ban
+  ```
+
+- [ ] Secure MongoDB (if accessible from outside):
+  ```
+  # Edit MongoDB configuration
+  sudo nano /etc/mongod.conf
+  
+  # Change bindIp to only allow local connections
+  # bindIp: 127.0.0.1
+  
+  # Restart MongoDB
+  sudo systemctl restart mongod
   ```
 
 - [ ] Regularly update your system:
@@ -150,6 +168,11 @@ This checklist will guide you through the process of deploying the Boxwise appli
   sudo tail -f /var/log/nginx/error.log
   ```
 
+- View MongoDB logs:
+  ```
+  sudo tail -f /var/log/mongodb/mongod.log
+  ```
+
 ## Troubleshooting
 
 ### Application Not Starting
@@ -167,6 +190,23 @@ This checklist will guide you through the process of deploying the Boxwise appli
 3. Restart the application:
    ```
    pm2 restart boxwise
+   ```
+
+### MongoDB Issues
+
+1. Check if MongoDB is running:
+   ```
+   sudo systemctl status mongod
+   ```
+
+2. Start MongoDB if it's not running:
+   ```
+   sudo systemctl start mongod
+   ```
+
+3. Check MongoDB logs for errors:
+   ```
+   sudo tail -f /var/log/mongodb/mongod.log
    ```
 
 ### SSL Certificate Issues
