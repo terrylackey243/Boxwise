@@ -146,34 +146,14 @@ if [ "$INSTALL_DEPS" = true ]; then
     sudo rm -f /etc/apt/sources.list.d/mongodb*.list
     sudo rm -f /usr/share/keyrings/mongodb*.gpg
     
-    # Check Ubuntu version
-    UBUNTU_VERSION=$(lsb_release -cs)
+    # Import MongoDB public GPG key
+    curl -fsSL https://pgp.mongodb.com/server-7.0.asc | \
+        sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
+        --dearmor
     
-    # For Ubuntu 24.04 (noble) or newer, use MongoDB 7.0 packages for Ubuntu 22.04 (jammy)
-    if [[ "$UBUNTU_VERSION" == "noble" || "$UBUNTU_VERSION" > "noble" ]]; then
-        echo "Detected Ubuntu $UBUNTU_VERSION. Using MongoDB 7.0 packages for Ubuntu 22.04 (jammy)..."
-        
-        # Import MongoDB public GPG key
-        curl -fsSL https://pgp.mongodb.com/server-7.0.asc | \
-            sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
-            --dearmor
-        
-        # Create list file for MongoDB using jammy (22.04) packages
-        echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
-            sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-    else
-        # For older Ubuntu versions, use the appropriate repository
-        echo "Using MongoDB 7.0 packages for Ubuntu $UBUNTU_VERSION..."
-        
-        # Import MongoDB public GPG key
-        curl -fsSL https://pgp.mongodb.com/server-7.0.asc | \
-            sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
-            --dearmor
-        
-        # Create list file for MongoDB
-        echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $UBUNTU_VERSION/mongodb-org/7.0 multiverse" | \
-            sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-    fi
+    # Create list file for MongoDB
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+        sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
     
     # Update package lists again
     sudo apt-get update

@@ -4,7 +4,7 @@ This checklist will guide you through the process of deploying the Boxwise appli
 
 ## Prerequisites
 
-- [ ] A server running Ubuntu 20.04 or later (script supports up to Ubuntu 24.04)
+- [ ] A server running Ubuntu 22.04 LTS (jammy)
 - [ ] A domain name pointing to your server's IP address
 - [ ] SSH access to your server
 - [ ] Root or sudo privileges on your server
