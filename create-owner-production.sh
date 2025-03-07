@@ -101,10 +101,30 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
+# Check if package.json exists and install dependencies
+if [ -f "package.json" ]; then
+    echo -e "${BLUE}Installing script dependencies...${NC}"
+    npm install
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install dependencies. Please check npm error messages above.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Dependencies installed successfully${NC}"
+else
+    echo -e "${YELLOW}Warning: package.json not found in scripts directory. Attempting to install required dependencies manually...${NC}"
+    npm install mongoose bcryptjs jsonwebtoken
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install dependencies. Please check npm error messages above.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Dependencies installed successfully${NC}"
+fi
+
 # Set the MongoDB URI environment variable
 export MONGO_URI="mongodb://localhost:27017/boxwise"
 
 # Run the script
+echo -e "${BLUE}Running create-owner.js script...${NC}"
 node create-owner.js "$EMAIL" "$PASSWORD" "$NAME"
 
 # Check if the script was successful
