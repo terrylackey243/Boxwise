@@ -70,39 +70,186 @@ if command -v mongod &> /dev/null; then
   MONGO_VERSION=$(mongod --version | head -n 1 | awk '{print $3}')
   echo "MongoDB version: $MONGO_VERSION"
 else
-  echo "Adding MongoDB repository..."
+  # Get Ubuntu version
+  UBUNTU_VERSION=$(lsb_release -cs)
+  echo "Detected Ubuntu version: $UBUNTU_VERSION"
+  
+  # For newer Ubuntu versions that might not have a MongoDB repository yet,
+  # use the repository for Ubuntu 22.04 (jammy)
+  if [ "$UBUNTU_VERSION" = "oracular" ] || [ "$UBUNTU_VERSION" = "noble" ]; then
+    echo "Using MongoDB repository for Ubuntu 22.04 (jammy) for compatibility with $UBUNTU_VERSION..."
+    REPO_UBUNTU_VERSION="jammy"
+  else
+    REPO_UBUNTU_VERSION=$UBUNTU_VERSION
+  fi
+  
+  echo "Adding MongoDB repository for Ubuntu $REPO_UBUNTU_VERSION..."
+  
+  # Method 1: Try official MongoDB repository
+  echo "Method 1: Using official MongoDB repository..."
   # Import MongoDB public GPG key
   wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add -
   
   # Add MongoDB repository
-  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $REPO_UBUNTU_VERSION/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list
   
   # Update package lists
-  apt update
+  apt update || true
   
   # Install MongoDB packages
   echo "Installing MongoDB packages..."
   apt install -y mongodb-org
   
+  # If Method 1 fails, try Method 2
   if [ $? -ne 0 ]; then
-    echo "Error: Failed to install MongoDB packages. Trying alternative method..."
+    echo "Method 1 failed. Trying Method 2: MongoDB 5.0 repository..."
     
-    # Alternative installation method
-    apt install -y gnupg
-    wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-    apt update
+    # Remove previous repository file
+    rm -f /etc/apt/sources.list.d/mongodb-org-6.0.list
+    
+    # Try MongoDB 5.0 repository
+    wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add -
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $REPO_UBUNTU_VERSION/mongodb-org/5.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+    apt update || true
     apt install -y mongodb-org
     
+    # If Method 2 fails, try Method 3
     if [ $? -ne 0 ]; then
-      echo "Error: Failed to install MongoDB. Trying to install MongoDB Community Edition..."
+      echo "Method 2 failed. Trying Method 3: Ubuntu's mongodb package..."
+      
+      # Remove previous repository file
+      rm -f /etc/apt/sources.list.d/mongodb-org-5.0.list
+      
+      # Try Ubuntu's mongodb package
+      echo "Installing MongoDB from Ubuntu repository..."
+      apt update
       apt install -y mongodb
       
+      # If Method 3 fails, try Method 4
       if [ $? -ne 0 ]; then
-        echo "Error: All MongoDB installation methods failed. Please install MongoDB manually."
-        exit 1
+        echo "Method 3 failed. Trying Method 4: Manual MongoDB installation..."
+        
+        # Create MongoDB service user if it doesn't exist
+        if ! id -u mongodb &>/dev/null; then
+          echo "Creating mongodb user..."
+          useradd -r -d /var/lib/mongodb -s /usr/sbin/nologin mongodb
+        fi
+        
+        # Create necessary directories
+        mkdir -p /var/lib/mongodb /var/log/mongodb
+        chown -R mongodb:mongodb /var/lib/mongodb /var/log/mongodb
+        chmod 755 /var/lib/mongodb /var/log/mongodb
+        
+        # Download and install MongoDB binaries
+        echo "Downloading MongoDB Community Server..."
+        cd /tmp
+        wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2204-6.0.12.tgz
+        
+        echo "Extracting MongoDB binaries..."
+        tar -zxvf mongodb-linux-x86_64-ubuntu2204-6.0.12.tgz
+        
+        echo "Installing MongoDB binaries..."
+        cp mongodb-linux-x86_64-ubuntu2204-6.0.12/bin/* /usr/local/bin/
+        
+        # Create systemd service file
+        echo "Creating systemd service file..."
+        cat > /etc/systemd/system/mongod.service << EOL
+[Unit]
+Description=MongoDB Database Server
+Documentation=https://docs.mongodb.org/manual
+After=network.target
+
+[Service]
+User=mongodb
+Group=mongodb
+ExecStart=/usr/local/bin/mongod --dbpath /var/lib/mongodb --logpath /var/log/mongodb/mongod.log --bind_ip 127.0.0.1 --fork
+PIDFile=/var/run/mongodb/mongod.pid
+Type=forking
+# file size
+LimitFSIZE=infinity
+# cpu time
+LimitCPU=infinity
+# virtual memory size
+LimitAS=infinity
+# open files
+LimitNOFILE=64000
+# processes/threads
+LimitNPROC=64000
+# locked memory
+LimitMEMLOCK=infinity
+# total threads (user+kernel)
+TasksMax=infinity
+TasksAccounting=false
+
+[Install]
+WantedBy=multi-user.target
+EOL
+        
+        # Create MongoDB configuration file
+        echo "Creating MongoDB configuration file..."
+        mkdir -p /etc/mongodb
+        cat > /etc/mongodb/mongod.conf << EOL
+# mongod.conf
+
+# for documentation of all options, see:
+#   http://docs.mongodb.org/manual/reference/configuration-options/
+
+# Where and how to store data.
+storage:
+  dbPath: /var/lib/mongodb
+  journal:
+    enabled: true
+
+# where to write logging data.
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
+
+# network interfaces
+net:
+  port: 27017
+  bindIp: 127.0.0.1
+EOL
+        
+        # If all methods fail, exit with error
+        if [ $? -ne 0 ]; then
+          echo "Error: All MongoDB installation methods failed. Please install MongoDB manually."
+          exit 1
+        fi
       fi
     fi
+  fi
+fi
+
+# Ensure MongoDB data directory exists with proper permissions
+echo "Setting up MongoDB data directory..."
+mkdir -p /var/lib/mongodb
+chown -R mongodb:mongodb /var/lib/mongodb
+chmod 755 /var/lib/mongodb
+
+# Configure MongoDB to start on boot and start the service
+echo "Starting MongoDB service..."
+systemctl daemon-reload
+systemctl enable mongod
+systemctl start mongod
+
+# Verify MongoDB is running
+echo "Verifying MongoDB installation..."
+sleep 5 # Give MongoDB time to start
+if systemctl is-active --quiet mongod; then
+  echo "MongoDB service is running."
+else
+  echo "Warning: MongoDB service is not running. Attempting to start..."
+  systemctl start mongod
+  sleep 5
+  
+  if systemctl is-active --quiet mongod; then
+    echo "MongoDB service is now running."
+  else
+    echo "Error: Failed to start MongoDB service. Please check MongoDB installation."
+    echo "You can try to start it manually with: sudo systemctl start mongod"
+    echo "And check the status with: sudo systemctl status mongod"
   fi
 fi
 
