@@ -466,6 +466,32 @@ Options:
 - Offers to pop stashed changes after pulling
 - Shows the latest commits to provide context about what was pulled
 
+### Fix Nginx API Path Script (`fix-nginx-api.sh`)
+
+This script fixes the double API path issue in Nginx configuration:
+
+1. Locates Nginx configuration files with API settings
+2. Identifies and fixes the double API path issue
+3. Tests the updated configuration
+4. Verifies API connectivity
+
+#### Usage
+
+```bash
+./fix-nginx-api.sh
+```
+
+#### What it does
+
+- Searches for Nginx configuration files with API settings
+- Identifies configuration files with the double API path issue (/api/api)
+- Creates backups of the original configuration files
+- Fixes the proxy_pass directive to remove the double API path
+- Tests the updated configuration to ensure it's valid
+- Reloads Nginx to apply the changes
+- Tests API connectivity to verify the fix worked
+- Provides detailed logs and additional troubleshooting steps if needed
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -530,6 +556,9 @@ For a full production deployment, it's recommended to:
 
 # To pull the latest changes from GitHub
 ./pull-from-github.sh
+
+# To fix Nginx API path issues
+./fix-nginx-api.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -562,7 +591,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -588,6 +617,7 @@ put fix-production.sh
 put start-backend.sh
 put fix-pm2-env.sh
 put pull-from-github.sh
+put fix-nginx-api.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -600,14 +630,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh
 ```
 
 ## Troubleshooting
