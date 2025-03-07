@@ -84,6 +84,8 @@ FILES=(
     "fix-persistent-issues.sh"
     "fix-critical-issues.sh"
     "fix-manual.sh"
+    "digital-ocean-troubleshoot.sh"
+    "fix-webpack-error.sh"
     "PRODUCTION_SCRIPTS.md"
 )
 
@@ -99,7 +101,7 @@ done
 
 # Make scripts executable on the remote server
 echo "Making scripts executable on the remote server..."
-ssh "$SERVER" "chmod +x $PATH_ON_SERVER/start-production.sh $PATH_ON_SERVER/stop-production.sh $PATH_ON_SERVER/restart-production.sh $PATH_ON_SERVER/status-production.sh $PATH_ON_SERVER/check-servers.sh $PATH_ON_SERVER/check-ssl.sh $PATH_ON_SERVER/create-owner-production.sh $PATH_ON_SERVER/get-db-url.sh $PATH_ON_SERVER/update-from-github.sh $PATH_ON_SERVER/check-user.sh $PATH_ON_SERVER/check-api.sh $PATH_ON_SERVER/fix-mongodb-connection.sh $PATH_ON_SERVER/boxwise-menu.sh $PATH_ON_SERVER/fix-production.sh $PATH_ON_SERVER/start-backend.sh $PATH_ON_SERVER/fix-pm2-env.sh $PATH_ON_SERVER/pull-from-github.sh $PATH_ON_SERVER/fix-nginx-api.sh $PATH_ON_SERVER/boxwise-doctor.sh $PATH_ON_SERVER/fix-persistent-issues.sh $PATH_ON_SERVER/fix-critical-issues.sh $PATH_ON_SERVER/fix-manual.sh"
+ssh "$SERVER" "chmod +x $PATH_ON_SERVER/start-production.sh $PATH_ON_SERVER/stop-production.sh $PATH_ON_SERVER/restart-production.sh $PATH_ON_SERVER/status-production.sh $PATH_ON_SERVER/check-servers.sh $PATH_ON_SERVER/check-ssl.sh $PATH_ON_SERVER/create-owner-production.sh $PATH_ON_SERVER/get-db-url.sh $PATH_ON_SERVER/update-from-github.sh $PATH_ON_SERVER/check-user.sh $PATH_ON_SERVER/check-api.sh $PATH_ON_SERVER/fix-mongodb-connection.sh $PATH_ON_SERVER/boxwise-menu.sh $PATH_ON_SERVER/fix-production.sh $PATH_ON_SERVER/start-backend.sh $PATH_ON_SERVER/fix-pm2-env.sh $PATH_ON_SERVER/pull-from-github.sh $PATH_ON_SERVER/fix-nginx-api.sh $PATH_ON_SERVER/boxwise-doctor.sh $PATH_ON_SERVER/fix-persistent-issues.sh $PATH_ON_SERVER/fix-critical-issues.sh $PATH_ON_SERVER/fix-manual.sh $PATH_ON_SERVER/digital-ocean-troubleshoot.sh $PATH_ON_SERVER/fix-webpack-error.sh"
 
 echo "=== Copy completed ==="
 echo ""

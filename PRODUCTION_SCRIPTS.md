@@ -634,6 +634,67 @@ This script provides a step-by-step interactive guide to manually fix persistent
   - Minimal Nginx configuration examples
   - API endpoint testing commands
 
+### DigitalOcean Troubleshoot Script (`digital-ocean-troubleshoot.sh`)
+
+This script provides commands to run in the DigitalOcean terminal to diagnose and fix issues:
+
+1. Provides a comprehensive set of commands to check system status
+2. Includes commands to check and fix MongoDB, PM2, and Nginx
+3. Tests API connectivity and provides troubleshooting steps
+4. Offers solutions for common issues specific to DigitalOcean environments
+
+#### Usage
+
+```bash
+./digital-ocean-troubleshoot.sh
+```
+
+#### What it does
+
+- Provides commands to check system resources and running processes
+- Includes commands to check MongoDB status and test connections
+- Offers commands to check PM2 processes and environment variables
+- Provides commands to check Nginx configuration and logs
+- Includes commands to test API connectivity
+- Offers solutions for common issues:
+  - MongoDB not running
+  - PM2 environment variables not set
+  - Nginx API configuration incorrect
+  - Invalid options object error in webpack
+- Provides commands to restart all services
+- Includes commands to verify fixes
+
+### Fix Webpack Error Script (`fix-webpack-error.sh`)
+
+This script fixes the "Invalid options object" error related to allowedHosts in webpack:
+
+1. Finds webpack configuration files
+2. Identifies and fixes the problematic allowedHosts configuration
+3. Tests the fix and provides verification steps
+4. Offers manual intervention options if needed
+
+#### Usage
+
+```bash
+./fix-webpack-error.sh [options]
+```
+
+Options:
+- `-f, --force`: Force fix without prompting
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Searches for webpack configuration files in the client directory
+- Looks for webpack configuration files in node_modules
+- Checks for allowedHosts configuration in the files
+- Identifies problematic configurations (empty strings in allowedHosts array)
+- Creates backups of original files before making changes
+- Fixes the allowedHosts configuration by changing it to 'all'
+- Checks react-scripts version to determine the appropriate fix
+- Tests the fix and provides verification steps
+- Offers manual intervention options if the automatic fix doesn't work
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -713,6 +774,12 @@ For a full production deployment, it's recommended to:
 
 # To follow an interactive guide for manual troubleshooting
 ./fix-manual.sh
+
+# To get commands for troubleshooting in DigitalOcean
+./digital-ocean-troubleshoot.sh
+
+# To fix webpack "Invalid options object" error
+./fix-webpack-error.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -745,7 +812,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh digital-ocean-troubleshoot.sh fix-webpack-error.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -776,6 +843,8 @@ put boxwise-doctor.sh
 put fix-persistent-issues.sh
 put fix-critical-issues.sh
 put fix-manual.sh
+put digital-ocean-troubleshoot.sh
+put fix-webpack-error.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -788,14 +857,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh digital-ocean-troubleshoot.sh fix-webpack-error.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh fix-manual.sh digital-ocean-troubleshoot.sh fix-webpack-error.sh
 ```
 
 ## Troubleshooting
@@ -818,6 +887,7 @@ pm2 logs boxwise
 1. **MongoDB not starting**: You may need to create the data directory or fix permissions
 2. **Nginx configuration issues**: Check Nginx error logs at `/var/log/nginx/error.log`
 3. **Port conflicts**: Ensure ports 3000 and 5001 are not being used by other applications
+4. **Webpack "Invalid options object" error**: This is related to the allowedHosts configuration in webpack. Use the `fix-webpack-error.sh` script to fix it.
 
 ## Important Notes
 
