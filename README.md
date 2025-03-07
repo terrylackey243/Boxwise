@@ -85,11 +85,10 @@ Boxwise is a comprehensive inventory management system designed to help organiza
 
 ### Prerequisites
 
-- Server with MongoDB installed
-- Domain name configured to point to your server
-- UPC API key (optional - using free trial version for now)
-- SSL certificates (or ability to generate Let's Encrypt certificates)
-- Remote backup server (optional but recommended)
+- Server running Ubuntu 20.04 or later
+- Domain name pointing to your server's IP address
+- SSH access to your server with root or sudo privileges
+- Let's Encrypt will be used for SSL certificates (no need to obtain them separately)
 
 ### Deployment Steps
 
@@ -99,16 +98,26 @@ Boxwise is a comprehensive inventory management system designed to help organiza
    cd boxwise
    ```
 
-2. Run the deployment script:
+2. Make the deployment scripts executable:
    ```
-   # Without UPC API key (using free trial)
-   sudo ./deploy-production.sh
-   
-   # Or with UPC API key if you have one
-   sudo ./deploy-production.sh -u your_upc_api_key
+   chmod +x deploy.sh switch-env.sh backup.sh
    ```
 
-3. Follow the post-deployment steps in the PRODUCTION_CHECKLIST.md file.
+3. Run the deployment script with the appropriate options:
+   ```
+   ./deploy.sh -d yourdomain.com -e your@email.com -i -l -p -n -b
+   ```
+   
+   Options:
+   - `-d, --domain`: Your domain name (required)
+   - `-e, --email`: Your email for Let's Encrypt registration (required for SSL)
+   - `-i, --install-deps`: Install system dependencies
+   - `-l, --setup-letsencrypt`: Set up Let's Encrypt SSL certificates
+   - `-p, --setup-pm2`: Set up PM2 process manager
+   - `-n, --setup-nginx`: Set up Nginx configuration
+   - `-b, --backup-db`: Backup the MongoDB database
+
+4. Follow the post-deployment steps in the [Production Checklist](./PRODUCTION_CHECKLIST.md) file.
 
 ### Switching Between Environments
 
@@ -121,6 +130,11 @@ To switch between production and development environments, use the provided `swi
 # Switch to production environment
 ./switch-env.sh prod
 ```
+
+The script will automatically:
+- Update the environment configuration
+- Stop/start the appropriate services
+- Build the client application when switching to production
 
 ## Documentation
 
