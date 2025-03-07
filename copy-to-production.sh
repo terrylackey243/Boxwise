@@ -71,6 +71,7 @@ FILES=(
     "create-owner-production.sh"
     "get-db-url.sh"
     "update-from-github.sh"
+    "check-user.sh"
     "PRODUCTION_SCRIPTS.md"
 )
 
@@ -86,7 +87,7 @@ done
 
 # Make scripts executable on the remote server
 echo "Making scripts executable on the remote server..."
-ssh "$SERVER" "chmod +x $PATH_ON_SERVER/start-production.sh $PATH_ON_SERVER/stop-production.sh $PATH_ON_SERVER/restart-production.sh $PATH_ON_SERVER/status-production.sh $PATH_ON_SERVER/check-servers.sh $PATH_ON_SERVER/check-ssl.sh $PATH_ON_SERVER/create-owner-production.sh $PATH_ON_SERVER/get-db-url.sh $PATH_ON_SERVER/update-from-github.sh"
+ssh "$SERVER" "chmod +x $PATH_ON_SERVER/start-production.sh $PATH_ON_SERVER/stop-production.sh $PATH_ON_SERVER/restart-production.sh $PATH_ON_SERVER/status-production.sh $PATH_ON_SERVER/check-servers.sh $PATH_ON_SERVER/check-ssl.sh $PATH_ON_SERVER/create-owner-production.sh $PATH_ON_SERVER/get-db-url.sh $PATH_ON_SERVER/update-from-github.sh $PATH_ON_SERVER/check-user.sh"
 
 echo "=== Copy completed ==="
 echo ""

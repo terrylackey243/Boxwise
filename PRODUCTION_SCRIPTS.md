@@ -241,6 +241,36 @@ Options:
 - Restarts the application (can be skipped with --no-restart)
 - Restores any stashed changes
 
+### Check User Script (`check-user.sh`)
+
+This script checks if a user exists in the MongoDB database and verifies its details:
+
+1. Connects to the MongoDB database
+2. Searches for a user with the specified email
+3. Displays detailed information about the user if found
+4. Provides troubleshooting steps for login issues
+
+#### Usage
+
+```bash
+./check-user.sh [options]
+```
+
+Options:
+- `-e, --email EMAIL`: Email of the user to check (default: terry@jknelotions.com)
+- `-u, --uri URI`: MongoDB URI (default: mongodb://localhost:27017/boxwise)
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Connects to the specified MongoDB database
+- Searches for a user with the given email address
+- If the user is found, displays detailed information:
+  - Name, role, password hash length, creation date
+  - Group association and membership details
+- If the user is not found, lists all existing users in the database
+- Provides troubleshooting steps for login issues
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -281,6 +311,9 @@ For a full production deployment, it's recommended to:
 
 # To update the application from GitHub
 ./update-from-github.sh
+
+# To check if a user exists in the database
+./check-user.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -313,7 +346,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -331,6 +364,7 @@ put check-ssl.sh
 put create-owner-production.sh
 put get-db-url.sh
 put update-from-github.sh
+put check-user.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -343,14 +377,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh
 ```
 
 ## Troubleshooting
