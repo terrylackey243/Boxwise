@@ -129,6 +129,35 @@ This script provides a simple, color-coded status check of all Boxwise services:
 - Gives an overall summary of the system status
 - Ideal for quick health checks of your production environment
 
+### Check SSL Script (`check-ssl.sh`)
+
+This script provides a comprehensive check of SSL certificate configuration:
+
+1. Checks Nginx SSL configuration
+2. Verifies SSL certificate existence and validity
+3. Checks certificate expiration date
+4. Verifies Let's Encrypt certificate status
+5. Checks DNS resolution and server IP matching
+6. Provides recommendations for fixing SSL issues
+
+#### Usage
+
+```bash
+./check-ssl.sh
+```
+
+#### What it does
+
+- Detects if SSL is properly configured in Nginx
+- Checks certificate files and their expiration dates
+- Verifies if Let's Encrypt certificates are installed and valid
+- Checks if the domain is properly pointing to the server's IP
+- Provides color-coded status for each check:
+  - GREEN: Everything is properly configured
+  - YELLOW: Warnings that need attention
+  - RED: Critical issues that need to be fixed
+- Gives specific recommendations for resolving SSL issues
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -157,6 +186,9 @@ For a full production deployment, it's recommended to:
 
 # To check the status of all services (color-coded summary)
 ./check-servers.sh
+
+# To check SSL certificate status and configuration
+./check-ssl.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -189,7 +221,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -203,6 +235,7 @@ put stop-production.sh
 put restart-production.sh
 put status-production.sh
 put check-servers.sh
+put check-ssl.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -215,14 +248,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh
 ```
 
 ## Troubleshooting
