@@ -354,6 +354,34 @@ This script provides a menu-driven interface for running all Boxwise production 
 - Returns to the menu after script execution
 - Includes options to refresh the menu or quit
 
+### Fix Production Script (`fix-production.sh`)
+
+This script provides a comprehensive solution for diagnosing and fixing common production issues:
+
+1. Checks and fixes MongoDB connection issues
+2. Verifies and corrects Nginx configuration
+3. Ensures PM2 is properly set up
+4. Tests API connectivity
+5. Provides a detailed summary and next steps
+
+#### Usage
+
+```bash
+./fix-production.sh
+```
+
+#### What it does
+
+- Checks if MongoDB, Nginx, and PM2 are installed and running
+- Offers to install missing components if needed
+- Fixes environment variables in server/.env and ecosystem.config.js
+- Ensures MONGO_URI, JWT_SECRET, NODE_ENV, and PORT are properly set
+- Detects and fixes double API path issues in Nginx configuration
+- Restarts the application to apply changes
+- Tests API connectivity to verify the fix worked
+- Provides a detailed summary of the system status
+- Suggests next steps for troubleshooting if issues persist
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -406,6 +434,9 @@ For a full production deployment, it's recommended to:
 
 # To access the interactive menu of all scripts
 ./boxwise-menu.sh
+
+# To run the comprehensive production fix script
+./fix-production.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -438,7 +469,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -460,6 +491,7 @@ put check-user.sh
 put check-api.sh
 put fix-mongodb-connection.sh
 put boxwise-menu.sh
+put fix-production.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -472,14 +504,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh
 ```
 
 ## Troubleshooting
