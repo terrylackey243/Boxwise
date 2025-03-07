@@ -112,7 +112,9 @@ function display_menu {
     OTHER_SCRIPTS=()
     for script in "${SCRIPTS[@]}"; do
         if [[ ! " ${SERVICE_SCRIPTS[@]} ${STATUS_SCRIPTS[@]} ${MAINTENANCE_SCRIPTS[@]} ${DEPLOYMENT_SCRIPTS[@]} " =~ " $script " ]]; then
-            OTHER_SCRIPTS+=("$script")
+            if [ "$script" != "boxwise-menu.sh" ]; then
+                OTHER_SCRIPTS+=("$script")
+            fi
         fi
     done
     
@@ -120,19 +122,14 @@ function display_menu {
         echo -e "${YELLOW}${BOLD}Other Scripts:${NC}"
         for i in "${!OTHER_SCRIPTS[@]}"; do
             SCRIPT="${OTHER_SCRIPTS[$i]}"
-            if [ "$SCRIPT" != "boxwise-menu.sh" ]; then
-                INDEX=$((i+1+${#SERVICE_SCRIPTS[@]}+${#STATUS_SCRIPTS[@]}+${#MAINTENANCE_SCRIPTS[@]}+${#DEPLOYMENT_SCRIPTS[@]}))
-                echo -e "${GREEN}$INDEX.${NC} ${BOLD}$SCRIPT${NC} - ${DESCRIPTIONS[$SCRIPT]:-No description available}"
-            fi
+            INDEX=$((i+1+${#SERVICE_SCRIPTS[@]}+${#STATUS_SCRIPTS[@]}+${#MAINTENANCE_SCRIPTS[@]}+${#DEPLOYMENT_SCRIPTS[@]}))
+            echo -e "${GREEN}$INDEX.${NC} ${BOLD}$SCRIPT${NC} - ${DESCRIPTIONS[$SCRIPT]:-No description available}"
         done
         echo ""
     fi
     
     # Calculate total number of scripts (excluding this menu script)
     TOTAL_SCRIPTS=$((${#SERVICE_SCRIPTS[@]}+${#STATUS_SCRIPTS[@]}+${#MAINTENANCE_SCRIPTS[@]}+${#DEPLOYMENT_SCRIPTS[@]}+${#OTHER_SCRIPTS[@]}))
-    if [[ " ${OTHER_SCRIPTS[@]} " =~ " boxwise-menu.sh " ]]; then
-        TOTAL_SCRIPTS=$((TOTAL_SCRIPTS-1))
-    fi
     
     echo -e "${BLUE}${BOLD}Options:${NC}"
     echo -e "${GREEN}1-$TOTAL_SCRIPTS.${NC} Run the corresponding script"
@@ -167,13 +164,13 @@ while true; do
     # Get all scripts (excluding this menu script)
     ALL_SCRIPTS=()
     for script in "${SERVICE_SCRIPTS[@]}" "${STATUS_SCRIPTS[@]}" "${MAINTENANCE_SCRIPTS[@]}" "${DEPLOYMENT_SCRIPTS[@]}"; do
-        if [ -x "$SCRIPT_DIR/$script" ] && [ "$script" != "boxwise-menu.sh" ]; then
+        if [ -x "$SCRIPT_DIR/$script" ]; then
             ALL_SCRIPTS+=("$script")
         fi
     done
     
     for script in "${OTHER_SCRIPTS[@]}"; do
-        if [ "$script" != "boxwise-menu.sh" ] && [ -x "$SCRIPT_DIR/$script" ]; then
+        if [ -x "$SCRIPT_DIR/$script" ]; then
             ALL_SCRIPTS+=("$script")
         fi
     done

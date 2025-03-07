@@ -410,6 +410,62 @@ This script focuses specifically on getting the backend server running properly:
 - Displays backend server logs if there are issues
 - Provides a detailed summary and specific troubleshooting steps
 
+### Fix PM2 Environment Variables Script (`fix-pm2-env.sh`)
+
+This script specifically addresses issues with environment variables in PM2:
+
+1. Ensures environment variables are correctly passed to the application
+2. Creates a new ecosystem.config.js file with explicit environment variables
+3. Restarts the application with the updated configuration
+4. Tests the environment variables and API connectivity
+
+#### Usage
+
+```bash
+./fix-pm2-env.sh
+```
+
+#### What it does
+
+- Checks if PM2 is installed and the application is running
+- Reads environment variables from server/.env
+- Sets environment variables directly in PM2 configuration
+- Creates a new ecosystem.config.js file with explicit environment variables
+- Restarts the application with the updated environment variables
+- Runs a test script to verify environment variables are correctly passed
+- Tests API connectivity to verify the fix worked
+- Provides detailed logs and additional troubleshooting steps if needed
+
+### Pull from GitHub Script (`pull-from-github.sh`)
+
+This script pulls the latest changes from GitHub:
+
+1. Switches to the specified branch
+2. Handles uncommitted changes by offering to stash them
+3. Pulls the latest changes from the remote repository
+4. Shows the latest commits
+
+#### Usage
+
+```bash
+./pull-from-github.sh [options]
+```
+
+Options:
+- `-b, --branch BRANCH`: Branch to pull from (default: main)
+- `-r, --remote REMOTE`: Remote to pull from (default: origin)
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Checks if the current directory is a git repository
+- Verifies that the specified remote exists
+- Checks if the specified branch exists and offers to create it if it doesn't
+- Handles uncommitted changes by offering to stash them
+- Pulls the latest changes from the specified remote and branch
+- Offers to pop stashed changes after pulling
+- Shows the latest commits to provide context about what was pulled
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -468,6 +524,12 @@ For a full production deployment, it's recommended to:
 
 # To focus specifically on starting the backend server
 ./start-backend.sh
+
+# To fix PM2 environment variable issues
+./fix-pm2-env.sh
+
+# To pull the latest changes from GitHub
+./pull-from-github.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -500,7 +562,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -524,6 +586,8 @@ put fix-mongodb-connection.sh
 put boxwise-menu.sh
 put fix-production.sh
 put start-backend.sh
+put fix-pm2-env.sh
+put pull-from-github.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -536,14 +600,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh
 ```
 
 ## Troubleshooting
