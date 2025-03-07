@@ -555,6 +555,42 @@ Options:
 - Runs a final check to verify all persistent issues have been resolved
 - Provides detailed troubleshooting steps for any remaining issues
 
+### Fix Critical Issues Script (`fix-critical-issues.sh`)
+
+This script aggressively fixes critical issues that other scripts couldn't resolve:
+
+1. Takes a more direct approach to fixing stubborn issues
+2. Completely recreates configurations rather than patching them
+3. Provides extensive debugging information
+4. Offers manual intervention options when needed
+
+#### Usage
+
+```bash
+./fix-critical-issues.sh [options]
+```
+
+Options:
+- `-f, --force`: Force aggressive fixes without prompting
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Verifies and fixes backend server issues:
+  - Checks if the backend server is running and listening on the correct port
+  - Restarts or recreates the PM2 process if needed
+  - Tests backend API connectivity directly
+- Completely recreates PM2 environment with explicit environment variables:
+  - Creates a new ecosystem.config.js file with all required variables
+  - Deletes and recreates the PM2 process to ensure clean configuration
+  - Tests environment variables to verify they're correctly passed
+- Aggressively fixes Nginx configuration:
+  - Completely replaces API location blocks rather than patching them
+  - Tests connection between Nginx and backend server
+  - Provides detailed error logs and debugging information
+- Tests all endpoints to verify fixes worked
+- Provides comprehensive troubleshooting steps for any remaining issues
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -628,6 +664,9 @@ For a full production deployment, it's recommended to:
 
 # To fix persistent issues that boxwise-doctor.sh identifies but doesn't resolve
 ./fix-persistent-issues.sh
+
+# To aggressively fix critical issues when other scripts don't work
+./fix-critical-issues.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -660,7 +699,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -689,6 +728,7 @@ put pull-from-github.sh
 put fix-nginx-api.sh
 put boxwise-doctor.sh
 put fix-persistent-issues.sh
+put fix-critical-issues.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -701,14 +741,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh fix-mongodb-connection.sh boxwise-menu.sh fix-production.sh start-backend.sh fix-pm2-env.sh pull-from-github.sh fix-nginx-api.sh boxwise-doctor.sh fix-persistent-issues.sh fix-critical-issues.sh
 ```
 
 ## Troubleshooting
