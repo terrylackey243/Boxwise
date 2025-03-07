@@ -403,4 +403,3 @@ echo -e "   - ./check-ssl.sh"
 echo ""
 
 echo -e "${GREEN}${BOLD}Fix script completed!${NC}"
-ffffff
