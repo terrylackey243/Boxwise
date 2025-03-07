@@ -66,6 +66,17 @@ if command -v nginx &> /dev/null; then
         else
             echo "Nginx is already running"
         fi
+        
+        # Find the domain name from Nginx configuration
+        DOMAIN=""
+        for conf in /etc/nginx/sites-enabled/*; do
+            if grep -q "boxwise" "$conf" 2>/dev/null; then
+                DOMAIN=$(grep -E "^\s*server_name" "$conf" | head -n 1 | sed -E 's/^\s*server_name\s+([^;]+);.*/\1/' | awk '{print $1}')
+                break
+            fi
+        done
+        
+        echo "Frontend is being served by Nginx for domain: ${DOMAIN:-unknown}"
     else
         echo "Warning: No Nginx configuration found for Boxwise"
         echo "You may need to run the deployment script with the -n option to set up Nginx"
@@ -162,7 +173,23 @@ echo "Backend API: http://localhost:5001/api"
 if [ -f "$SCRIPT_DIR/client-serve.pid" ]; then
     echo "Frontend: http://localhost:3000"
 else
-    echo "Frontend: Check your Nginx configuration for the URL"
+    # Find the domain name from Nginx configuration if not already found
+    if [ -z "$DOMAIN" ]; then
+        for conf in /etc/nginx/sites-enabled/*; do
+            if grep -q "boxwise" "$conf" 2>/dev/null; then
+                DOMAIN=$(grep -E "^\s*server_name" "$conf" | head -n 1 | sed -E 's/^\s*server_name\s+([^;]+);.*/\1/' | awk '{print $1}')
+                break
+            fi
+        done
+    fi
+    
+    if [ -n "$DOMAIN" ]; then
+        echo "Frontend: https://$DOMAIN (or http://$DOMAIN if SSL is not configured)"
+    else
+        echo "Frontend: Check your Nginx configuration for the URL"
+        echo "Note: In production, the frontend is served by Nginx as static files,"
+        echo "      not by a separate development server."
+    fi
 fi
 
 echo ""

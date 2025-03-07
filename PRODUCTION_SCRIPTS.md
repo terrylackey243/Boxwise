@@ -80,6 +80,31 @@ This script restarts all services by stopping them and then starting them again:
 - Waits for processes to terminate
 - Calls the start-production.sh script to start all services again
 
+### Status Production Script (`status-production.sh`)
+
+This script checks the status of all Boxwise services in production mode:
+
+1. Checks MongoDB status
+2. Checks Nginx status and configuration
+3. Checks frontend server status
+4. Checks backend server status
+5. Checks client build status
+
+#### Usage
+
+```bash
+./status-production.sh
+```
+
+#### What it does
+
+- Displays the status of MongoDB
+- Checks if Nginx is running and properly configured for Boxwise
+- Shows domain and SSL information if available
+- Checks if the frontend is being served by Nginx or a separate server
+- Displays PM2 status for the backend server
+- Provides information about the client build
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -102,6 +127,9 @@ For a full production deployment, it's recommended to:
 
 # To restart the application
 ./restart-production.sh
+
+# To check the status of all services
+./status-production.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -134,7 +162,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -146,6 +174,7 @@ cd /path/to/boxwise
 put start-production.sh
 put stop-production.sh
 put restart-production.sh
+put status-production.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -158,14 +187,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh
 ```
 
 ## Troubleshooting
