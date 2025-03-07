@@ -68,6 +68,7 @@ FILES=(
     "status-production.sh"
     "check-servers.sh"
     "check-ssl.sh"
+    "create-owner-production.sh"
     "PRODUCTION_SCRIPTS.md"
 )
 
@@ -83,7 +84,7 @@ done
 
 # Make scripts executable on the remote server
 echo "Making scripts executable on the remote server..."
-ssh "$SERVER" "chmod +x $PATH_ON_SERVER/start-production.sh $PATH_ON_SERVER/stop-production.sh $PATH_ON_SERVER/restart-production.sh $PATH_ON_SERVER/status-production.sh $PATH_ON_SERVER/check-servers.sh $PATH_ON_SERVER/check-ssl.sh"
+ssh "$SERVER" "chmod +x $PATH_ON_SERVER/start-production.sh $PATH_ON_SERVER/stop-production.sh $PATH_ON_SERVER/restart-production.sh $PATH_ON_SERVER/status-production.sh $PATH_ON_SERVER/check-servers.sh $PATH_ON_SERVER/check-ssl.sh $PATH_ON_SERVER/create-owner-production.sh"
 
 echo "=== Copy completed ==="
 echo ""

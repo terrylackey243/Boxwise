@@ -158,6 +158,34 @@ This script provides a comprehensive check of SSL certificate configuration:
   - RED: Critical issues that need to be fixed
 - Gives specific recommendations for resolving SSL issues
 
+### Create Owner Script (`create-owner-production.sh`)
+
+This script creates an owner user in the Boxwise application on the production server:
+
+1. Sets up the production environment
+2. Ensures MongoDB is running
+3. Creates an owner user with the specified email, password, and name
+
+#### Usage
+
+```bash
+./create-owner-production.sh [options]
+```
+
+Options:
+- `-e, --email EMAIL`: Email for the owner user (default: terry@jknelotions.com)
+- `-p, --password PASSWORD`: Password for the owner user
+- `-n, --name NAME`: Name for the owner user (default: Terry)
+- `-h, --help`: Show help message
+
+#### What it does
+
+- Sets up the production environment
+- Checks if MongoDB is running and starts it if needed
+- Creates an owner user with admin privileges
+- Provides color-coded output for easy status identification
+- Confirms successful user creation with login details
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -189,6 +217,9 @@ For a full production deployment, it's recommended to:
 
 # To check SSL certificate status and configuration
 ./check-ssl.sh
+
+# To create an owner user in production
+./create-owner-production.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -221,7 +252,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -236,6 +267,7 @@ put restart-production.sh
 put status-production.sh
 put check-servers.sh
 put check-ssl.sh
+put create-owner-production.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -248,14 +280,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh
 ```
 
 ## Troubleshooting
