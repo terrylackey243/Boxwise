@@ -271,6 +271,32 @@ Options:
 - If the user is not found, lists all existing users in the database
 - Provides troubleshooting steps for login issues
 
+### Check API Script (`check-api.sh`)
+
+This script checks the API configuration and connectivity:
+
+1. Checks Nginx configuration for API endpoints
+2. Verifies backend server status
+3. Tests API endpoints directly
+4. Checks environment variables that might affect the API
+5. Provides recommendations for fixing API issues
+
+#### Usage
+
+```bash
+./check-api.sh
+```
+
+#### What it does
+
+- Checks if Nginx is running and properly configured for API endpoints
+- Looks for potential issues in the Nginx configuration, such as double API paths
+- Verifies if the backend server is running and checks for errors in the logs
+- Tests API endpoints directly to confirm they're accessible
+- Checks environment variables that might affect the API configuration
+- Provides detailed recommendations for fixing common API issues
+- Especially useful for diagnosing 502 Bad Gateway errors and API connectivity problems
+
 ## Production Deployment
 
 For a full production deployment, it's recommended to:
@@ -314,6 +340,9 @@ For a full production deployment, it's recommended to:
 
 # To check if a user exists in the database
 ./check-user.sh
+
+# To check API configuration and connectivity
+./check-api.sh
 ```
 
 ## Copying Scripts to Production Server
@@ -346,7 +375,7 @@ If you prefer to copy the files manually, here are some alternative methods:
 
 ```bash
 # From your local machine
-scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
+scp start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh PRODUCTION_SCRIPTS.md user@your-production-server:/path/to/boxwise/
 ```
 
 #### Using SFTP
@@ -365,6 +394,7 @@ put create-owner-production.sh
 put get-db-url.sh
 put update-from-github.sh
 put check-user.sh
+put check-api.sh
 put PRODUCTION_SCRIPTS.md
 exit
 ```
@@ -377,14 +407,14 @@ If your production server has access to your Git repository:
 # On your production server
 cd /path/to/boxwise
 git pull
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh
 ```
 
 After copying the scripts manually, make sure they are executable:
 
 ```bash
 # On your production server
-chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh
+chmod +x start-production.sh stop-production.sh restart-production.sh status-production.sh check-servers.sh check-ssl.sh create-owner-production.sh get-db-url.sh update-from-github.sh check-user.sh check-api.sh
 ```
 
 ## Troubleshooting
