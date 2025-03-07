@@ -123,19 +123,33 @@ if [ "$INSTALL_DEPS" = true ]; then
     sudo apt-get install -y nginx certbot python3-certbot-nginx curl gnupg
     
     # Install Node.js if not already installed
-    if ! command -v node &> /dev/null; then
+    if ! command -v node &> /dev/null || [[ $(node -v) != v20* ]]; then
         echo "Installing Node.js 20 LTS..."
+        
+        # Remove any existing Node.js repository configurations
+        sudo rm -f /etc/apt/sources.list.d/nodesource.list
+        sudo rm -f /etc/apt/keyrings/nodesource.gpg
+        
+        # Add Node.js 20.x repository
         curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
         sudo apt-get install -y nodejs
+        
+        echo "Node.js $(node -v) installed"
+    else
+        echo "Node.js $(node -v) is already installed"
     fi
     
     # Install MongoDB
     echo "Installing MongoDB..."
     
+    # Remove any existing MongoDB repository configurations
+    sudo rm -f /etc/apt/sources.list.d/mongodb*.list
+    sudo rm -f /usr/share/keyrings/mongodb*.gpg
+    
     # Check Ubuntu version
     UBUNTU_VERSION=$(lsb_release -cs)
     
-    # For Ubuntu 24.04 (noble) or newer, install MongoDB Community Edition using direct package download
+    # For Ubuntu 24.04 (noble) or newer, use MongoDB 7.0 packages for Ubuntu 22.04 (jammy)
     if [[ "$UBUNTU_VERSION" == "noble" || "$UBUNTU_VERSION" > "noble" ]]; then
         echo "Detected Ubuntu $UBUNTU_VERSION. Using MongoDB 7.0 packages for Ubuntu 22.04 (jammy)..."
         
