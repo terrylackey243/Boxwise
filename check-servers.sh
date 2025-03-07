@@ -93,11 +93,11 @@ echo ""
 echo -e "${BLUE}Checking Backend...${NC}"
 if command -v pm2 &> /dev/null && pm2 list | grep -q "boxwise"; then
     STATUS=$(pm2 list | grep "boxwise" | awk '{print $10}')
-    if [ "$STATUS" == "online" ]; then
+    if [ "$STATUS" == "online" ] || [ "$STATUS" == "cluster" ]; then
         CPU=$(pm2 list | grep "boxwise" | awk '{print $11}')
         MEM=$(pm2 list | grep "boxwise" | awk '{print $12}')
         RESTARTS=$(pm2 list | grep "boxwise" | awk '{print $9}')
-        print_status "Backend" "up" "(managed by PM2, CPU: $CPU, Memory: $MEM, Restarts: $RESTARTS)"
+        print_status "Backend" "up" "(managed by PM2, Status: $STATUS, CPU: $CPU, Memory: $MEM, Restarts: $RESTARTS)"
     else
         print_status "Backend" "warning" "(managed by PM2 but status is $STATUS)"
     fi
@@ -139,7 +139,7 @@ fi
 BACKEND_STATUS="down"
 if command -v pm2 &> /dev/null && pm2 list | grep -q "boxwise"; then
     STATUS=$(pm2 list | grep "boxwise" | awk '{print $10}')
-    if [ "$STATUS" == "online" ]; then
+    if [ "$STATUS" == "online" ] || [ "$STATUS" == "cluster" ]; then
         BACKEND_STATUS="up"
     else
         BACKEND_STATUS="warning"
@@ -155,10 +155,16 @@ BUILD_STATUS=$([ -d "$SCRIPT_DIR/client/build" ] && [ ! -z "$(ls -A "$SCRIPT_DIR
 # Print overall status
 if [ "$MONGODB_STATUS" == "up" ] && [ "$BACKEND_STATUS" == "up" ] && ([ "$NGINX_STATUS" == "up" ] || [ "$FRONTEND_STATUS" == "up" ]); then
     echo -e "${GREEN}All essential services are running!${NC}"
-elif [ "$BACKEND_STATUS" == "up" ] && ([ "$NGINX_STATUS" == "up" ] || [ "$FRONTEND_STATUS" == "up" ]); then
-    echo -e "${YELLOW}Core services are running, but some services may be down.${NC}"
+elif [ "$BACKEND_STATUS" == "warning" ] && ([ "$NGINX_STATUS" == "up" ] || [ "$FRONTEND_STATUS" == "up" ]); then
+    echo -e "${YELLOW}Core services are running, but the backend may have issues (status: $STATUS).${NC}"
+elif [ "$BACKEND_STATUS" == "down" ] && ([ "$NGINX_STATUS" == "up" ] || [ "$FRONTEND_STATUS" == "up" ]); then
+    echo -e "${RED}Critical service down: Backend is not running!${NC}"
+elif [ "$MONGODB_STATUS" == "down" ]; then
+    echo -e "${RED}Critical service down: MongoDB is not running!${NC}"
+elif [ "$NGINX_STATUS" == "down" ] && [ "$FRONTEND_STATUS" == "down" ]; then
+    echo -e "${RED}Critical service down: Frontend is not accessible!${NC}"
 else
-    echo -e "${RED}Critical services are down!${NC}"
+    echo -e "${RED}Multiple critical services are down!${NC}"
 fi
 
 echo ""
