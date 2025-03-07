@@ -376,6 +376,27 @@ sudo chmod +x /usr/local/bin/boxwise-backup.sh
 
 ## Maintenance and Management
 
+### Service Management Scripts
+
+Boxwise includes several scripts to help you manage the application services:
+
+1. **start-service.sh**: Starts all Boxwise services (MongoDB, application, and Nginx)
+   ```bash
+   sudo ./start-service.sh
+   ```
+
+2. **stop-service.sh**: Stops Boxwise services with options to stop MongoDB and Nginx
+   ```bash
+   sudo ./stop-service.sh
+   ```
+
+3. **restart-service.sh**: Restarts all Boxwise services and verifies they're running
+   ```bash
+   sudo ./restart-service.sh
+   ```
+
+These scripts include error checking and helpful diagnostics to ensure services are running correctly.
+
 ### Checking Service Status
 
 ```bash
@@ -387,6 +408,9 @@ sudo systemctl status boxwise
 
 # Check Nginx status
 sudo systemctl status nginx
+
+# Or use the start script to check all services
+sudo ./start-service.sh
 ```
 
 ### Viewing Logs
@@ -403,22 +427,51 @@ sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 ```
 
-### Restarting Services
+### Manual Service Control
+
+If you prefer to manage services manually:
 
 ```bash
-# Restart MongoDB
+# Start services
+sudo systemctl start mongod
+sudo systemctl start boxwise
+sudo systemctl start nginx
+
+# Stop services
+sudo systemctl stop boxwise
+sudo systemctl stop nginx
+sudo systemctl stop mongod
+
+# Restart services
 sudo systemctl restart mongod
-
-# Restart Boxwise application
 sudo systemctl restart boxwise
-
-# Restart Nginx
 sudo systemctl restart nginx
 ```
 
 ### Updating the Application
 
-To update the application to a new version:
+#### Option 1: Using the Update Script (Recommended)
+
+The easiest way to update the application is to use the provided `update-application.sh` script:
+
+```bash
+sudo ./update-application.sh
+```
+
+This script will:
+1. Create a backup of your current application state and database
+2. Pull the latest changes from the git repository
+3. Update dependencies for server, client, and scripts
+4. Rebuild the client application
+5. Check for new environment variables
+6. Restart all services
+7. Verify the update was successful
+
+If any issues occur during the update, the script will provide information on how to restore the previous version.
+
+#### Option 2: Manual Update
+
+If you prefer to update manually:
 
 1. Pull the latest changes:
    ```bash
@@ -438,6 +491,8 @@ To update the application to a new version:
 
 3. Restart the application:
    ```bash
+   sudo ./restart-service.sh
+   # Or manually:
    sudo systemctl restart boxwise
    ```
 
