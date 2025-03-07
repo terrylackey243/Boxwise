@@ -39,7 +39,6 @@ import Reports from './pages/reports/Reports';
 import QRGenerator from './pages/tools/QRGenerator';
 import LabelGenerator from './pages/tools/LabelGenerator';
 import ImportExport from './pages/tools/ImportExport';
-import Subscription from './pages/subscription/Subscription';
 import Achievements from './pages/achievements/Achievements';
 import Reminders from './pages/reminders/Reminders';
 import ReminderDetail from './pages/reminders/ReminderDetail';
@@ -51,7 +50,6 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import CreateUser from './pages/admin/CreateUser';
 import EditUser from './pages/admin/EditUser';
 import DatabaseAdmin from './pages/admin/DatabaseAdmin';
-import SystemAdmin from './pages/admin/SystemAdmin';
 
 // Create theme with light purple primary color
 const getTheme = (mode) => createTheme({
@@ -208,7 +206,6 @@ const App = () => {
               
               {/* User */}
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              <Route path="/subscription" element={<PrivateRoute><Subscription /></PrivateRoute>} />
               <Route path="/achievements" element={<PrivateRoute><Achievements /></PrivateRoute>} />
               
               {/* Reminders */}
@@ -222,7 +219,6 @@ const App = () => {
               <Route path="/admin/users/create" element={<AdminRoute><CreateUser /></AdminRoute>} />
               <Route path="/admin/users/edit/:id" element={<AdminRoute><EditUser /></AdminRoute>} />
               <Route path="/admin/database" element={<AdminRoute><DatabaseAdmin /></AdminRoute>} />
-              <Route path="/admin/system" element={<AdminRoute><SystemAdmin /></AdminRoute>} />
               
               {/* 404 */}
               <Route path="*" element={<NotFound />} />

@@ -14,13 +14,8 @@ exports.lookupUPC = async (req, res, next) => {
       });
     }
     
-    // Check if we have an API key in the environment variables
-    const apiKey = process.env.UPC_API_KEY;
-    
-    // Use the API key if available, otherwise use the trial API
-    const apiUrl = apiKey 
-      ? `https://api.upcitemdb.com/prod/v1/lookup?upc=${upcCode}&apikey=${apiKey}`
-      : `https://api.upcitemdb.com/prod/trial/lookup?upc=${upcCode}`;
+    // Get the API URL from environment variables
+    const apiUrl = `${process.env.UPC_API_URL}?upc=${upcCode}`;
     
     // Make the API request
     const response = await axios.get(apiUrl);

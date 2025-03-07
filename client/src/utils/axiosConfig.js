@@ -1,10 +1,8 @@
 import axios from 'axios';
 
 // Set default base URL for all axios requests
-// In production, API requests are proxied through Nginx
-// In development, they're handled by the proxy setting in package.json
-const isProduction = process.env.NODE_ENV === 'production';
-axios.defaults.baseURL = isProduction ? '/api' : '';
+// Using the proxy setting in package.json for local development
+axios.defaults.baseURL = '';
 
 // Set default headers for all axios requests
 axios.defaults.headers.common['Content-Type'] = 'application/json';

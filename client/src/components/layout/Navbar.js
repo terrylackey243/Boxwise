@@ -40,7 +40,6 @@ import {
   Login as LoginIcon,
   PersonAdd as RegisterIcon,
   Upload as ImportExportIcon,
-  Subscriptions as SubscriptionIcon,
   AdminPanelSettings as AdminIcon,
   Alarm as ReminderIcon
 } from '@mui/icons-material';
@@ -150,12 +149,6 @@ const Navbar = ({ toggleColorMode, mode }) => {
       text: 'Profile',
       icon: <PersonIcon />,
       path: '/profile',
-      auth: true
-    },
-    {
-      text: 'Subscription',
-      icon: <SubscriptionIcon />,
-      path: '/subscription',
       auth: true
     },
     {

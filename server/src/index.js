@@ -14,12 +14,10 @@ const locationRoutes = require('./routes/locations');
 const labelRoutes = require('./routes/labels');
 const categoryRoutes = require('./routes/categories');
 const userRoutes = require('./routes/users');
-const subscriptionRoutes = require('./routes/subscriptions');
 const reportRoutes = require('./routes/reports');
 const upcRoutes = require('./routes/upc');
 const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
-const systemRoutes = require('./routes/system');
 const achievementRoutes = require('./routes/achievements');
 const reminderRoutes = require('./routes/reminders');
 
@@ -41,23 +39,14 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/upc', upcRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/admin/system', systemRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/reminders', reminderRoutes);
 
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../client/build')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../../client/build', 'index.html'));
-  });
-}
+// Local development only - no production asset serving
 
 // Error handling middleware
 app.use((err, req, res, next) => {
