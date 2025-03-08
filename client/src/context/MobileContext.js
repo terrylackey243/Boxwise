@@ -20,6 +20,9 @@ export const MobileProvider = ({ children }) => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState(null);
   
+  // State for shopping assistant
+  const [shoppingAssistantOpen, setShoppingAssistantOpen] = useState(false);
+  
   // Open photo capture
   const openPhotoCapture = () => {
     setPhotoCaptureOpen(true);
@@ -84,6 +87,16 @@ export const MobileProvider = ({ children }) => {
     setLastScannedCode(null);
   };
   
+  // Open shopping assistant
+  const openShoppingAssistant = () => {
+    setShoppingAssistantOpen(true);
+  };
+  
+  // Close shopping assistant
+  const closeShoppingAssistant = () => {
+    setShoppingAssistantOpen(false);
+  };
+  
   // Value object to be provided to consumers
   const value = {
     // Device capabilities
@@ -107,7 +120,12 @@ export const MobileProvider = ({ children }) => {
     handleBarcodeDetected,
     getLastScannedCode,
     clearLastScannedCode,
-    lastScannedCode
+    lastScannedCode,
+    
+    // Shopping assistant
+    shoppingAssistantOpen,
+    openShoppingAssistant,
+    closeShoppingAssistant
   };
   
   return (

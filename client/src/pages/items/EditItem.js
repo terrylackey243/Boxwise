@@ -562,13 +562,15 @@ const EditItem = () => {
                       )}
                       sx={{ flex: 1 }}
                     />
-                    <IconButton 
-                      color="primary"
-                      onClick={() => setNewLocationDialog(true)}
-                      sx={{ ml: 1, mt: 1 }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                    <Tooltip title="Add New Location">
+                      <IconButton 
+                        color="primary"
+                        onClick={() => setNewLocationDialog(true)}
+                        sx={{ ml: 1, mt: 1 }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Grid>
                 
@@ -610,13 +612,15 @@ const EditItem = () => {
                       )}
                       sx={{ flex: 1 }}
                     />
-                    <IconButton 
-                      color="primary"
-                      onClick={() => setNewCategoryDialog(true)}
-                      sx={{ ml: 1, mt: 1 }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                    <Tooltip title="Add New Category">
+                      <IconButton 
+                        color="primary"
+                        onClick={() => setNewCategoryDialog(true)}
+                        sx={{ ml: 1, mt: 1 }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Grid>
                 
@@ -649,13 +653,15 @@ const EditItem = () => {
                       }
                       sx={{ flex: 1 }}
                     />
-                    <IconButton 
-                      color="primary"
-                      onClick={() => setNewLabelDialog(true)}
-                      sx={{ ml: 1, mt: 1 }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                    <Tooltip title="Add New Label">
+                      <IconButton 
+                        color="primary"
+                        onClick={() => setNewLabelDialog(true)}
+                        sx={{ ml: 1, mt: 1 }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Grid>
               </Grid>

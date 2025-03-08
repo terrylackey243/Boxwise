@@ -163,18 +163,10 @@ const Login = () => {
             >
               {loading ? <CircularProgress size={24} /> : 'Sign In'}
             </Button>
-            <Grid container>
-              <Grid item xs>
-                <Link component={RouterLink} to="#" variant="body2">
-                  Forgot password?
-                </Link>
-              </Grid>
-              <Grid item>
-                <Link component={RouterLink} to="/register" variant="body2">
-                  {"Don't have an account? Sign Up"}
-                </Link>
-              </Grid>
-            </Grid>
+            {/* Admin note: New users must be created through user management */}
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+              Contact your administrator for account assistance
+            </Typography>
           </Box>
         </Paper>
       </Box>

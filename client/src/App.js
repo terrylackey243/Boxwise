@@ -175,7 +175,7 @@ const App = () => {
                 <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              {/* Register route removed - new users must be created by admins */}
               <Route path="/test" element={<TestPage />} />
               
               {/* Protected Routes */}

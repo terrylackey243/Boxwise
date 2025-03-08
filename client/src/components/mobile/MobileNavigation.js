@@ -27,11 +27,13 @@ import {
   Search as SearchIcon,
   QrCode as QrCodeIcon,
   CameraAlt as CameraIcon,
-  PhoneAndroid as PhoneAndroidIcon
+  PhoneAndroid as PhoneAndroidIcon,
+  QrCodeScanner as QrCodeScannerIcon,
+  ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 
 const MobileNavigation = () => {
-  const { isMobile } = useMobile();
+  const { isMobile, openScanner } = useMobile();
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -125,6 +127,19 @@ const MobileNavigation = () => {
           <ListItemText primary="Add Item" />
         </ListItem>
         
+        <ListItem button onClick={() => {
+          // Open shopping assistant
+          if (window.boxwiseMobile?.openShoppingAssistant) {
+            window.boxwiseMobile.openShoppingAssistant();
+            setDrawerOpen(false);
+          }
+        }}>
+          <ListItemIcon>
+            <ShoppingCartIcon />
+          </ListItemIcon>
+          <ListItemText primary="Shopping Assistant" />
+        </ListItem>
+        
         <ListItem button onClick={() => navigate('/tools/qr-generator')}>
           <ListItemIcon>
             <QrCodeIcon />
@@ -182,15 +197,23 @@ const MobileNavigation = () => {
             icon={<InventoryIcon />}
           />
           <BottomNavigationAction
+            label="Scan"
+            value="scan"
+            icon={<QrCodeScannerIcon />}
+            onClick={() => {
+              // Open the barcode scanner directly
+              if (openScanner) {
+                openScanner();
+              } else {
+                // Fallback to the items page if scanner context is not available
+                navigate('/items');
+              }
+            }}
+          />
+          <BottomNavigationAction
             label="Add"
             value="items/create"
             icon={<AddIcon />}
-          />
-          <BottomNavigationAction
-            label="Search"
-            value="search"
-            icon={<SearchIcon />}
-            onClick={() => navigate('/items')}
           />
         </BottomNavigation>
       </Paper>

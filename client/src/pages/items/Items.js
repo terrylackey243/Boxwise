@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
 import bulkService from '../../services/bulkService';
+import { useMobile } from '../../context/MobileContext';
 import {
   Container,
   Grid,
@@ -42,7 +43,8 @@ import {
   MoreVert as MoreVertIcon,
   Clear as ClearIcon,
   QrCodeScanner as QrCodeScannerIcon,
-  CameraAlt as CameraIcon
+  CameraAlt as CameraIcon,
+  ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
@@ -91,6 +93,7 @@ const Items = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const isMobile = useIsMobile();
   const hasCamera = useHasCamera();
+  const { openShoppingAssistant } = useMobile();
   
   // Bulk add state
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
@@ -248,10 +251,58 @@ const Items = () => {
       // Make API call to delete the item
       await axios.delete(`/api/items/${itemId}`);
       
-      // Update the items list
-      setItems(prevItems => prevItems.filter(item => item._id !== itemId));
-      
+      // Close the action menu
       handleActionMenuClose();
+      
+      // Show success message
+      setErrorAlert({ 
+        type: 'success', 
+        message: 'Item deleted successfully' 
+      });
+      
+      // Refresh the items list from the server
+      setLoading(true);
+      
+      // Make API call to fetch items with current pagination and filters
+      const params = new URLSearchParams();
+      
+      // Pagination parameters
+      params.set('page', page + 1); // API uses 1-based indexing
+      params.set('limit', rowsPerPage);
+      
+      // Filter parameters
+      if (filters.archived === true) {
+        params.set('archived', 'true');
+      }
+      
+      if (filters.location) {
+        params.set('location', filters.location);
+      }
+      
+      if (filters.category) {
+        params.set('category', filters.category);
+      }
+      
+      if (filters.label) {
+        params.set('label', filters.label);
+      }
+      
+      // Search parameter
+      if (searchTerm) {
+        params.set('search', searchTerm);
+      }
+      
+      const response = await axios.get(`/api/items?${params.toString()}`);
+      
+      if (response.data.success) {
+        setItems(response.data.data);
+        setFilteredItems(response.data.data);
+        setTotalItems(response.data.total);
+      } else {
+        setErrorAlert('Failed to refresh items');
+      }
+      
+      setLoading(false);
     } catch (err) {
       setErrorAlert('Error deleting item: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -270,12 +321,58 @@ const Items = () => {
         isArchived: true
       });
       
-      // Update the items list
-      setItems(prevItems => prevItems.map(item => 
-        item._id === itemId ? { ...item, isArchived: true } : item
-      ));
-      
+      // Close the action menu
       handleActionMenuClose();
+      
+      // Show success message
+      setErrorAlert({ 
+        type: 'success', 
+        message: 'Item archived successfully' 
+      });
+      
+      // Refresh the items list from the server
+      setLoading(true);
+      
+      // Make API call to fetch items with current pagination and filters
+      const params = new URLSearchParams();
+      
+      // Pagination parameters
+      params.set('page', page + 1); // API uses 1-based indexing
+      params.set('limit', rowsPerPage);
+      
+      // Filter parameters
+      if (filters.archived === true) {
+        params.set('archived', 'true');
+      }
+      
+      if (filters.location) {
+        params.set('location', filters.location);
+      }
+      
+      if (filters.category) {
+        params.set('category', filters.category);
+      }
+      
+      if (filters.label) {
+        params.set('label', filters.label);
+      }
+      
+      // Search parameter
+      if (searchTerm) {
+        params.set('search', searchTerm);
+      }
+      
+      const response = await axios.get(`/api/items?${params.toString()}`);
+      
+      if (response.data.success) {
+        setItems(response.data.data);
+        setFilteredItems(response.data.data);
+        setTotalItems(response.data.total);
+      } else {
+        setErrorAlert('Failed to refresh items');
+      }
+      
+      setLoading(false);
     } catch (err) {
       setErrorAlert('Error archiving item: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -752,23 +849,43 @@ const Items = () => {
         onDetected={handleBarcodeDetected}
       />
       
-      {/* Scan Button - Show on mobile devices */}
+      {/* Mobile Action Buttons */}
       {isMobile && (
-        <Tooltip title="Scan Barcode">
-          <Fab
-            color="primary"
-            aria-label="scan"
-            onClick={handleOpenScanner}
-            sx={{
-              position: 'fixed',
-              bottom: 16,
-              right: 16,
-              zIndex: 1000
-            }}
-          >
-            <QrCodeScannerIcon />
-          </Fab>
-        </Tooltip>
+        <>
+          {/* Scan Button */}
+          <Tooltip title="Scan Barcode">
+            <Fab
+              color="primary"
+              aria-label="scan"
+              onClick={handleOpenScanner}
+              sx={{
+                position: 'fixed',
+                bottom: 16,
+                right: 16,
+                zIndex: 1000
+              }}
+            >
+              <QrCodeScannerIcon />
+            </Fab>
+          </Tooltip>
+          
+          {/* Shopping Assistant Button */}
+          <Tooltip title="Shopping Assistant">
+            <Fab
+              color="secondary"
+              aria-label="shopping-assistant"
+              onClick={openShoppingAssistant}
+              sx={{
+                position: 'fixed',
+                bottom: 16,
+                right: 80, // Position to the left of the scan button
+                zIndex: 1000
+              }}
+            >
+              <ShoppingCartIcon />
+            </Fab>
+          </Tooltip>
+        </>
       )}
       
       {/* Bulk Add Dialog */}

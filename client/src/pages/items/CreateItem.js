@@ -25,7 +25,11 @@ import {
   Chip,
   InputAdornment,
   IconButton,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -76,6 +80,9 @@ const CreateItem = () => {
   const queryParams = new URLSearchParams(location.search);
   const locationId = queryParams.get('location');
   
+  // Check for pre-filled data from shopping assistant or other sources
+  const prefillData = location.state?.prefillData || {};
+  
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [lookingUpUPC, setLookingUpUPC] = useState(false);
@@ -98,27 +105,36 @@ const CreateItem = () => {
   const [newLabel, setNewLabel] = useState({ name: '', description: '', color: '#3f51b5' });
   
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    name: prefillData.name || '',
+    description: prefillData.description || '',
     location: locationId || '',
     category: '',
     labels: [],
     quantity: 1,
     serialNumber: '',
-    modelNumber: '',
-    manufacturer: '',
+    modelNumber: prefillData.modelNumber || '',
+    manufacturer: prefillData.manufacturer || '',
     notes: '',
     isInsured: false,
     isArchived: false,
     purchasedFrom: '',
     purchasePrice: '',
-    purchaseDate: '',
+    purchaseDate: new Date().toISOString().split('T')[0], // Default to today for mobile purchases
     hasLifetimeWarranty: false,
     warrantyExpires: '',
     warrantyNotes: '',
     customFields: [],
-    upcCode: ''
+    upcCode: prefillData.upcCode || ''
   });
+  
+  // Set UPC code from prefill data if available
+  useEffect(() => {
+    if (prefillData.upcCode) {
+      setUpcCode(prefillData.upcCode);
+      // Show UPC lookup section if we have a UPC code
+      setShowUpcLookup(true);
+    }
+  }, [prefillData]);
   
   const [errors, setErrors] = useState({});
 
@@ -616,13 +632,15 @@ const CreateItem = () => {
                       )}
                       sx={{ flex: 1 }}
                     />
-                    <IconButton 
-                      color="primary"
-                      onClick={() => setNewLocationDialog(true)}
-                      sx={{ ml: 1, mt: 1 }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                    <Tooltip title="Add New Location">
+                      <IconButton 
+                        color="primary"
+                        onClick={() => setNewLocationDialog(true)}
+                        sx={{ ml: 1, mt: 1 }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Grid>
                 
@@ -664,13 +682,15 @@ const CreateItem = () => {
                       )}
                       sx={{ flex: 1 }}
                     />
-                    <IconButton 
-                      color="primary"
-                      onClick={() => setNewCategoryDialog(true)}
-                      sx={{ ml: 1, mt: 1 }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                    <Tooltip title="Add New Category">
+                      <IconButton 
+                        color="primary"
+                        onClick={() => setNewCategoryDialog(true)}
+                        sx={{ ml: 1, mt: 1 }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Grid>
                 
@@ -703,13 +723,15 @@ const CreateItem = () => {
                       }
                       sx={{ flex: 1 }}
                     />
-                    <IconButton 
-                      color="primary"
-                      onClick={() => setNewLabelDialog(true)}
-                      sx={{ ml: 1, mt: 1 }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                    <Tooltip title="Add New Label">
+                      <IconButton 
+                        color="primary"
+                        onClick={() => setNewLabelDialog(true)}
+                        sx={{ ml: 1, mt: 1 }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Grid>
               </Grid>
@@ -990,6 +1012,260 @@ const CreateItem = () => {
           onDetected={handleBarcodeDetected}
         />
       )}
+      
+      {/* Add Location Dialog */}
+      <Dialog open={newLocationDialog} onClose={() => setNewLocationDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Location</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newLocation.name}
+              onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newLocation.description}
+              onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="parent-location-label">Parent Location</InputLabel>
+              <Select
+                labelId="parent-location-label"
+                value={newLocation.parent}
+                onChange={(e) => setNewLocation({ ...newLocation, parent: e.target.value })}
+                label="Parent Location"
+              >
+                <MenuItem value="">None (Top Level)</MenuItem>
+                {locations.map(loc => (
+                  <MenuItem key={loc._id} value={loc._id}>{getLocationHierarchy(loc, locations)}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewLocationDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={async () => {
+              if (!newLocation.name.trim()) {
+                setErrorAlert('Location name is required');
+                return;
+              }
+              
+              try {
+                const response = await axios.post('/api/locations', {
+                  name: newLocation.name,
+                  description: newLocation.description,
+                  parent: newLocation.parent || null
+                });
+                
+                if (response.data.success) {
+                  // Add the new location to the locations array
+                  const newLoc = response.data.data;
+                  setLocations([...locations, newLoc]);
+                  
+                  // Select the new location in the form
+                  setFormData(prevData => ({
+                    ...prevData,
+                    location: newLoc._id
+                  }));
+                  
+                  // Reset the new location form
+                  setNewLocation({ name: '', description: '', parent: '' });
+                  
+                  // Close the dialog
+                  setNewLocationDialog(false);
+                  
+                  setSuccessAlert('Location created successfully');
+                } else {
+                  setErrorAlert('Error creating location: ' + response.data.message);
+                }
+              } catch (err) {
+                setErrorAlert('Error creating location: ' + (err.response?.data?.message || err.message));
+                console.error(err);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Add Category Dialog */}
+      <Dialog open={newCategoryDialog} onClose={() => setNewCategoryDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Category</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newCategory.description}
+              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewCategoryDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={async () => {
+              if (!newCategory.name.trim()) {
+                setErrorAlert('Category name is required');
+                return;
+              }
+              
+              try {
+                const response = await axios.post('/api/categories', {
+                  name: newCategory.name,
+                  description: newCategory.description
+                });
+                
+                if (response.data.success) {
+                  // Add the new category to the categories array
+                  const newCat = response.data.data;
+                  setCategories([...categories, newCat]);
+                  
+                  // Select the new category in the form
+                  setFormData(prevData => ({
+                    ...prevData,
+                    category: newCat._id
+                  }));
+                  
+                  // Reset the new category form
+                  setNewCategory({ name: '', description: '' });
+                  
+                  // Close the dialog
+                  setNewCategoryDialog(false);
+                  
+                  setSuccessAlert('Category created successfully');
+                } else {
+                  setErrorAlert('Error creating category: ' + response.data.message);
+                }
+              } catch (err) {
+                setErrorAlert('Error creating category: ' + (err.response?.data?.message || err.message));
+                console.error(err);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Add Label Dialog */}
+      <Dialog open={newLabelDialog} onClose={() => setNewLabelDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Label</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newLabel.name}
+              onChange={(e) => setNewLabel({ ...newLabel, name: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newLabel.description}
+              onChange={(e) => setNewLabel({ ...newLabel, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+            <TextField
+              fullWidth
+              label="Color"
+              type="color"
+              value={newLabel.color}
+              onChange={(e) => setNewLabel({ ...newLabel, color: e.target.value })}
+              margin="normal"
+              InputProps={{
+                startAdornment: (
+                  <Box 
+                    sx={{ 
+                      width: 24, 
+                      height: 24, 
+                      borderRadius: '50%', 
+                      backgroundColor: newLabel.color,
+                      mr: 1,
+                      border: '1px solid rgba(0, 0, 0, 0.23)'
+                    }} 
+                  />
+                )
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewLabelDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={async () => {
+              if (!newLabel.name.trim()) {
+                setErrorAlert('Label name is required');
+                return;
+              }
+              
+              try {
+                const response = await axios.post('/api/labels', {
+                  name: newLabel.name,
+                  description: newLabel.description,
+                  color: newLabel.color
+                });
+                
+                if (response.data.success) {
+                  // Add the new label to the labels array
+                  const newLab = response.data.data;
+                  setLabels([...labels, newLab]);
+                  
+                  // Add the new label to the selected labels in the form
+                  setFormData(prevData => ({
+                    ...prevData,
+                    labels: [...prevData.labels, newLab]
+                  }));
+                  
+                  // Reset the new label form
+                  setNewLabel({ name: '', description: '', color: '#3f51b5' });
+                  
+                  // Close the dialog
+                  setNewLabelDialog(false);
+                  
+                  setSuccessAlert('Label created successfully');
+                } else {
+                  setErrorAlert('Error creating label: ' + response.data.message);
+                }
+              } catch (err) {
+                setErrorAlert('Error creating label: ' + (err.response?.data?.message || err.message));
+                console.error(err);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
