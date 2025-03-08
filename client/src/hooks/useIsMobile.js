@@ -1,52 +1,33 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Hook to detect if the current device is a mobile device
- * @returns {boolean} True if the device is a mobile device
+ * Custom hook to detect if the device is a mobile device
+ * @returns {boolean} True if the device is a mobile device, false otherwise
  */
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Check if the device has touch capabilities
-    const hasTouchScreen = () => {
-      return (
-        ('ontouchstart' in window) ||
-        (navigator.maxTouchPoints > 0) ||
-        (navigator.msMaxTouchPoints > 0)
-      );
+    const checkMobile = () => {
+      // Check if the user agent contains mobile-specific keywords
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      const isMobileDevice = mobileRegex.test(navigator.userAgent);
+      
+      // Also check screen size as a fallback
+      const isSmallScreen = window.innerWidth <= 768;
+      
+      setIsMobile(isMobileDevice || isSmallScreen);
     };
 
-    // Check if the device has a mobile user agent
-    const hasMobileUserAgent = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-      return (
-        /android/i.test(userAgent) ||
-        /iPad|iPhone|iPod/.test(userAgent) ||
-        /IEMobile|Windows Phone|Kindle|Silk|Mobile/.test(userAgent)
-      );
-    };
-
-    // Check if the screen is small (typical for mobile devices)
-    const hasSmallScreen = () => {
-      return window.innerWidth <= 768;
-    };
-
-    // Combine all checks to determine if it's a mobile device
-    const checkIsMobile = () => {
-      const result = hasTouchScreen() && (hasMobileUserAgent() || hasSmallScreen());
-      setIsMobile(result);
-    };
-
-    // Initial check
-    checkIsMobile();
-
-    // Add resize listener to update on orientation change
-    window.addEventListener('resize', checkIsMobile);
-
-    // Cleanup
+    // Check initially
+    checkMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile);
+    
+    // Clean up
     return () => {
-      window.removeEventListener('resize', checkIsMobile);
+      window.removeEventListener('resize', checkMobile);
     };
   }, []);
 
