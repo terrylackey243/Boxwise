@@ -670,19 +670,65 @@ const ItemDetail = () => {
                 <Table size="small">
                   <TableBody>
                     {item.customFields.map((field, index) => {
-                      // Detect if the field value is a URL
-                      const isUrl = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(field.value);
+                      // Format the display value based on field type
+                      let displayValue = field.value;
+                      let linkUrl = '';
                       
-                      // Detect if the field value is an email
-                      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
-                      
-                      // Format URL for proper linking (ensure it has http/https)
-                      const formattedUrl = isUrl && !field.value.startsWith('http') 
-                        ? `https://${field.value}` 
-                        : field.value;
-                      
-                      // Format email for mailto link
-                      const mailtoLink = isEmail ? `mailto:${field.value}` : '';
+                      // Handle different field types
+                      if (field.type === 'boolean') {
+                        // Convert boolean values to Yes/No
+                        displayValue = field.value === 'true' || field.value === true ? 'Yes' : 'No';
+                      } else if (field.type === 'timestamp') {
+                        // Format date for display
+                        try {
+                          const date = new Date(field.value);
+                          if (!isNaN(date.getTime())) {
+                            displayValue = date.toLocaleDateString();
+                          }
+                        } catch (e) {
+                          // If date parsing fails, use the original value
+                          console.error('Error parsing date:', e);
+                        }
+                      } else if (field.type === 'integer') {
+                        // Format number with commas for thousands
+                        try {
+                          const num = parseInt(field.value);
+                          if (!isNaN(num)) {
+                            displayValue = num.toLocaleString();
+                          }
+                        } catch (e) {
+                          // If number parsing fails, use the original value
+                          console.error('Error parsing integer:', e);
+                        }
+                      } else {
+                        // Handle text fields, including URLs and Markdown links
+                        const markdownLinkMatch = field.value.match(/\[(.+?)\]\((.+?)\)/);
+                        
+                        if (markdownLinkMatch) {
+                          // Extract the text and URL from the Markdown syntax
+                          displayValue = markdownLinkMatch[1];
+                          linkUrl = markdownLinkMatch[2];
+                          
+                          // Ensure URL has http/https
+                          if (!linkUrl.startsWith('http')) {
+                            linkUrl = `https://${linkUrl}`;
+                          }
+                        } else {
+                          // Regular URL/email detection for non-Markdown values
+                          const isUrl = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(field.value);
+                          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
+                          
+                          if (isUrl) {
+                            // Format URL for proper linking (ensure it has http/https)
+                            linkUrl = !field.value.startsWith('http') 
+                              ? `https://${field.value}` 
+                              : field.value;
+                          } else if (isEmail) {
+                            // Format email for mailto link
+                            linkUrl = `mailto:${field.value}`;
+                          }
+                        }
+                      }
                       
                       return (
                         <TableRow key={index}>
@@ -690,16 +736,27 @@ const ItemDetail = () => {
                             {field.name}
                           </TableCell>
                           <TableCell>
-                            {isUrl ? (
-                              <Link href={formattedUrl} target="_blank" rel="noopener noreferrer">
-                                {field.value}
-                              </Link>
-                            ) : isEmail ? (
-                              <Link href={mailtoLink}>
-                                {field.value}
+                            {linkUrl ? (
+                              <Link href={linkUrl} target="_blank" rel="noopener noreferrer">
+                                {displayValue}
                               </Link>
                             ) : (
-                              field.value
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                {displayValue}
+                                {field.type && field.type !== 'text' && (
+                                  <Chip 
+                                    label={field.type} 
+                                    size="small"
+                                    color={
+                                      field.type === 'timestamp' ? 'success' :
+                                      field.type === 'integer' ? 'info' :
+                                      field.type === 'boolean' ? 'warning' :
+                                      'default'
+                                    }
+                                    sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                                  />
+                                )}
+                              </Box>
                             )}
                           </TableCell>
                         </TableRow>

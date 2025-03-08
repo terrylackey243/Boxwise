@@ -24,6 +24,14 @@ services:
         value: "5000000"
       - key: UPC_API_URL
         value: https://api.upcitemdb.com/prod/trial/lookup
+      - key: CUSTOM_FIELDS_ENABLED
+        value: "true"
+      - key: CUSTOM_FIELD_TYPES
+        value: "text,integer,boolean,timestamp"
+      - key: CUSTOM_FIELDS_URL_MARKDOWN
+        value: "true"
+      - key: CUSTOM_FIELDS_FEATURES
+        value: "url_markdown,url_detection,email_detection"
 
   # Frontend static site
   - type: web

@@ -833,30 +833,108 @@ const CreateItem = () => {
                       </Grid>
                       
                       <Grid item xs={4}>
-                        <TextField
-                          fullWidth
-                          label="Field Value"
-                          value={field.value}
-                          onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                          size="small"
-                          helperText={field.type ? `Detected as: ${field.type}` : ''}
-                        />
+                        {field.type === 'integer' ? (
+                          <TextField
+                            fullWidth
+                            label="Field Value (Number)"
+                            value={field.value}
+                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                            size="small"
+                            type="number"
+                            inputProps={{ step: 1 }}
+                            helperText="Enter a whole number"
+                          />
+                        ) : field.type === 'boolean' ? (
+                          <FormControl fullWidth size="small">
+                            <InputLabel id={`custom-field-${index}-boolean-label`}>Field Value (Yes/No)</InputLabel>
+                            <Select
+                              labelId={`custom-field-${index}-boolean-label`}
+                              value={field.value === 'true' ? 'true' : field.value === 'false' ? 'false' : ''}
+                              onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                              label="Field Value (Yes/No)"
+                            >
+                              <MenuItem value="true">Yes</MenuItem>
+                              <MenuItem value="false">No</MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : field.type === 'timestamp' ? (
+                          <TextField
+                            fullWidth
+                            label="Field Value (Date)"
+                            value={field.value}
+                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                            size="small"
+                            type="date"
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        ) : (
+                          <TextField
+                            fullWidth
+                            label="Field Value"
+                            value={field.value}
+                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                            size="small"
+                            helperText={field.type ? `Detected as: ${field.type}` : ''}
+                          />
+                        )}
                       </Grid>
                       
                       <Grid item xs={2}>
-                        <Chip 
-                          label={field.type || 'text'} 
-                          size="small"
-                          color={
-                            field.type === 'url' ? 'primary' :
-                            field.type === 'email' ? 'secondary' :
-                            field.type === 'timestamp' ? 'success' :
-                            field.type === 'integer' ? 'info' :
-                            field.type === 'boolean' ? 'warning' :
-                            'default'
-                          }
-                          sx={{ mt: 1 }}
-                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <Chip 
+                            label={field.type || 'text'} 
+                            size="small"
+                            color={
+                              field.type === 'url' ? 'primary' :
+                              field.type === 'email' ? 'secondary' :
+                              field.type === 'timestamp' ? 'success' :
+                              field.type === 'integer' ? 'info' :
+                              field.type === 'boolean' ? 'warning' :
+                              'default'
+                            }
+                            sx={{ mb: 1 }}
+                          />
+                          <FormControl size="small">
+                            <Select
+                              value={field.type || 'text'}
+                              onChange={(e) => {
+                                // Update the field type and convert the value if needed
+                                const newType = e.target.value;
+                                let newValue = field.value;
+                                
+                                // Convert value based on new type
+                                if (newType === 'boolean') {
+                                  newValue = newValue ? 'true' : 'false';
+                                } else if (newType === 'integer') {
+                                  newValue = isNaN(parseInt(newValue)) ? '0' : parseInt(newValue).toString();
+                                } else if (newType === 'timestamp' && !newValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                  newValue = new Date().toISOString().split('T')[0];
+                                }
+                                
+                                // Update both type and value
+                                const updatedCustomFields = [...formData.customFields];
+                                updatedCustomFields[index] = {
+                                  ...updatedCustomFields[index],
+                                  type: newType,
+                                  value: newValue
+                                };
+                                
+                                setFormData(prevData => ({
+                                  ...prevData,
+                                  customFields: updatedCustomFields
+                                }));
+                              }}
+                              displayEmpty
+                              size="small"
+                              sx={{ minWidth: 100 }}
+                            >
+                              <MenuItem value="text">Text</MenuItem>
+                              <MenuItem value="integer">Integer</MenuItem>
+                              <MenuItem value="boolean">Boolean</MenuItem>
+                              <MenuItem value="timestamp">Timestamp</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Box>
                       </Grid>
                       
                       <Grid item xs={2}>

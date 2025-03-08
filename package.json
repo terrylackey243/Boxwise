@@ -12,6 +12,6 @@
     "reset:db": "cd scripts && ./reset-db.sh"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.2"
   }
 }
