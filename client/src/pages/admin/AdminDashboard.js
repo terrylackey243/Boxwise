@@ -373,6 +373,153 @@ const AdminDashboard = () => {
                 </Grid>
               </Grid>
               
+              {/* Mobile App Card */}
+              <Paper sx={{ p: 3, mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      Mobile Application Now Available
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                      The Boxwise mobile app is now available for iOS and Android devices. Users can scan UPC codes, take photos of items, check inventory while shopping, and add items on the go.
+                    </Typography>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item>
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          href="https://apps.apple.com/app/boxwise-inventory"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Download for iOS
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          href="https://play.google.com/store/apps/details?id=com.boxwise.inventory"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Download for Android
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ml: 2 }}>
+                    <Box 
+                      sx={{ 
+                        width: 120, 
+                        height: 120, 
+                        border: '1px solid #eee',
+                        borderRadius: 1,
+                        mb: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: '#f5f5f5'
+                      }}
+                    >
+                      <Typography variant="caption" align="center" sx={{ p: 1 }}>
+                        QR Code<br />Coming Soon
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" align="center">
+                      Use download links
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Key Features:
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          bgcolor: 'primary.light', 
+                          color: 'white', 
+                          borderRadius: '50%',
+                          width: 36,
+                          height: 36,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mr: 1
+                        }}>
+                          1
+                        </Box>
+                        <Typography variant="body2">
+                          Scan UPC codes with camera
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          bgcolor: 'primary.light', 
+                          color: 'white', 
+                          borderRadius: '50%',
+                          width: 36,
+                          height: 36,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mr: 1
+                        }}>
+                          2
+                        </Box>
+                        <Typography variant="body2">
+                          Take photos and upload instantly
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          bgcolor: 'primary.light', 
+                          color: 'white', 
+                          borderRadius: '50%',
+                          width: 36,
+                          height: 36,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mr: 1
+                        }}>
+                          3
+                        </Box>
+                        <Typography variant="body2">
+                          Check inventory while shopping
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          bgcolor: 'primary.light', 
+                          color: 'white', 
+                          borderRadius: '50%',
+                          width: 36,
+                          height: 36,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mr: 1
+                        }}>
+                          4
+                        </Box>
+                        <Typography variant="body2">
+                          Add items right when purchased
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Paper>
+              
               {/* Charts */}
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>

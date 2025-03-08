@@ -10,7 +10,9 @@ const {
   generateQRCode,
   searchByUPC,
   loanItem,
-  returnItem
+  returnItem,
+  uploadItemAttachment,
+  quickAddItem
 } = require('../controllers/items');
 
 const router = express.Router();
@@ -29,8 +31,14 @@ router.route('/import')
 router.route('/export')
   .get(protect, exportItems);
 
+router.route('/quick-add')
+  .post(protect, checkSubscriptionLimits, quickAddItem);
+
 router.route('/upc/:upc')
   .get(protect, searchByUPC);
+
+router.route('/:id/attachments')
+  .post(protect, uploadItemAttachment);
 
 router.route('/:id/qrcode')
   .get(protect, generateQRCode);

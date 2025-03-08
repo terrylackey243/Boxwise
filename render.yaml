@@ -32,6 +32,8 @@ services:
         value: "true"
       - key: CUSTOM_FIELDS_FEATURES
         value: "url_markdown,url_detection,email_detection"
+      - key: FILE_UPLOAD_PATH
+        value: "./uploads"
 
   # Frontend static site
   - type: web
@@ -50,5 +52,28 @@ services:
       - key: NODE_ENV
         value: production
 
+  # Mobile App Build Service
+  - type: web
+    name: boxwise-mobile-build
+    env: node
+    buildCommand: cd mobile && npm install && npm run build
+    startCommand: cd mobile && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        value: https://boxwise-api-hc0t.onrender.com
+      - key: EXPO_USERNAME
+        sync: false # This will be set manually in the Render dashboard
+      - key: EXPO_PASSWORD
+        sync: false # This will be set manually in the Render dashboard
+
 # Note: To create the owner user, run the following command in the Render.com shell:
 # cd scripts && npm install jsonwebtoken && node create-owner-render.js terry@jknelotions.com "cde3CDE#vfr4VFR$" "Terry"
+
+# Mobile App Notes:
+# 1. The mobile app requires Expo EAS Build to create the iOS and Android app bundles
+# 2. Run the following commands to build the mobile app:
+#    - cd mobile && npx eas-cli build --platform ios
+#    - cd mobile && npx eas-cli build --platform android
+# 3. After building, submit the apps to the App Store and Google Play Store
