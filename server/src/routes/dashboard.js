@@ -19,38 +19,30 @@ router.get('/', protect, async (req, res) => {
     // Get user's group ID from the authenticated user
     const groupId = req.user.group;
     
-    // Get counts for each collection
-    const itemCount = await Item.countDocuments({ group: groupId });
-    const locationCount = await Location.countDocuments({ group: groupId });
-    const labelCount = await Label.countDocuments({ group: groupId });
-    const categoryCount = await Category.countDocuments({ group: groupId });
-    
-    // Get recent items
-    const recentItems = await Item.find({ group: groupId })
-      .sort({ updatedAt: -1 })
-      .limit(5)
-      .populate('location', 'name')
-      .populate('category', 'name')
-      .populate('labels', 'name color');
-    
-    // Get upcoming reminders (due in the next 30 days)
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    
-    const upcomingReminders = await Reminder.find({
-      group: groupId,
-      isCompleted: false,
-      reminderDate: {
-        $gte: new Date(),
-        $lte: thirtyDaysFromNow
-      }
-    })
-      .sort('reminderDate')
-      .limit(5)
-      .populate({
-        path: 'item',
-        select: 'name assetId'
-      });
+    // Run queries in parallel for better performance
+    const [
+      itemCount,
+      locationCount,
+      labelCount,
+      categoryCount,
+      recentItems
+    ] = await Promise.all([
+      // Get counts for each collection
+      Item.countDocuments({ group: groupId }),
+      Location.countDocuments({ group: groupId }),
+      Label.countDocuments({ group: groupId }),
+      Category.countDocuments({ group: groupId }),
+      
+      // Get recent items with lean() for better performance
+      Item.find({ group: groupId })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .select('name location category labels updatedAt')
+        .populate('location', 'name')
+        .populate('category', 'name')
+        .populate('labels', 'name color')
+        .lean()
+    ]);
     
     res.status(200).json({
       success: true,
@@ -61,8 +53,7 @@ router.get('/', protect, async (req, res) => {
           labelCount,
           categoryCount
         },
-        recentItems,
-        upcomingReminders
+        recentItems
       }
     });
   } catch (err) {

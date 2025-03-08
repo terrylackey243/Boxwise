@@ -233,30 +233,40 @@ exports.deleteReminder = asyncHandler(async (req, res, next) => {
 // @route   GET /api/reminders/upcoming
 // @access  Private
 exports.getUpcomingReminders = asyncHandler(async (req, res, next) => {
-  // Get reminders due in the next 30 days
-  const thirtyDaysFromNow = new Date();
-  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-  
-  const reminders = await Reminder.find({
-    group: req.user.group,
-    isCompleted: false,
-    reminderDate: {
-      $gte: new Date(),
-      $lte: thirtyDaysFromNow
-    }
-  })
-    .populate({
-      path: 'item',
-      select: 'name assetId'
+  try {
+    // Get reminders due in the next 30 days
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    
+    const reminders = await Reminder.find({
+      group: req.user.group,
+      isCompleted: false,
+      reminderDate: {
+        $gte: new Date(),
+        $lte: thirtyDaysFromNow
+      }
     })
-    .sort('reminderDate')
-    .limit(10);
-  
-  res.status(200).json({
-    success: true,
-    count: reminders.length,
-    data: reminders
-  });
+      .select('title reminderDate reminderType isRecurring item')
+      .populate({
+        path: 'item',
+        select: 'name assetId'
+      })
+      .sort('reminderDate')
+      .limit(5)
+      .lean(); // Use lean() for better performance
+    
+    res.status(200).json({
+      success: true,
+      count: reminders.length,
+      data: reminders
+    });
+  } catch (err) {
+    console.error('Error fetching upcoming reminders:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching upcoming reminders'
+    });
+  }
 });
 
 // @desc    Create warranty reminder from item

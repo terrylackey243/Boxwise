@@ -57,19 +57,40 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
-        // Fetch dashboard data and upcoming reminders in parallel
-        const [dashboardRes, remindersRes] = await Promise.all([
-          axios.get('/api/dashboard'),
-          axios.get('/api/reminders/upcoming')
-        ]);
+        // Configure longer timeout for dashboard requests (30 seconds)
+        const axiosOptions = {
+          timeout: 30000 // 30 seconds
+        };
         
-        if (dashboardRes.data.success) {
-          setStats(dashboardRes.data.data.stats);
-          setRecentItems(dashboardRes.data.data.recentItems);
+        // Fetch dashboard data and upcoming reminders separately to handle partial failures
+        try {
+          const dashboardRes = await axios.get('/api/dashboard', axiosOptions);
+          if (dashboardRes.data.success) {
+            setStats(dashboardRes.data.data.stats);
+            setRecentItems(dashboardRes.data.data.recentItems);
+          }
+        } catch (dashboardErr) {
+          console.error('Dashboard stats error:', dashboardErr);
+          setErrorAlert('Error loading dashboard stats. Some data may be unavailable.');
+          // Set default stats
+          setStats({
+            itemCount: 0,
+            locationCount: 0,
+            labelCount: 0,
+            categoryCount: 0
+          });
+          setRecentItems([]);
         }
         
-        if (remindersRes.data.success) {
-          setUpcomingReminders(remindersRes.data.data);
+        try {
+          const remindersRes = await axios.get('/api/reminders/upcoming', axiosOptions);
+          if (remindersRes.data.success) {
+            setUpcomingReminders(remindersRes.data.data);
+          }
+        } catch (remindersErr) {
+          console.error('Reminders error:', remindersErr);
+          setErrorAlert('Error loading reminders. Some data may be unavailable.');
+          setUpcomingReminders([]);
         }
         
         setLoading(false);
