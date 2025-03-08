@@ -56,7 +56,7 @@ services:
   - type: web
     name: boxwise-mobile-build
     env: node
-    buildCommand: cd mobile && npm install && npx eas-cli build --platform all --non-interactive
+    buildCommand: cd mobile && npm install && echo "Mobile app ready for local development. To build for app stores, run 'npm run build' locally."
     startCommand: cd mobile && npm start
     envVars:
       - key: NODE_ENV

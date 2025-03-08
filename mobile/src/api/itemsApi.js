@@ -106,7 +106,8 @@ export const uploadItemImage = async (id, imageUri, isPrimary = false) => {
     formData.append('isPrimary', isPrimary);
     
     // Make the request with multipart/form-data content type
-    const response = await axios.post(`/api/items/${id}/attachments`, formData, {
+    // Use the mobile API endpoint
+    const response = await axios.post(`/api/mobile/items/${id}/attachments`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -121,7 +122,8 @@ export const uploadItemImage = async (id, imageUri, isPrimary = false) => {
 // Lookup UPC code
 export const lookupUPC = async (upcCode) => {
   try {
-    const response = await axios.get(`/api/upc/${upcCode}`);
+    // Use the mobile API endpoint
+    const response = await axios.get(`/api/mobile/upc/${upcCode}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -131,9 +133,8 @@ export const lookupUPC = async (upcCode) => {
 // Quick add item (for adding items while shopping)
 export const quickAddItem = async (itemData) => {
   try {
-    // This endpoint would be a simplified version of the create item endpoint
-    // that requires fewer fields for quick addition
-    const response = await axios.post('/api/items/quick-add', itemData);
+    // Use the mobile API endpoint
+    const response = await axios.post('/api/mobile/items/quick-add', itemData);
     return response.data;
   } catch (error) {
     throw error;

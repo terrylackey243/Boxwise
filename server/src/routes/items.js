@@ -43,11 +43,12 @@ router.route('/:id/attachments')
 router.route('/:id/qrcode')
   .get(protect, generateQRCode);
 
-router.route('/:id/loan')
-  .post(protect, loanItem);
+// These routes are now handled by the mobile API
+// router.route('/:id/loan')
+//   .post(protect, loanItem);
 
-router.route('/:id/return')
-  .post(protect, returnItem);
+// router.route('/:id/return')
+//   .post(protect, returnItem);
 
 router.route('/:id')
   .get(protect, getItem)

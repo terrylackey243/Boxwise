@@ -9,11 +9,13 @@
     "web": "expo start --web",
     "test": "jest",
     "lint": "eslint .",
-    "build": "npx eas-cli build --platform all",
-    "build:ios": "npx eas-cli build --platform ios",
-    "build:android": "npx eas-cli build --platform android",
-    "submit:ios": "npx eas-cli submit --platform ios",
-    "submit:android": "npx eas-cli submit --platform android"
+    "build": "echo 'To build the app, first login with: npx eas-cli login' && echo 'Then run: npx eas-cli build --platform all'",
+    "build:ios": "echo 'To build for iOS, first login with: npx eas-cli login' && echo 'Then run: npx eas-cli build --platform ios'",
+    "build:android": "echo 'To build for Android, first login with: npx eas-cli login' && echo 'Then run: npx eas-cli build --platform android'",
+    "submit:ios": "echo 'To submit to App Store, first login with: npx eas-cli login' && echo 'Then run: npx eas-cli submit --platform ios'",
+    "submit:android": "echo 'To submit to Play Store, first login with: npx eas-cli login' && echo 'Then run: npx eas-cli submit --platform android'",
+    "build:local": "expo export",
+    "build:preview": "expo export --dev-client"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.21.0",

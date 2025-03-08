@@ -73,24 +73,53 @@ npm run web     # Run in web browser
 
 ### Building the app
 
+The build process requires authentication with Expo, so it must be run locally rather than on the Render server:
+
 ```
 # Build for both platforms
-npm run build
+npx eas-cli build --platform all
 
 # Build for iOS only
-npm run build:ios
+npx eas-cli build --platform ios
 
 # Build for Android only
+npx eas-cli build --platform android
+```
+
+You can also use the npm scripts, which will provide instructions:
+
+```
+npm run build
+npm run build:ios
 npm run build:android
+```
+
+### Local Development Builds
+
+For testing on your device without going through the app stores:
+
+```
+# Create a local development build
+npm run build:local
+
+# Create a preview build with development client
+npm run build:preview
 ```
 
 ### Submitting to App Stores
 
 ```
 # Submit to App Store
-npm run submit:ios
+npx eas-cli submit --platform ios
 
 # Submit to Google Play Store
+npx eas-cli submit --platform android
+```
+
+Or use the npm scripts for guidance:
+
+```
+npm run submit:ios
 npm run submit:android
 ```
 
