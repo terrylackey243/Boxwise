@@ -92,6 +92,7 @@ const CreateItem = () => {
   const [labels, setLabels] = useState([]);
   const [upcCode, setUpcCode] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [nextAssetId, setNextAssetId] = useState('');
   const hasCamera = useHasCamera();
   
   // State for quick add dialogs
@@ -138,20 +139,34 @@ const CreateItem = () => {
   
   const [errors, setErrors] = useState({});
 
+  // Function to flatten the hierarchical locations data
+  const flattenLocations = (locationArray, result = []) => {
+    locationArray.forEach(location => {
+      result.push(location);
+      if (location.children && location.children.length > 0) {
+        flattenLocations(location.children, result);
+      }
+    });
+    return result;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Make API calls to fetch locations, categories, and labels
-        const [locationsRes, categoriesRes, labelsRes] = await Promise.all([
-          axios.get('/api/locations?flat=true'),
+        // Make API calls to fetch locations, categories, labels, and next asset ID
+        const [locationsRes, categoriesRes, labelsRes, nextAssetIdRes] = await Promise.all([
+          axios.get('/api/locations'),
           axios.get('/api/categories'),
-          axios.get('/api/labels')
+          axios.get('/api/labels'),
+          axios.get('/api/items/next-asset-id')
         ]);
         
         if (locationsRes.data.success) {
-          setLocations(locationsRes.data.data || []);
+          // Flatten the hierarchical locations data
+          const flatLocations = flattenLocations(locationsRes.data.data || []);
+          setLocations(flatLocations);
         }
         
         if (categoriesRes.data.success) {
@@ -160,6 +175,16 @@ const CreateItem = () => {
         
         if (labelsRes.data.success) {
           setLabels(labelsRes.data.data || []);
+        }
+        
+        if (nextAssetIdRes.data.success) {
+          setNextAssetId(nextAssetIdRes.data.data);
+          
+          // Set the asset ID in the form data
+          setFormData(prevData => ({
+            ...prevData,
+            assetId: nextAssetIdRes.data.data
+          }));
         }
         
         setLoading(false);
@@ -328,6 +353,23 @@ const CreateItem = () => {
     return 'text';
   };
   
+  // Function to map UI field types to database field types
+  const mapFieldTypeToDbType = (uiType) => {
+    // The database only supports 'text', 'integer', 'boolean', 'timestamp'
+    switch (uiType) {
+      case 'url':
+      case 'email':
+        return 'text';
+      case 'integer':
+      case 'boolean':
+      case 'timestamp':
+      case 'text':
+        return uiType;
+      default:
+        return 'text';
+    }
+  };
+  
   const handleCustomFieldChange = (index, field, value) => {
     const updatedCustomFields = [...formData.customFields];
     
@@ -417,8 +459,40 @@ const CreateItem = () => {
     setSubmitting(true);
     
     try {
+      // Prepare data for submission - include both nested and non-nested purchase details
+      // This ensures compatibility with both the database model and the frontend display
+      const submissionData = {
+        ...formData,
+        // Include non-nested purchase details for frontend display
+        purchasedFrom: formData.purchasedFrom,
+        purchasePrice: formData.purchasePrice,
+        purchaseDate: formData.purchaseDate,
+        // Include nested purchase details for database model
+        purchaseDetails: {
+          purchasedFrom: formData.purchasedFrom,
+          purchasePrice: formData.purchasePrice,
+          purchaseDate: formData.purchaseDate
+        },
+        // Include non-nested warranty details for frontend display
+        hasLifetimeWarranty: formData.hasLifetimeWarranty,
+        warrantyExpires: formData.warrantyExpires,
+        warrantyNotes: formData.warrantyNotes,
+        // Include nested warranty details for database model
+        warrantyDetails: {
+          hasLifetimeWarranty: formData.hasLifetimeWarranty,
+          warrantyExpires: formData.warrantyExpires,
+          warrantyNotes: formData.warrantyNotes
+        },
+        // Map UI field types to database field types for custom fields
+        customFields: formData.customFields.map(field => ({
+          name: field.name,
+          value: field.value,
+          type: mapFieldTypeToDbType(field.type || detectFieldType(field.value))
+        }))
+      };
+      
       // Make API call to create the item
-      const response = await axios.post('/api/items', formData);
+      const response = await axios.post('/api/items', submissionData);
       
       if (response.data.success) {
         setSuccessAlert('Item created successfully');
@@ -514,6 +588,20 @@ const CreateItem = () => {
                       value={upcCode}
                       onChange={handleUpcChange}
                       placeholder="Enter UPC code to lookup product information"
+                      onKeyDown={(e) => {
+                        // Trigger lookup when Enter or Tab is pressed
+                        if (e.key === 'Enter' || e.key === 'Tab') {
+                          // Prevent default behavior for Enter to avoid form submission
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                          
+                          // Only trigger lookup if there's a UPC code
+                          if (upcCode.trim()) {
+                            handleUpcLookup();
+                          }
+                        }
+                      }}
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">
@@ -596,42 +684,68 @@ const CreateItem = () => {
                 
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <Autocomplete
-                      options={locations}
-                      getOptionLabel={(option) => {
-                        // Handle both objects and string IDs
-                        if (typeof option === 'string') {
-                          const locationObj = locations.find(loc => loc._id === option);
-                          return locationObj ? getLocationHierarchy(locationObj, locations) : '';
-                        }
-                        return getLocationHierarchy(option, locations);
-                      }}
-                      value={formData.location ? locations.find(loc => loc._id === formData.location) || null : null}
-                      onChange={(event, newValue) => {
-                        setFormData(prevData => ({
-                          ...prevData,
-                          location: newValue ? newValue._id : ''
-                        }));
-                        
-                        // Clear error for this field if it exists
-                        if (errors.location) {
-                          setErrors(prevErrors => ({
-                            ...prevErrors,
-                            location: null
+                    <FormControl fullWidth error={!!errors.location} required>
+                      <InputLabel id="location-label">Location</InputLabel>
+                      <Select
+                        labelId="location-label"
+                        value={formData.location}
+                        onChange={(e) => {
+                          setFormData(prevData => ({
+                            ...prevData,
+                            location: e.target.value
                           }));
-                        }
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Location"
-                          required
-                          error={!!errors.location}
-                          helperText={errors.location}
-                        />
-                      )}
-                      sx={{ flex: 1 }}
-                    />
+                          
+                          // Clear error for this field if it exists
+                          if (errors.location) {
+                            setErrors(prevErrors => ({
+                              ...prevErrors,
+                              location: null
+                            }));
+                          }
+                        }}
+                        label="Location"
+                      >
+                        <MenuItem value="">
+                          <em>Select Location</em>
+                        </MenuItem>
+                        {locations.map((location) => {
+                          // Get the full location hierarchy path
+                          const getLocationHierarchy = (loc) => {
+                            if (!loc) return '';
+                            
+                            // Start with the current location name
+                            let path = loc.name;
+                            let currentLoc = loc;
+                            
+                            // Traverse up the parent hierarchy
+                            while (currentLoc.parent) {
+                              // Find the parent location
+                              const parentLocation = locations.find(l => l._id === currentLoc.parent);
+                              
+                              // If parent not found, break the loop
+                              if (!parentLocation) break;
+                              
+                              // Add parent name to the path
+                              path = `${parentLocation.name} > ${path}`;
+                              
+                              // Move up to the parent
+                              currentLoc = parentLocation;
+                            }
+                            
+                            return path;
+                          };
+                          
+                          const hierarchyPath = getLocationHierarchy(location);
+                          
+                          return (
+                            <MenuItem key={location._id} value={location._id}>
+                              {hierarchyPath}
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                      {errors.location && <Typography color="error" variant="caption">{errors.location}</Typography>}
+                    </FormControl>
                     <Tooltip title="Add New Location">
                       <IconButton 
                         color="primary"
@@ -671,6 +785,7 @@ const CreateItem = () => {
                           }));
                         }
                       }}
+                      isOptionEqualToValue={(option, value) => option._id === value._id}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -702,6 +817,7 @@ const CreateItem = () => {
                       getOptionLabel={(option) => option.name}
                       value={formData.labels}
                       onChange={handleLabelChange}
+                      isOptionEqualToValue={(option, value) => option._id === value._id}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -710,16 +826,22 @@ const CreateItem = () => {
                         />
                       )}
                       renderTags={(value, getTagProps) =>
-                        value.map((option, index) => (
-                          <Chip
-                            label={option.name}
-                            {...getTagProps({ index })}
-                            sx={{
-                              bgcolor: option.color,
-                              color: 'white',
-                            }}
-                          />
-                        ))
+                        value.map((option, index) => {
+                          const props = getTagProps({ index });
+                          // Extract key from props to avoid React warning
+                          const { key, ...chipProps } = props;
+                          return (
+                            <Chip
+                              key={key}
+                              label={option.name}
+                              {...chipProps}
+                              sx={{
+                                bgcolor: option.color,
+                                color: 'white',
+                              }}
+                            />
+                          );
+                        })
                       }
                       sx={{ flex: 1 }}
                     />
@@ -743,6 +865,17 @@ const CreateItem = () => {
               </Typography>
               
               <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Asset ID"
+                    name="assetId"
+                    value={formData.assetId || nextAssetId}
+                    InputProps={{ readOnly: true }}
+                    helperText="Auto-generated ID"
+                  />
+                </Grid>
+                
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth

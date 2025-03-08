@@ -12,7 +12,8 @@ const {
   loanItem,
   returnItem,
   uploadItemAttachment,
-  quickAddItem
+  quickAddItem,
+  getNextAssetId
 } = require('../controllers/items');
 
 const router = express.Router();
@@ -34,6 +35,9 @@ router.route('/export')
 router.route('/quick-add')
   .post(protect, checkSubscriptionLimits, quickAddItem);
 
+router.route('/next-asset-id')
+  .get(protect, getNextAssetId);
+
 router.route('/upc/:upc')
   .get(protect, searchByUPC);
 
@@ -43,12 +47,12 @@ router.route('/:id/attachments')
 router.route('/:id/qrcode')
   .get(protect, generateQRCode);
 
-// These routes are now handled by the mobile API
-// router.route('/:id/loan')
-//   .post(protect, loanItem);
+// Uncomment these routes to enable loan and return functionality
+router.route('/:id/loan')
+  .post(protect, loanItem);
 
-// router.route('/:id/return')
-//   .post(protect, returnItem);
+router.route('/:id/return')
+  .post(protect, returnItem);
 
 router.route('/:id')
   .get(protect, getItem)

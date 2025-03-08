@@ -83,7 +83,7 @@ const ItemDetail = () => {
               
               if (locationResponse.data.success) {
                 // Get all locations to build the hierarchy
-                const locationsResponse = await axios.get('/api/locations?flat=true');
+                const locationsResponse = await axios.get('/api/locations');
                 
                 if (locationsResponse.data.success) {
                   const allLocations = locationsResponse.data.data;
@@ -567,7 +567,7 @@ const ItemDetail = () => {
                     <TableCell component="th" scope="row" sx={{ width: '30%', fontWeight: 'bold' }}>
                       Purchased From
                     </TableCell>
-                    <TableCell>{item.purchasedFrom || '-'}</TableCell>
+                    <TableCell>{(item.purchaseDetails?.purchasedFrom || item.purchasedFrom) || '-'}</TableCell>
                   </TableRow>
                   
                   <TableRow>
@@ -575,7 +575,9 @@ const ItemDetail = () => {
                       Purchase Price
                     </TableCell>
                     <TableCell>
-                      {item.purchasePrice ? `$${item.purchasePrice.toFixed(2)}` : '-'}
+                      {(item.purchaseDetails?.purchasePrice || item.purchasePrice) 
+                        ? `$${(item.purchaseDetails?.purchasePrice || item.purchasePrice).toFixed(2)}` 
+                        : '-'}
                     </TableCell>
                   </TableRow>
                   
@@ -584,7 +586,9 @@ const ItemDetail = () => {
                       Purchase Date
                     </TableCell>
                     <TableCell>
-                      {item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : '-'}
+                      {(item.purchaseDetails?.purchaseDate || item.purchaseDate) 
+                        ? new Date(item.purchaseDetails?.purchaseDate || item.purchaseDate).toLocaleDateString() 
+                        : '-'}
                     </TableCell>
                   </TableRow>
                 </TableBody>

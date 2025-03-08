@@ -15,7 +15,11 @@ import {
   IconButton,
   Divider,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -128,8 +132,15 @@ const BulkAddDialog = ({
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Bulk Add {entityName}s</Typography>
+      <DialogTitle 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          fontWeight: 'medium'
+        }}
+      >
+        Bulk Add {entityName}s
         <IconButton edge="end" color="inherit" onClick={onClose} aria-label="close">
           <CloseIcon />
         </IconButton>
@@ -182,22 +193,52 @@ const BulkAddDialog = ({
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {Object.entries(fields).map(([field, config]) => (
-                  <TextField
-                    key={`${entity.id}-${field}`}
-                    label={config.label}
-                    value={entity[field] || ''}
-                    onChange={(e) => handleFieldChange(entity.id, field, e.target.value)}
-                    required={config.required}
-                    fullWidth
-                    size="small"
-                    type={config.type || 'text'}
-                    multiline={config.multiline}
-                    rows={config.rows}
-                    select={config.select}
-                    SelectProps={config.SelectProps}
-                    InputProps={config.InputProps}
-                    helperText={config.helperText}
-                  />
+                  <React.Fragment key={`${entity.id}-${field}`}>
+                    {config.select ? (
+                      <FormControl fullWidth size="small">
+                        <InputLabel id={`${field}-label-${entity.id}`}>{config.label}</InputLabel>
+                        <Select
+                          labelId={`${field}-label-${entity.id}`}
+                          value={entity[field] || ''}
+                          onChange={(e) => handleFieldChange(entity.id, field, e.target.value)}
+                          label={config.label}
+                          required={config.required}
+                          {...(config.SelectProps || {})}
+                        >
+                          {config.options ? (
+                            config.options.map((option) => (
+                              <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                              </MenuItem>
+                            ))
+                          ) : (
+                            <MenuItem value="" disabled>
+                              <em>No options available</em>
+                            </MenuItem>
+                          )}
+                        </Select>
+                        {config.helperText && (
+                          <Typography variant="caption" color="text.secondary">
+                            {config.helperText}
+                          </Typography>
+                        )}
+                      </FormControl>
+                    ) : (
+                      <TextField
+                        label={config.label}
+                        value={entity[field] || ''}
+                        onChange={(e) => handleFieldChange(entity.id, field, e.target.value)}
+                        required={config.required}
+                        fullWidth
+                        size="small"
+                        type={config.type || 'text'}
+                        multiline={config.multiline}
+                        rows={config.rows}
+                        InputProps={config.InputProps}
+                        helperText={config.helperText}
+                      />
+                    )}
+                  </React.Fragment>
                 ))}
               </Box>
             </Paper>

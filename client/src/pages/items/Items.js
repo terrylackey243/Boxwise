@@ -48,12 +48,12 @@ import {
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
-import BulkAddDialog from '../../components/bulk/BulkAddDialog';
+import SpreadsheetBulkAddDialog from '../../components/bulk/SpreadsheetBulkAddDialog';
 import useIsMobile from '../../hooks/useIsMobile';
 import useHasCamera from '../../hooks/useHasCamera';
 
 const Items = () => {
-  const { setErrorAlert } = useContext(AlertContext);
+  const { setErrorAlert, setSuccessAlert } = useContext(AlertContext);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -255,10 +255,7 @@ const Items = () => {
       handleActionMenuClose();
       
       // Show success message
-      setErrorAlert({ 
-        type: 'success', 
-        message: 'Item deleted successfully' 
-      });
+      setSuccessAlert('Item deleted successfully');
       
       // Refresh the items list from the server
       setLoading(true);
@@ -325,10 +322,7 @@ const Items = () => {
       handleActionMenuClose();
       
       // Show success message
-      setErrorAlert({ 
-        type: 'success', 
-        message: 'Item archived successfully' 
-      });
+      setSuccessAlert('Item archived successfully');
       
       // Refresh the items list from the server
       setLoading(true);
@@ -657,6 +651,14 @@ const Items = () => {
                                   sx={{ ml: 1 }}
                                 />
                               )}
+                              {item.loanDetails && item.loanDetails.isLoaned && (
+                                <Chip
+                                  label="Loaned"
+                                  size="small"
+                                  color="primary"
+                                  sx={{ ml: 1 }}
+                                />
+                              )}
                             </Box>
                           </TableCell>
                           
@@ -748,6 +750,14 @@ const Items = () => {
                             label="Archived"
                             size="small"
                             color="default"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+                        {item.loanDetails && item.loanDetails.isLoaned && (
+                          <Chip
+                            label="Loaned"
+                            size="small"
+                            color="primary"
                             sx={{ ml: 1 }}
                           />
                         )}
@@ -888,17 +898,14 @@ const Items = () => {
         </>
       )}
       
-      {/* Bulk Add Dialog */}
-      <BulkAddDialog
+      {/* Spreadsheet Bulk Add Dialog */}
+      <SpreadsheetBulkAddDialog
         open={bulkAddOpen}
         onClose={() => setBulkAddOpen(false)}
         onSubmit={async (items) => {
           try {
             const result = await bulkService.bulkAdd('items', items);
-            setErrorAlert({ 
-              type: 'success', 
-              message: `Successfully added ${result.count} items` 
-            });
+            setSuccessAlert(`Successfully added ${result.count} items`);
             
             // Refresh the items list
             const params = new URLSearchParams();
@@ -920,6 +927,7 @@ const Items = () => {
         }}
         entityType="items"
         fields={{
+          // Basic information
           name: {
             label: 'Name',
             required: true
@@ -929,20 +937,103 @@ const Items = () => {
             multiline: true,
             rows: 2
           },
-          upcCode: {
-            label: 'UPC Code'
+          location: {
+            label: 'Location',
+            required: true
+          },
+          category: {
+            label: 'Category',
+            required: true
+          },
+          labels: {
+            label: 'Labels'
+          },
+          
+          // Details
+          assetId: {
+            label: 'Asset ID'
           },
           quantity: {
             label: 'Quantity',
             type: 'number',
             required: true
+          },
+          serialNumber: {
+            label: 'Serial Number'
+          },
+          modelNumber: {
+            label: 'Model Number'
+          },
+          manufacturer: {
+            label: 'Manufacturer'
+          },
+          upcCode: {
+            label: 'UPC Code'
+          },
+          isInsured: {
+            label: 'Insured',
+            type: 'boolean'
+          },
+          
+          // Purchase details
+          'purchaseDetails.purchasedFrom': {
+            label: 'Purchased From'
+          },
+          'purchaseDetails.purchasePrice': {
+            label: 'Purchase Price',
+            type: 'number'
+          },
+          'purchaseDetails.purchaseDate': {
+            label: 'Purchase Date',
+            type: 'date'
+          },
+          
+          // Warranty details
+          'warrantyDetails.hasLifetimeWarranty': {
+            label: 'Lifetime Warranty',
+            type: 'boolean'
+          },
+          'warrantyDetails.warrantyExpires': {
+            label: 'Warranty Expires',
+            type: 'date'
+          },
+          'warrantyDetails.warrantyNotes': {
+            label: 'Warranty Notes',
+            multiline: true,
+            rows: 2
+          },
+          
+          // Notes
+          notes: {
+            label: 'Notes',
+            multiline: true,
+            rows: 2
           }
         }}
         defaultValues={{
           name: '',
           description: '',
+          location: '',
+          category: '',
+          labels: [],
+          assetId: '',
+          quantity: 1,
+          serialNumber: '',
+          modelNumber: '',
+          manufacturer: '',
           upcCode: '',
-          quantity: 1
+          isInsured: false,
+          purchaseDetails: {
+            purchasedFrom: '',
+            purchasePrice: '',
+            purchaseDate: ''
+          },
+          warrantyDetails: {
+            hasLifetimeWarranty: false,
+            warrantyExpires: '',
+            warrantyNotes: ''
+          },
+          notes: ''
         }}
       />
       

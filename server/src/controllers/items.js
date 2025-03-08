@@ -342,6 +342,45 @@ exports.generateQRCode = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get next available asset ID
+// @route   GET /api/items/next-asset-id
+// @access  Private
+exports.getNextAssetId = asyncHandler(async (req, res, next) => {
+  try {
+    // Find the item with the highest asset ID for this group
+    const highestItem = await Item.findOne({ 
+      group: req.user.group,
+      assetId: { $exists: true, $ne: null, $ne: '' }
+    }).sort({ assetId: -1 });
+    
+    let nextAssetId = 'A0001'; // Default starting asset ID
+    
+    if (highestItem && highestItem.assetId) {
+      // Extract the numeric part of the asset ID
+      const assetIdMatch = highestItem.assetId.match(/^([A-Z]*)(\d+)$/);
+      
+      if (assetIdMatch) {
+        const prefix = assetIdMatch[1] || 'A';
+        const currentNumber = parseInt(assetIdMatch[2], 10);
+        
+        // Increment the number and pad with zeros
+        const nextNumber = currentNumber + 1;
+        const paddedNumber = nextNumber.toString().padStart(4, '0');
+        
+        nextAssetId = `${prefix}${paddedNumber}`;
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: nextAssetId
+    });
+  } catch (err) {
+    console.error('Error getting next asset ID:', err);
+    return next(new ErrorResponse('Error generating next asset ID', 500));
+  }
+});
+
 // @desc    Search for item by UPC code
 // @route   GET /api/items/upc/:upc
 // @access  Private
@@ -419,12 +458,13 @@ exports.loanItem = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Please provide who the item is loaned to', 400));
   }
   
-  // Update item with loan information
-  item.status = 'loaned';
-  item.loanedTo = req.body.loanedTo;
-  item.loanDate = Date.now();
-  item.expectedReturnDate = req.body.expectedReturnDate || null;
-  item.loanNotes = req.body.loanNotes || '';
+  // Update item with loan information using the loanDetails object
+  item.loanDetails = {
+    loanedTo: req.body.loanedTo,
+    loanDate: Date.now(),
+    isLoaned: true,
+    notes: req.body.notes || ''
+  };
   
   await item.save();
   
@@ -450,15 +490,15 @@ exports.returnItem = asyncHandler(async (req, res, next) => {
   }
   
   // Check if item is actually loaned
-  if (item.status !== 'loaned') {
+  if (!item.loanDetails || !item.loanDetails.isLoaned) {
     return next(new ErrorResponse(`This item is not currently loaned out`, 400));
   }
   
   // Update item with return information
-  item.status = 'available';
-  item.returnDate = Date.now();
-  item.returnCondition = req.body.returnCondition || 'good';
-  item.returnNotes = req.body.returnNotes || '';
+  item.loanDetails.isLoaned = false;
+  item.loanDetails.returnDate = Date.now();
+  item.loanDetails.notes = (item.loanDetails.notes || '') + 
+    (req.body.returnNotes ? `\nReturn notes: ${req.body.returnNotes}` : '');
   
   await item.save();
   

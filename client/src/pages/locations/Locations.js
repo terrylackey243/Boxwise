@@ -122,6 +122,23 @@ const Locations = () => {
       [locationId]: !prev[locationId]
     }));
   };
+  
+  // Function to flatten the hierarchical locations data for dropdowns
+  const flattenLocations = (locationArray, result = [], level = 0, parentPath = '') => {
+    locationArray.forEach(location => {
+      const path = parentPath ? `${parentPath} > ${location.name}` : location.name;
+      result.push({
+        ...location,
+        hierarchyPath: path,
+        level
+      });
+      
+      if (location.children && location.children.length > 0) {
+        flattenLocations(location.children, result, level + 1, path);
+      }
+    });
+    return result;
+  };
 
   // Recursive function to render location tree
   const renderLocationTree = (locationArray, level = 0) => {
@@ -367,7 +384,22 @@ const Locations = () => {
           },
           parentId: {
             label: 'Parent Location',
-            helperText: 'Leave blank for top-level location'
+            helperText: 'Leave blank for top-level location',
+            select: true,
+            SelectProps: {
+              renderValue: (value) => {
+                if (!value) return 'None (Top Level)';
+                const loc = flattenLocations(locations).find(l => l._id === value);
+                return loc ? loc.hierarchyPath : value;
+              }
+            },
+            options: [
+              { value: '', label: 'None (Top Level)' },
+              ...flattenLocations(locations).map(loc => ({
+                value: loc._id,
+                label: loc.hierarchyPath
+              }))
+            ]
           }
         }}
         defaultValues={{
