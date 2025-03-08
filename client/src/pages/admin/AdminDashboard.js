@@ -485,64 +485,68 @@ const AdminDashboard = () => {
                         
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              {user.name}
-                              <Chip
-                                size="small"
-                                label={user.role.toUpperCase()}
-                                color={
-                                  user.role === 'owner'
-                                    ? 'error'
-                                    : user.role === 'admin'
-                                    ? 'primary'
-                                    : 'default'
-                                }
-                                sx={{ ml: 1 }}
-                              />
-                              {/* Get subscription info from the API */}
-                              {(() => {
-                                // Find the subscription for this user's group
-                                const subscription = stats?.subscriptions?.find(sub => 
-                                  sub.group.toString() === user.group.toString()
-                                );
-                                
-                                if (subscription) {
-                                  return (
-                                    <>
-                                      <Chip
-                                        size="small"
-                                        label={subscription.plan.toUpperCase()}
-                                        color={
-                                          subscription.plan === 'business'
-                                            ? 'success'
-                                            : subscription.plan === 'pro'
-                                            ? 'info'
-                                            : 'default'
-                                        }
-                                        sx={{ ml: 1 }}
-                                      />
-                                      <Chip
-                                        size="small"
-                                        icon={subscription.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
-                                        label={subscription.status.toUpperCase()}
-                                        color={subscription.status === 'active' ? 'success' : 'error'}
-                                        variant="outlined"
-                                        sx={{ ml: 1 }}
-                                      />
-                                    </>
+                            <Typography variant="body1" component="div">
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                {user.name}
+                                <Chip
+                                  size="small"
+                                  label={user.role.toUpperCase()}
+                                  color={
+                                    user.role === 'owner'
+                                      ? 'error'
+                                      : user.role === 'admin'
+                                      ? 'primary'
+                                      : 'default'
+                                  }
+                                  sx={{ ml: 1 }}
+                                />
+                                {/* Get subscription info from the API */}
+                                {(() => {
+                                  // Find the subscription for this user's group
+                                  const subscription = stats?.subscriptions?.find(sub => 
+                                    sub.group.toString() === user.group.toString()
                                   );
-                                }
-                                return null;
-                              })()}
-                            </Box>
+                                  
+                                  if (subscription) {
+                                    return (
+                                      <>
+                                        <Chip
+                                          size="small"
+                                          label={subscription.plan.toUpperCase()}
+                                          color={
+                                            subscription.plan === 'business'
+                                              ? 'success'
+                                              : subscription.plan === 'pro'
+                                              ? 'info'
+                                              : 'default'
+                                          }
+                                          sx={{ ml: 1 }}
+                                        />
+                                        <Chip
+                                          size="small"
+                                          icon={subscription.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
+                                          label={subscription.status.toUpperCase()}
+                                          color={subscription.status === 'active' ? 'success' : 'error'}
+                                          variant="outlined"
+                                          sx={{ ml: 1 }}
+                                        />
+                                      </>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </Box>
+                            </Typography>
                           }
                           secondary={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <EmailIcon fontSize="small" sx={{ mr: 0.5, fontSize: 16 }} />
-                              {user.email}
-                              <Box component="span" sx={{ mx: 1 }}>•</Box>
-                              Joined {new Date(user.createdAt).toLocaleDateString()}
-                            </Box>
+                            <Typography variant="body2" component="div">
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <EmailIcon fontSize="small" sx={{ mr: 0.5, fontSize: 16 }} />
+                                {user.email}
+                                <Box component="span" sx={{ mx: 1 }}>•</Box>
+                                Joined {new Date(user.createdAt).toLocaleDateString()}
+                              </Box>
+                            </Typography>
                           }
                         />
                         
@@ -618,28 +622,30 @@ const AdminDashboard = () => {
                     <ListItem>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="subtitle1">
-                              {activity.user}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mx: 1 }}>
-                              {activity.type === 'item_created'
-                                ? 'created item'
-                                : activity.type === 'item_updated'
-                                ? 'updated item'
-                                : activity.type === 'location_created'
-                                ? 'created location'
-                                : activity.type === 'label_created'
-                                ? 'created label'
-                                : 'created category'}
-                            </Typography>
-                            <Typography variant="subtitle1">
-                              {activity.item}
-                            </Typography>
-                          </Box>
+                          <Typography variant="body1" component="div">
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Typography variant="subtitle1" component="span">
+                                {activity.user}
+                              </Typography>
+                              <Typography variant="body2" component="span" sx={{ mx: 1 }}>
+                                {activity.type === 'item_created'
+                                  ? 'created item'
+                                  : activity.type === 'item_updated'
+                                  ? 'updated item'
+                                  : activity.type === 'location_created'
+                                  ? 'created location'
+                                  : activity.type === 'label_created'
+                                  ? 'created label'
+                                  : 'created category'}
+                              </Typography>
+                              <Typography variant="subtitle1" component="span">
+                                {activity.item}
+                              </Typography>
+                            </Box>
+                          </Typography>
                         }
                         secondary={
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" component="div" color="text.secondary">
                             {new Date(activity.date).toLocaleString()}
                           </Typography>
                         }
