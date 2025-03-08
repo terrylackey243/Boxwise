@@ -26,7 +26,9 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  Tooltip,
+  Fab
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -37,9 +39,14 @@ import {
   Delete as DeleteIcon,
   Archive as ArchiveIcon,
   MoreVert as MoreVertIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  QrCodeScanner as QrCodeScannerIcon,
+  CameraAlt as CameraIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
+import BarcodeScanner from '../../components/scanner/BarcodeScanner';
+import useIsMobile from '../../hooks/useIsMobile';
+import useHasCamera from '../../hooks/useHasCamera';
 
 const Items = () => {
   const { setErrorAlert } = useContext(AlertContext);
@@ -77,6 +84,11 @@ const Items = () => {
   // Sort state
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
+  
+  // Scanner state
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const hasCamera = useHasCamera();
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -265,6 +277,26 @@ const Items = () => {
     }
   };
 
+  // Handle barcode scanner
+  const handleOpenScanner = () => {
+    setScannerOpen(true);
+  };
+
+  const handleCloseScanner = () => {
+    setScannerOpen(false);
+  };
+
+  const handleBarcodeDetected = async (code) => {
+    console.log('Barcode detected:', code);
+    
+    // Close the scanner
+    setScannerOpen(false);
+    
+    // Set the search term to the detected barcode
+    setSearchTerm(code);
+    setPage(0);
+  };
+
   if (loading) {
     return (
       <Box
@@ -339,11 +371,23 @@ const Items = () => {
                     <SearchIcon />
                   </InputAdornment>
                 ),
-                endAdornment: searchTerm && (
+                endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={handleClearSearch}>
-                      <ClearIcon />
-                    </IconButton>
+                    {searchTerm && (
+                      <IconButton size="small" onClick={handleClearSearch}>
+                        <ClearIcon />
+                      </IconButton>
+                    )}
+                    {hasCamera && (
+                      <IconButton 
+                        color="primary" 
+                        onClick={handleOpenScanner}
+                        size="small"
+                        sx={{ ml: 0.5 }}
+                      >
+                        <QrCodeScannerIcon />
+                      </IconButton>
+                    )}
                   </InputAdornment>
                 )
               }}
@@ -685,6 +729,32 @@ const Items = () => {
           </Paper>
         )}
       </Box>
+      
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={handleCloseScanner}
+        onDetected={handleBarcodeDetected}
+      />
+      
+      {/* Scan Button - Only show on mobile devices with camera */}
+      {isMobile && hasCamera && (
+        <Tooltip title="Scan Barcode">
+          <Fab
+            color="primary"
+            aria-label="scan"
+            onClick={handleOpenScanner}
+            sx={{
+              position: 'fixed',
+              bottom: 16,
+              right: 16,
+              zIndex: 1000
+            }}
+          >
+            <QrCodeScannerIcon />
+          </Fab>
+        </Tooltip>
+      )}
       
       {/* Action Menu */}
       <Menu
