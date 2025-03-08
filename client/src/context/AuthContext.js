@@ -77,33 +77,58 @@ export const AuthProvider = ({ children }) => {
 
   // Load user
   const loadUser = async () => {
+    console.log('loadUser called - checking authentication state');
+    
     if (localStorage.token) {
+      console.log('Token found in localStorage:', localStorage.token.substring(0, 20) + '...');
       setAuthToken(localStorage.token);
       
       try {
         // Check if token is expired
         const decoded = jwt_decode(localStorage.token);
+        console.log('Token decoded:', decoded);
+        
         const currentTime = Date.now() / 1000;
+        console.log('Current time:', currentTime, 'Token expires:', decoded.exp);
         
         if (decoded.exp < currentTime) {
           // Token is expired
+          console.error('Token expired - redirecting to login');
           dispatch({ type: 'AUTH_ERROR', payload: 'Session expired, please login again' });
           return;
         }
         
+        console.log('Attempting to fetch user data with token');
         const res = await axios.get('/api/auth/me');
+        console.log('User data received:', res.data);
         
         dispatch({
           type: 'USER_LOADED',
           payload: res.data.data
         });
+        console.log('User loaded successfully');
       } catch (err) {
+        console.error('Error loading user:', err);
+        console.error('Error details:', {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          headers: err.response?.headers,
+          config: {
+            url: err.config?.url,
+            method: err.config?.method,
+            baseURL: err.config?.baseURL,
+            headers: err.config?.headers
+          }
+        });
+        
         dispatch({
           type: 'AUTH_ERROR',
           payload: err.response?.data?.message || 'Authentication error'
         });
       }
     } else {
+      console.warn('No token found in localStorage');
       dispatch({ type: 'AUTH_ERROR' });
     }
   };
@@ -129,42 +154,86 @@ export const AuthProvider = ({ children }) => {
 
   // Login user
   const login = async (formData) => {
+    console.log('Login function called with:', { email: formData.email, password: '***' });
+    
     try {
+      console.log('Sending login request to /api/auth/login');
       const res = await axios.post('/api/auth/login', formData);
+      console.log('Login response received:', res.data);
       
       // Set token in localStorage and axios headers
+      console.log('Setting token in localStorage and axios headers');
       localStorage.setItem('token', res.data.token);
       setAuthToken(res.data.token);
+      
+      // Verify token was stored correctly
+      const storedToken = localStorage.getItem('token');
+      console.log('Token stored in localStorage:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
       
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: res.data
       });
+      console.log('Dispatched LOGIN_SUCCESS');
       
       try {
         // Load user data
+        console.log('Attempting to load user data');
         const userRes = await axios.get('/api/auth/me');
+        console.log('User data received:', userRes.data);
         
         dispatch({
           type: 'USER_LOADED',
           payload: userRes.data.data
         });
+        console.log('Dispatched USER_LOADED');
         
         // Force redirect to dashboard
+        console.log('Redirecting to dashboard');
         window.location.href = '/dashboard';
         
         return true;
       } catch (loadErr) {
+        console.error('Error loading user after login:', loadErr);
+        console.error('Error details:', {
+          status: loadErr.response?.status,
+          statusText: loadErr.response?.statusText,
+          data: loadErr.response?.data,
+          headers: loadErr.response?.headers,
+          config: {
+            url: loadErr.config?.url,
+            method: loadErr.config?.method,
+            baseURL: loadErr.config?.baseURL,
+            headers: loadErr.config?.headers
+          }
+        });
+        
         dispatch({
           type: 'AUTH_ERROR',
           payload: loadErr.response?.data?.message || 'Error loading user'
         });
+        console.log('Dispatched AUTH_ERROR due to error loading user');
       }
     } catch (err) {
+      console.error('Login failed:', err);
+      console.error('Error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        headers: err.response?.headers,
+        config: {
+          url: err.config?.url,
+          method: err.config?.method,
+          baseURL: err.config?.baseURL,
+          headers: err.config?.headers
+        }
+      });
+      
       dispatch({
         type: 'LOGIN_FAIL',
         payload: err.response?.data?.message || 'Invalid credentials'
       });
+      console.log('Dispatched LOGIN_FAIL');
       throw err;
     }
   };

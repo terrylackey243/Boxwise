@@ -30,13 +30,24 @@ const Login = () => {
   const { email, password } = formData;
 
   useEffect(() => {
+    console.log('Login component - useEffect triggered');
+    console.log('Authentication state:', { isAuthenticated, error });
+    
+    // Check localStorage directly
+    const token = localStorage.getItem('token');
+    console.log('Token in localStorage:', token ? `${token.substring(0, 20)}...` : 'null');
+    
     // If already authenticated, redirect to dashboard
     if (isAuthenticated) {
+      console.log('User is authenticated, redirecting to dashboard');
       navigate('/dashboard');
+    } else {
+      console.log('User is not authenticated');
     }
 
     // If there's an error, show it
     if (error) {
+      console.error('Authentication error:', error);
       setErrorAlert(error);
       clearError();
     }
@@ -49,17 +60,43 @@ const Login = () => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    console.log('Login form submitted');
     setLoading(true);
     
     try {
-      console.log('Attempting to login with:', { email, password });
+      console.log('Attempting to login with:', { email, password: '***' });
+      
+      // Check authentication state before login
+      console.log('Auth state before login:', { 
+        isAuthenticated, 
+        hasToken: !!localStorage.getItem('token') 
+      });
+      
       await login({ email, password });
+      
+      // Check authentication state after login
+      console.log('Auth state after login:', { 
+        isAuthenticated, 
+        hasToken: !!localStorage.getItem('token') 
+      });
+      
       console.log('Login successful, redirecting to dashboard...');
       
-      // Force navigation to dashboard after successful login
-      navigate('/dashboard');
+      // Add a small delay to ensure state updates have propagated
+      setTimeout(() => {
+        console.log('Navigating to dashboard after delay');
+        navigate('/dashboard');
+      }, 100);
+      
     } catch (err) {
       console.error('Login error:', err);
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response ? {
+          status: err.response.status,
+          data: err.response.data
+        } : 'No response'
+      });
     } finally {
       setLoading(false);
     }

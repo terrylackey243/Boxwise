@@ -35,6 +35,7 @@ import CreateCategory from './pages/categories/CreateCategory';
 import EditCategory from './pages/categories/EditCategory';
 import Profile from './pages/profile/Profile';
 import NotFound from './pages/NotFound';
+import TestPage from './pages/TestPage';
 import Reports from './pages/reports/Reports';
 import QRGenerator from './pages/tools/QRGenerator';
 import LabelGenerator from './pages/tools/LabelGenerator';
@@ -172,6 +173,7 @@ const App = () => {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/test" element={<TestPage />} />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
