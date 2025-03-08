@@ -41,7 +41,8 @@ import {
   PersonAdd as RegisterIcon,
   Upload as ImportExportIcon,
   AdminPanelSettings as AdminIcon,
-  Alarm as ReminderIcon
+  Alarm as ReminderIcon,
+  PhoneAndroid as MobileIcon
 } from '@mui/icons-material';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -132,6 +133,12 @@ const Navbar = ({ toggleColorMode, mode }) => {
       text: 'Import/Export',
       icon: <ImportExportIcon />,
       path: '/tools/import-export',
+      auth: true
+    },
+    {
+      text: 'Mobile App',
+      icon: <MobileIcon />,
+      path: '/mobile-app.html',
       auth: true
     },
     {
