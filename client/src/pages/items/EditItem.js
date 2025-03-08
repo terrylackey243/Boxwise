@@ -20,14 +20,20 @@ import {
   Breadcrumbs,
   Link,
   Autocomplete,
-  Chip
+  Chip,
+  InputAdornment,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  QrCodeScanner as QrCodeScannerIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
+import BarcodeScanner from '../../components/scanner/BarcodeScanner';
+import useHasCamera from '../../hooks/useHasCamera';
 
 const EditItem = () => {
   const { id } = useParams();
@@ -40,6 +46,8 @@ const EditItem = () => {
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
   const [item, setItem] = useState(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const hasCamera = useHasCamera();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -148,6 +156,28 @@ const EditItem = () => {
         [name]: null
       }));
     }
+  };
+  
+  // Handle barcode scanner
+  const handleOpenScanner = () => {
+    setScannerOpen(true);
+  };
+
+  const handleCloseScanner = () => {
+    setScannerOpen(false);
+  };
+
+  const handleBarcodeDetected = (code) => {
+    console.log('Barcode detected:', code);
+    
+    // Close the scanner
+    setScannerOpen(false);
+    
+    // Set the UPC code
+    setFormData(prevData => ({
+      ...prevData,
+      upcCode: code
+    }));
   };
 
   const handleLabelChange = (event, newValue) => {
@@ -600,6 +630,21 @@ const EditItem = () => {
                     name="upcCode"
                     value={formData.upcCode}
                     onChange={handleChange}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip title="Scan Barcode">
+                            <IconButton 
+                              color="primary" 
+                              onClick={handleOpenScanner}
+                              size="small"
+                            >
+                              <QrCodeScannerIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      )
+                    }}
                   />
                 </Grid>
                 
@@ -933,6 +978,13 @@ const EditItem = () => {
           </Grid>
         </Grid>
       </form>
+      
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={handleCloseScanner}
+        onDetected={handleBarcodeDetected}
+      />
     </Container>
   );
 };

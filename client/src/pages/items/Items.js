@@ -378,7 +378,7 @@ const Items = () => {
                         <ClearIcon />
                       </IconButton>
                     )}
-                    {hasCamera && (
+                    <Tooltip title="Scan Barcode">
                       <IconButton 
                         color="primary" 
                         onClick={handleOpenScanner}
@@ -387,7 +387,7 @@ const Items = () => {
                       >
                         <QrCodeScannerIcon />
                       </IconButton>
-                    )}
+                    </Tooltip>
                   </InputAdornment>
                 )
               }}
@@ -737,8 +737,8 @@ const Items = () => {
         onDetected={handleBarcodeDetected}
       />
       
-      {/* Scan Button - Only show on mobile devices with camera */}
-      {isMobile && hasCamera && (
+      {/* Scan Button - Show on mobile devices */}
+      {isMobile && (
         <Tooltip title="Scan Barcode">
           <Fab
             color="primary"

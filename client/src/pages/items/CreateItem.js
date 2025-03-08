@@ -20,16 +20,22 @@ import {
   Breadcrumbs,
   Link,
   Autocomplete,
-  Chip
+  Chip,
+  InputAdornment,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
   Add as AddIcon,
   Search as SearchIcon,
-  QrCode as QrCodeIcon
+  QrCode as QrCodeIcon,
+  QrCodeScanner as QrCodeScannerIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
+import BarcodeScanner from '../../components/scanner/BarcodeScanner';
+import useHasCamera from '../../hooks/useHasCamera';
 
 const CreateItem = () => {
   const navigate = useNavigate();
@@ -43,6 +49,8 @@ const CreateItem = () => {
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
   const [upcCode, setUpcCode] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const hasCamera = useHasCamera();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -130,6 +138,36 @@ const CreateItem = () => {
       ...prevData,
       upcCode: value
     }));
+  };
+  
+  // Handle barcode scanner
+  const handleOpenScanner = () => {
+    setScannerOpen(true);
+  };
+
+  const handleCloseScanner = () => {
+    setScannerOpen(false);
+  };
+
+  const handleBarcodeDetected = (code) => {
+    console.log('Barcode detected:', code);
+    
+    // Close the scanner
+    setScannerOpen(false);
+    
+    // Set the UPC code
+    setUpcCode(code);
+    
+    // Also update the formData with the UPC code
+    setFormData(prevData => ({
+      ...prevData,
+      upcCode: code
+    }));
+    
+    // Automatically trigger UPC lookup
+    setTimeout(() => {
+      handleUpcLookup();
+    }, 500);
   };
   
   const handleUpcLookup = async () => {
@@ -442,6 +480,21 @@ const CreateItem = () => {
                       value={upcCode}
                       onChange={handleUpcChange}
                       placeholder="Enter UPC code to lookup product information"
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Tooltip title="Scan Barcode">
+                              <IconButton 
+                                color="primary" 
+                                onClick={handleOpenScanner}
+                                size="small"
+                              >
+                                <QrCodeScannerIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </InputAdornment>
+                        )
+                      }}
                     />
                   </Grid>
                   <Grid item xs={4}>
@@ -994,6 +1047,13 @@ const CreateItem = () => {
           </Grid>
         </Grid>
       </form>
+      
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={handleCloseScanner}
+        onDetected={handleBarcodeDetected}
+      />
     </Container>
   );
 };

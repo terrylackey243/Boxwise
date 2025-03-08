@@ -58,6 +58,20 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
     setScanning(true);
     setError(null);
     
+    // Check if the browser supports getUserMedia (required for camera access)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Your browser does not support camera access');
+      setScanning(false);
+      return;
+    }
+    
+    // Check if we have any cameras
+    if (cameras.length === 0) {
+      setError('No camera detected on your device');
+      setScanning(false);
+      return;
+    }
+    
     Quagga.init({
       inputStream: {
         name: "Live",
@@ -82,7 +96,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
     }, (err) => {
       if (err) {
         console.error('Error initializing Quagga:', err);
-        setError('Could not initialize camera scanner');
+        setError('Could not initialize camera scanner. Make sure you have granted camera permissions.');
         setScanning(false);
         return;
       }
@@ -146,12 +160,22 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
         {error ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="error" gutterBottom>{error}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              To use the barcode scanner, you need a device with a camera and must grant camera permissions.
+            </Typography>
             <Button 
               variant="contained" 
               onClick={initializeScanner}
               startIcon={<CameraIcon />}
             >
               Try Again
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={onClose}
+              sx={{ ml: 1 }}
+            >
+              Cancel
             </Button>
           </Box>
         ) : (
