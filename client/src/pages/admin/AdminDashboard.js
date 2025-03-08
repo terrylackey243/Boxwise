@@ -47,7 +47,8 @@ import {
   SupervisorAccount as OwnerIcon,
   Person as UserIcon,
   CheckCircle as ActiveIcon,
-  Cancel as InactiveIcon
+  Cancel as InactiveIcon,
+  Devices as DevicesIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { AlertContext } from '../../context/AlertContext';
@@ -373,48 +374,25 @@ const AdminDashboard = () => {
                 </Grid>
               </Grid>
               
-              {/* Mobile App Card */}
+              {/* Mobile Responsive Card */}
               <Paper sx={{ p: 3, mb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                   <Box>
                     <Typography variant="h6" gutterBottom>
-                      Mobile Application Now Available
+                      Mobile Responsive Web App
                     </Typography>
                     <Typography variant="body1" paragraph>
-                      The Boxwise mobile app is now available for iOS and Android devices. Users can scan UPC codes, take photos of items, check inventory while shopping, and add items on the go.
+                      Boxwise is now fully responsive and optimized for mobile devices. Access your inventory on the go directly from your phone's web browser - no app download required!
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                       <Grid item>
                         <Button 
                           variant="contained" 
                           color="primary"
-                          href="https://apps.apple.com/app/boxwise-inventory"
-                          target="_blank"
+                          href="/"
                           rel="noopener noreferrer"
                         >
-                          Download for iOS
-                        </Button>
-                      </Grid>
-                      <Grid item>
-                        <Button 
-                          variant="contained" 
-                          color="primary"
-                          href="https://play.google.com/store/apps/details?id=com.boxwise.inventory"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Download for Android
-                        </Button>
-                      </Grid>
-                      <Grid item>
-                        <Button 
-                          variant="outlined" 
-                          color="primary"
-                          href="https://boxwise-mobile-preview.onrender.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          View App Preview
+                          Open in Browser
                         </Button>
                       </Grid>
                     </Grid>
@@ -434,12 +412,11 @@ const AdminDashboard = () => {
                       }}
                     >
                       <Typography variant="caption" align="center" sx={{ p: 1 }}>
-                        QR Code<br />Coming Soon
+                        <DevicesIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                        <br />
+                        Responsive Design
                       </Typography>
                     </Box>
-                    <Typography variant="caption" align="center">
-                      Use download links
-                    </Typography>
                   </Box>
                 </Box>
                 <Box sx={{ mt: 2 }}>
@@ -463,7 +440,7 @@ const AdminDashboard = () => {
                           1
                         </Box>
                         <Typography variant="body2">
-                          Scan UPC codes with camera
+                          Optimized for all screen sizes
                         </Typography>
                       </Box>
                     </Grid>
@@ -483,7 +460,7 @@ const AdminDashboard = () => {
                           2
                         </Box>
                         <Typography variant="body2">
-                          Take photos and upload instantly
+                          Touch-friendly interface
                         </Typography>
                       </Box>
                     </Grid>
@@ -503,7 +480,7 @@ const AdminDashboard = () => {
                           3
                         </Box>
                         <Typography variant="body2">
-                          Check inventory while shopping
+                          Fast loading on mobile networks
                         </Typography>
                       </Box>
                     </Grid>
@@ -523,7 +500,7 @@ const AdminDashboard = () => {
                           4
                         </Box>
                         <Typography variant="body2">
-                          Add items right when purchased
+                          Manage inventory on any device
                         </Typography>
                       </Box>
                     </Grid>

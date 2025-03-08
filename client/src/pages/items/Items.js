@@ -437,130 +437,254 @@ const Items = () => {
         </Grid>
       </Paper>
       
-      {/* Items Table */}
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Labels</TableCell>
-                <TableCell>UPC Code</TableCell>
-                <TableCell>Last Updated</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            
-            <TableBody>
-              {filteredItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                    <Typography variant="body1" color="text.secondary" gutterBottom>
-                      No items found
-                    </Typography>
-                    
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      component={RouterLink}
-                      to="/items/create"
-                      sx={{ mt: 1 }}
-                    >
-                      Add Your First Item
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredItems.map((item) => (
-                    <TableRow
-                      key={item._id}
-                      hover
-                      onClick={() => navigate(`/items/${item._id}`)}
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        '&:hover': { cursor: 'pointer' },
-                        ...(item.isArchived === true && { opacity: 0.6 })
-                      }}
-                    >
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="body1">
-                            {item.name || 'Unnamed Item'}
-                          </Typography>
-                          {item.isArchived === true && (
-                            <Chip
-                              label="Archived"
-                              size="small"
-                              color="default"
-                              sx={{ ml: 1 }}
-                            />
-                          )}
-                        </Box>
-                      </TableCell>
-                      
-                      <TableCell>{item.location?.name || 'No location'}</TableCell>
-                      <TableCell>{item.category?.name || 'No category'}</TableCell>
-                      
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {item.labels && item.labels.length > 0 ? (
-                            item.labels.map((label) => (
-                              <Chip
-                                key={label._id}
-                                label={label.name}
-                                size="small"
-                                sx={{
-                                  bgcolor: label.color,
-                                  color: 'white',
-                                }}
-                              />
-                            ))
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              No labels
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {item.upcCode || 'N/A'}
-                      </TableCell>
-                      
-                      <TableCell>
-                        {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      
-                      <TableCell align="right">
-                        <IconButton
-                          onClick={(e) => handleActionMenuOpen(e, item._id)}
-                          size="small"
+      {/* Items List - Responsive Layout */}
+      <Box>
+        {/* Desktop View - Table */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <Paper>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Location</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Labels</TableCell>
+                    <TableCell>UPC Code</TableCell>
+                    <TableCell>Last Updated</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                
+                <TableBody>
+                  {filteredItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body1" color="text.secondary" gutterBottom>
+                          No items found
+                        </Typography>
+                        
+                        <Button
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          component={RouterLink}
+                          to="/items/create"
+                          sx={{ mt: 1 }}
                         >
-                          <MoreVertIcon />
-                        </IconButton>
+                          Add Your First Item
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  ) : (
+                    filteredItems.map((item) => (
+                        <TableRow
+                          key={item._id}
+                          hover
+                          onClick={() => navigate(`/items/${item._id}`)}
+                          sx={{
+                            textDecoration: 'none',
+                            color: 'inherit',
+                            '&:hover': { cursor: 'pointer' },
+                            ...(item.isArchived === true && { opacity: 0.6 })
+                          }}
+                        >
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Typography variant="body1">
+                                {item.name || 'Unnamed Item'}
+                              </Typography>
+                              {item.isArchived === true && (
+                                <Chip
+                                  label="Archived"
+                                  size="small"
+                                  color="default"
+                                  sx={{ ml: 1 }}
+                                />
+                              )}
+                            </Box>
+                          </TableCell>
+                          
+                          <TableCell>{item.location?.name || 'No location'}</TableCell>
+                          <TableCell>{item.category?.name || 'No category'}</TableCell>
+                          
+                          <TableCell>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {item.labels && item.labels.length > 0 ? (
+                                item.labels.map((label) => (
+                                  <Chip
+                                    key={label._id}
+                                    label={label.name}
+                                    size="small"
+                                    sx={{
+                                      bgcolor: label.color,
+                                      color: 'white',
+                                    }}
+                                  />
+                                ))
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No labels
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
+                          
+                          <TableCell>
+                            {item.upcCode || 'N/A'}
+                          </TableCell>
+                          
+                          <TableCell>
+                            {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          
+                          <TableCell align="right">
+                            <IconButton
+                              onClick={(e) => handleActionMenuOpen(e, item._id)}
+                              size="small"
+                            >
+                              <MoreVertIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+
+        {/* Mobile View - Cards */}
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          {filteredItems.length === 0 ? (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary" gutterBottom>
+                No items found
+              </Typography>
+              
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                component={RouterLink}
+                to="/items/create"
+                sx={{ mt: 1 }}
+              >
+                Add Your First Item
+              </Button>
+            </Paper>
+          ) : (
+            <Grid container spacing={2}>
+              {filteredItems.map((item) => (
+                <Grid item xs={12} key={item._id}>
+                  <Paper 
+                    sx={{ 
+                      p: 2, 
+                      ...(item.isArchived === true && { opacity: 0.6 }),
+                      '&:hover': { boxShadow: 3, cursor: 'pointer' }
+                    }}
+                    onClick={() => navigate(`/items/${item._id}`)}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="h6" component="div">
+                        {item.name || 'Unnamed Item'}
+                        {item.isArchived === true && (
+                          <Chip
+                            label="Archived"
+                            size="small"
+                            color="default"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+                      </Typography>
+                      <IconButton
+                        onClick={(e) => handleActionMenuOpen(e, item._id)}
+                        size="small"
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </Box>
+                    
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Location:
+                        </Typography>
+                        <Typography variant="body2">
+                          {item.location?.name || 'No location'}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Category:
+                        </Typography>
+                        <Typography variant="body2">
+                          {item.category?.name || 'No category'}
+                        </Typography>
+                      </Grid>
+                      
+                      {item.upcCode && (
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            UPC:
+                          </Typography>
+                          <Typography variant="body2">
+                            {item.upcCode}
+                          </Typography>
+                        </Grid>
+                      )}
+                      
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Updated:
+                        </Typography>
+                        <Typography variant="body2">
+                          {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                    
+                    {item.labels && item.labels.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Labels:
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {item.labels.map((label) => (
+                            <Chip
+                              key={label._id}
+                              label={label.name}
+                              size="small"
+                              sx={{
+                                bgcolor: label.color,
+                                color: 'white',
+                              }}
+                            />
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
         
         {filteredItems.length > 0 && (
-          <TablePagination
-            component="div"
-            count={totalItems}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-          />
+          <Paper sx={{ mt: 2 }}>
+            <TablePagination
+              component="div"
+              count={totalItems}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </Paper>
         )}
-      </Paper>
+      </Box>
       
       {/* Action Menu */}
       <Menu

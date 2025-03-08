@@ -21,7 +21,6 @@ const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
 const achievementRoutes = require('./routes/achievements');
 const reminderRoutes = require('./routes/reminders');
-const mobileRoutes = require('./routes/mobile');
 
 // Create Express app
 const app = express();
@@ -53,7 +52,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/reminders', reminderRoutes);
-app.use('/api/mobile', mobileRoutes);
 
 // Local development only - no production asset serving
 
