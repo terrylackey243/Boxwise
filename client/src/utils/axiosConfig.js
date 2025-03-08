@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Set default base URL for all axios requests
 // Using the proxy setting in package.json for local development
-axios.defaults.baseURL = '';
+// In production, use relative path which will be handled by the rewrite rules in render.yaml
+axios.defaults.baseURL = process.env.NODE_ENV === 'production' ? '/api' : '';
 
 // Set default headers for all axios requests
 axios.defaults.headers.common['Content-Type'] = 'application/json';

@@ -1,0 +1,17 @@
+{
+  "name": "boxwise",
+  "version": "1.0.0",
+  "description": "Boxwise Inventory Management System (Local Development Version)",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ../scripts && npm install",
+    "start:client": "cd client && npm start",
+    "start:server": "cd server && npm run dev",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "init:db": "cd scripts && node init-db.js",
+    "reset:db": "cd scripts && ./reset-db.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
