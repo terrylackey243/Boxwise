@@ -101,6 +101,10 @@ UserSchema.methods.matchPassword = async function(enteredPassword) {
 
 // Check if user has reached item limit based on group subscription
 UserSchema.methods.hasReachedItemLimit = async function(itemCount) {
+  // Always return false to remove all limits
+  return false;
+  
+  /* Original implementation with limits:
   const Subscription = require('./Subscription');
   const SubscriptionPlan = require('./SubscriptionPlan');
   
@@ -137,6 +141,7 @@ UserSchema.methods.hasReachedItemLimit = async function(itemCount) {
     default:
       return itemCount >= 50; // Default to free plan limits
   }
+  */
 };
 
 module.exports = mongoose.model('User', UserSchema);

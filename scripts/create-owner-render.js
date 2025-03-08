@@ -1,34 +1,35 @@
 #!/usr/bin/env node
 
 /**
- * Script to create a new owner user in the Boxwise application
+ * Script to create a new owner user in the Boxwise application on Render.com
  * 
- * Usage: node create-owner.js <email> <password> <name>
- * Example: node create-owner.js owner@example.com password123 "John Doe"
+ * This script is designed to be run on Render.com to create a new owner user
+ * with the specified email, password, and name.
+ * 
+ * Usage: node create-owner-render.js <email> <password> <name>
+ * Example: node create-owner-render.js owner@example.com password123 "John Doe"
  */
 
+// Import required modules
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Get command line arguments
-const email = process.argv[2];
-const password = process.argv[3];
-const name = process.argv[4] || email.split('@')[0]; // Use part of email as name if not provided
+const email = process.argv[2] || 'terry@jknelotions.com';
+const password = process.argv[3] || 'cde3CDE#vfr4VFR$';
+const name = process.argv[4] || 'Terry';
 
-if (!email || !password) {
-  console.error('Usage: node create-owner.js <email> <password> <name>');
+// MongoDB connection
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error('MONGO_URI environment variable is required');
   process.exit(1);
 }
 
-// Load environment variables from .env file
-const dotenv = require('dotenv');
-const path = require('path');
-dotenv.config({ path: path.resolve(__dirname, '../server/.env') });
-
-// MongoDB connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/boxwise';
-console.log('Using MongoDB URI:', MONGO_URI.replace(/\/\/([^:]+):[^@]+@/, '//***:***@'));
+console.log(`Using MongoDB URI: ${MONGO_URI.replace(/\/\/([^:]+):[^@]+@/, '//***:***@')}`);
+console.log(`Creating owner user with email: ${email}, name: ${name}`);
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI, {
@@ -57,6 +58,20 @@ const GroupSchema = new mongoose.Schema({
     role: String,
     joinedAt: Date
   }],
+  settings: {
+    assetIdPrefix: {
+      type: String,
+      default: '000-'
+    },
+    autoIncrementAssetId: {
+      type: Boolean,
+      default: true
+    },
+    nextAssetId: {
+      type: Number,
+      default: 1
+    }
+  },
   subscription: {
     plan: String,
     maxMembers: Number
@@ -112,20 +127,26 @@ async function createOwner() {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.error(`User with email ${email} already exists`);
-      process.exit(1);
+      console.log(`User with email ${email} already exists`);
+      process.exit(0);
     }
 
     // Create a new group
     const group = new Group({
       name: `${name}'s Group`,
       description: 'Default group',
+      settings: {
+        assetIdPrefix: '000-',
+        autoIncrementAssetId: true,
+        nextAssetId: 1
+      },
       subscription: {
-        plan: 'free',
-        maxMembers: 1
+        plan: 'pro', // Set to pro to remove limits
+        maxMembers: 100
       }
     });
     await group.save();
+    console.log('Group created:', group._id);
 
     // Create the owner user
     const user = new User({
@@ -141,6 +162,7 @@ async function createOwner() {
       loginStreak: 0
     });
     await user.save();
+    console.log('User created:', user._id);
 
     // Update group with owner
     group.owner = user._id;
@@ -150,6 +172,7 @@ async function createOwner() {
       joinedAt: Date.now()
     });
     await group.save();
+    console.log('Group updated with owner');
 
     console.log(`Owner user created successfully:`);
     console.log(`- Email: ${email}`);

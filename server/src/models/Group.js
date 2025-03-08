@@ -93,12 +93,17 @@ GroupSchema.methods.getNextAssetId = async function() {
 
 // Check if group has reached member limit based on subscription
 GroupSchema.methods.hasReachedMemberLimit = function() {
+  // Always return false to remove all limits
+  return false;
+  
+  /* Original implementation with limits:
   if (this.subscription.plan === 'free') {
     return this.members.length >= 1;
   } else if (this.subscription.plan === 'family') {
     return this.members.length >= 5;
   }
   return false;
+  */
 };
 
 module.exports = mongoose.model('Group', GroupSchema);

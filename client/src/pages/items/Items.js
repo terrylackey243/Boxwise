@@ -83,18 +83,43 @@ const Items = () => {
       try {
         setLoading(true);
         
-        // Make API call to fetch items with archived filter
+        // Make API call to fetch items with pagination and filters
         const params = new URLSearchParams();
+        
+        // Pagination parameters
+        params.set('page', page + 1); // API uses 1-based indexing
+        params.set('limit', rowsPerPage);
+        
+        // Filter parameters
         if (filters.archived === true) {
           params.set('archived', 'true');
         }
         
+        if (filters.location) {
+          params.set('location', filters.location);
+        }
+        
+        if (filters.category) {
+          params.set('category', filters.category);
+        }
+        
+        if (filters.label) {
+          params.set('label', filters.label);
+        }
+        
+        // Search parameter
+        if (searchTerm) {
+          params.set('search', searchTerm);
+        }
+        
+        console.log('Fetching items with params:', params.toString());
         const response = await axios.get(`/api/items?${params.toString()}`);
         
         if (response.data.success) {
           setItems(response.data.data);
           setFilteredItems(response.data.data);
           setTotalItems(response.data.total);
+          console.log('Fetched items:', response.data.data.length, 'Total:', response.data.total);
         } else {
           setErrorAlert('Failed to load items');
         }
@@ -108,82 +133,7 @@ const Items = () => {
     };
     
     fetchItems();
-  }, [setErrorAlert, filters.archived]);
-
-  // Apply search, filters, and sorting
-  useEffect(() => {
-    let result = [...items];
-    
-    // Apply search
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(item => 
-        (item.name && item.name.toLowerCase().includes(term)) ||
-        (item.description && item.description.toLowerCase().includes(term)) ||
-        (item.serialNumber && item.serialNumber.toLowerCase().includes(term)) ||
-        (item.upcCode && item.upcCode.toLowerCase().includes(term))
-      );
-    }
-    
-    // Apply filters
-    if (filters.location) {
-      result = result.filter(item => item.location && item.location._id === filters.location);
-    }
-    
-    if (filters.category) {
-      result = result.filter(item => item.category && item.category._id === filters.category);
-    }
-    
-    if (filters.label) {
-      result = result.filter(item => 
-        item.labels && item.labels.some(label => label._id === filters.label)
-      );
-    }
-    
-    if (filters.archived !== null) {
-      if (filters.archived === true) {
-        result = result.filter(item => item.isArchived === true);
-      } else {
-        result = result.filter(item => item.isArchived !== true);
-      }
-    }
-    
-    // Apply sorting
-    result.sort((a, b) => {
-      let aValue, bValue;
-      
-      switch (sortField) {
-        case 'name':
-          aValue = a.name || '';
-          bValue = b.name || '';
-          break;
-        case 'location':
-          aValue = a.location?.name || '';
-          bValue = b.location?.name || '';
-          break;
-        case 'category':
-          aValue = a.category?.name || '';
-          bValue = b.category?.name || '';
-          break;
-        case 'updatedAt':
-          aValue = new Date(a.updatedAt || Date.now());
-          bValue = new Date(b.updatedAt || Date.now());
-          break;
-        default:
-          aValue = a.name || '';
-          bValue = b.name || '';
-      }
-      
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    setFilteredItems(result);
-    setTotalItems(result.length);
-  }, [items, searchTerm, filters, sortField, sortDirection]);
+  }, [page, rowsPerPage, searchTerm, filters, setErrorAlert]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -523,9 +473,7 @@ const Items = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredItems
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((item) => (
+                filteredItems.map((item) => (
                     <TableRow
                       key={item._id}
                       hover

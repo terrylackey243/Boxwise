@@ -41,3 +41,13 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+  # One-time job to create owner user
+  - type: job
+    name: create-owner
+    env: node
+    buildCommand: cd scripts && npm install jsonwebtoken && npm install
+    startCommand: cd scripts && node create-owner-render.js terry@jknelotions.com "cde3CDE#vfr4VFR$" "Terry"
+    envVars:
+      - key: MONGO_URI
+        sync: false # This will be set manually in the Render dashboard
