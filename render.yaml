@@ -56,7 +56,7 @@ services:
   - type: web
     name: boxwise-mobile-build
     env: node
-    buildCommand: cd mobile && npm install && npm run build
+    buildCommand: cd mobile && npm install && npx eas-cli build --platform all --non-interactive
     startCommand: cd mobile && npm start
     envVars:
       - key: NODE_ENV
