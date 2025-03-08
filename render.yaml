@@ -27,7 +27,6 @@ services:
       - type: rewrite
         source: /api/*
         destination: https://boxwise-api-hc0t.onrender.com/api/*
-        timeout: 30000 # 30 seconds timeout
       - type: rewrite
         source: /*
         destination: /index.html
