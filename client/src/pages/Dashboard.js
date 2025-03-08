@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import axios from '../utils/axiosConfig';
 import {
   Container,
   Grid,
@@ -12,14 +11,7 @@ import {
   CardContent,
   CardActions,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  ListItemIcon,
   Avatar,
-  CircularProgress,
-  Chip
 } from '@mui/material';
 import {
   Inventory as InventoryIcon,
@@ -29,136 +21,15 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Alarm as AlarmIcon,
-  Build as BuildIcon,
-  VerifiedUser as WarrantyIcon,
-  Settings as ServiceIcon,
-  Notifications as NotificationIcon
+  Settings as SettingsIcon,
+  Info as InfoIcon,
+  Dashboard as DashboardIcon,
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
-import { AlertContext } from '../context/AlertContext';
 
+// Simplified Dashboard component that doesn't rely on API calls
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
-  const { setErrorAlert } = useContext(AlertContext);
-  
-  const [stats, setStats] = useState({
-    itemCount: 0,
-    locationCount: 0,
-    labelCount: 0,
-    categoryCount: 0
-  });
-  
-  const [recentItems, setRecentItems] = useState([]);
-  const [upcomingReminders, setUpcomingReminders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Configure longer timeout for dashboard requests (30 seconds)
-        const axiosOptions = {
-          timeout: 30000 // 30 seconds
-        };
-        
-        // Fetch dashboard data and upcoming reminders separately to handle partial failures
-        try {
-          const dashboardRes = await axios.get('/api/dashboard', axiosOptions);
-          if (dashboardRes.data.success) {
-            setStats(dashboardRes.data.data.stats);
-            setRecentItems(dashboardRes.data.data.recentItems);
-          }
-        } catch (dashboardErr) {
-          console.error('Dashboard stats error:', dashboardErr);
-          setErrorAlert('Error loading dashboard stats. Some data may be unavailable.');
-          // Set default stats
-          setStats({
-            itemCount: 0,
-            locationCount: 0,
-            labelCount: 0,
-            categoryCount: 0
-          });
-          setRecentItems([]);
-        }
-        
-        try {
-          const remindersRes = await axios.get('/api/reminders/upcoming', axiosOptions);
-          if (remindersRes.data.success) {
-            setUpcomingReminders(remindersRes.data.data);
-          }
-        } catch (remindersErr) {
-          console.error('Reminders error:', remindersErr);
-          setErrorAlert('Error loading reminders. Some data may be unavailable.');
-          setUpcomingReminders([]);
-        }
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Dashboard error:', err);
-        
-        // Set empty data when API call fails
-        setStats({
-          itemCount: 0,
-          locationCount: 0,
-          labelCount: 0,
-          categoryCount: 0
-        });
-        setRecentItems([]);
-        setUpcomingReminders([]);
-        
-        setLoading(false);
-        setErrorAlert('Error loading dashboard data: ' + (err.response?.data?.message || err.message));
-      }
-    };
-    
-    fetchDashboardData();
-  }, [setErrorAlert]);
-
-  // Format date to relative time (e.g., "2 days ago")
-  const formatRelativeTime = (date) => {
-    if (!date) return '';
-    
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'just now';
-    }
-    
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-    }
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    }
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 30) {
-      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    }
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
-  };
-
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: 'calc(100vh - 64px)',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -207,7 +78,10 @@ const Dashboard = () => {
         </Box>
       </Paper>
 
-      {/* Stats Cards */}
+      {/* Quick Access Cards */}
+      <Typography variant="h5" component="h2" gutterBottom>
+        Quick Access
+      </Typography>
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={6} sm={3}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
@@ -220,8 +94,8 @@ const Dashboard = () => {
                   Items
                 </Typography>
               </Box>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                {stats.itemCount}
+              <Typography variant="body2" color="text.secondary">
+                Manage your inventory items
               </Typography>
             </CardContent>
             <CardActions>
@@ -241,8 +115,8 @@ const Dashboard = () => {
                   Locations
                 </Typography>
               </Box>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                {stats.locationCount}
+              <Typography variant="body2" color="text.secondary">
+                Organize items by location
               </Typography>
             </CardContent>
             <CardActions>
@@ -262,8 +136,8 @@ const Dashboard = () => {
                   Labels
                 </Typography>
               </Box>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                {stats.labelCount}
+              <Typography variant="body2" color="text.secondary">
+                Categorize with custom labels
               </Typography>
             </CardContent>
             <CardActions>
@@ -283,8 +157,8 @@ const Dashboard = () => {
                   Categories
                 </Typography>
               </Box>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                {stats.categoryCount}
+              <Typography variant="body2" color="text.secondary">
+                Manage item categories
               </Typography>
             </CardContent>
             <CardActions>
@@ -294,196 +168,142 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Recent Items */}
+      {/* Tools Section */}
       <Paper sx={{ p: 3, borderRadius: 2, mb: 4 }}>
         <Typography variant="h5" component="h2" gutterBottom>
-          Recent Items
+          Tools
         </Typography>
         <Divider sx={{ mb: 2 }} />
         
-        {recentItems.length > 0 ? (
-          <List>
-            {recentItems.map((item) => (
-              <React.Fragment key={item._id}>
-                <ListItem
-                  alignItems="flex-start"
-                  component={RouterLink}
-                  to={`/items/${item._id}`}
-                  sx={{
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                      borderRadius: 1,
-                    },
-                  }}
-                >
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      <InventoryIcon />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={item.name}
-                    secondary={
-                      <React.Fragment>
-                        <Typography
-                          sx={{ display: 'inline' }}
-                          component="span"
-                          variant="body2"
-                          color="text.primary"
-                        >
-                          {item.location.name}
-                        </Typography>
-                        {` — ${item.category.name} — `}
-                        {formatRelativeTime(item.updatedAt)}
-                        <Box sx={{ mt: 1 }}>
-                          {item.labels.map((label) => (
-                            <Chip
-                              key={label.name}
-                              label={label.name}
-                              size="small"
-                              sx={{
-                                mr: 0.5,
-                                bgcolor: label.color,
-                                color: 'white',
-                              }}
-                            />
-                          ))}
-                        </Box>
-                      </React.Fragment>
-                    }
-                  />
-                </ListItem>
-                <Divider variant="inset" component="li" />
-              </React.Fragment>
-            ))}
-          </List>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary" gutterBottom>
-              No items found
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              component={RouterLink}
-              to="/items/create"
-              sx={{ mt: 2 }}
-            >
-              Add Your First Item
-            </Button>
-          </Box>
-        )}
-        
-        {recentItems.length > 0 && (
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Button
-              variant="outlined"
-              component={RouterLink}
-              to="/items"
-            >
-              View All Items
-            </Button>
-          </Box>
-        )}
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card sx={{ height: '100%', borderRadius: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Avatar sx={{ bgcolor: 'secondary.main', mr: 1 }}>
+                    <AlarmIcon />
+                  </Avatar>
+                  <Typography variant="h6" component="div">
+                    Reminders
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Set up maintenance and warranty reminders for your items
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button size="small" component={RouterLink} to="/reminders">Manage Reminders</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={4}>
+            <Card sx={{ height: '100%', borderRadius: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Avatar sx={{ bgcolor: 'secondary.main', mr: 1 }}>
+                    <DashboardIcon />
+                  </Avatar>
+                  <Typography variant="h6" component="div">
+                    Reports
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Generate reports and analytics about your inventory
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button size="small" component={RouterLink} to="/reports">View Reports</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={4}>
+            <Card sx={{ height: '100%', borderRadius: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Avatar sx={{ bgcolor: 'secondary.main', mr: 1 }}>
+                    <SettingsIcon />
+                  </Avatar>
+                  <Typography variant="h6" component="div">
+                    Settings
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Customize your account and application preferences
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button size="small" component={RouterLink} to="/profile">Profile Settings</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+        </Grid>
       </Paper>
       
-      {/* Upcoming Reminders */}
+      {/* Getting Started */}
       <Paper sx={{ p: 3, borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <InfoIcon sx={{ mr: 1, color: 'info.main' }} />
           <Typography variant="h5" component="h2">
-            Upcoming Reminders
+            Getting Started
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<AlarmIcon />}
-            component={RouterLink}
-            to="/reminders"
-            size="small"
-          >
-            View All
-          </Button>
         </Box>
         <Divider sx={{ mb: 2 }} />
         
-        {upcomingReminders.length > 0 ? (
-          <List>
-            {upcomingReminders.map((reminder) => (
-              <React.Fragment key={reminder._id}>
-                <ListItem
-                  alignItems="flex-start"
-                  component={RouterLink}
-                  to={`/reminders/${reminder._id}`}
-                  sx={{
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                      borderRadius: 1,
-                    },
-                  }}
-                >
-                  <ListItemIcon>
-                    {reminder.reminderType === 'maintenance' ? (
-                      <BuildIcon color="primary" />
-                    ) : reminder.reminderType === 'warranty' ? (
-                      <WarrantyIcon color="secondary" />
-                    ) : reminder.reminderType === 'service' ? (
-                      <ServiceIcon color="info" />
-                    ) : (
-                      <AlarmIcon color="warning" />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={reminder.title}
-                    secondary={
-                      <React.Fragment>
-                        <Typography
-                          sx={{ display: 'inline' }}
-                          component="span"
-                          variant="body2"
-                          color="text.primary"
-                        >
-                          {reminder.item.name}
-                        </Typography>
-                        {` — Due: ${new Date(reminder.reminderDate).toLocaleDateString()}`}
-                        {reminder.isRecurring && ' (Recurring)'}
-                      </React.Fragment>
-                    }
-                  />
-                  <Chip
-                    label={reminder.reminderType.charAt(0).toUpperCase() + reminder.reminderType.slice(1)}
-                    size="small"
-                    color={
-                      reminder.reminderType === 'maintenance' ? 'primary' :
-                      reminder.reminderType === 'warranty' ? 'secondary' :
-                      reminder.reminderType === 'service' ? 'info' : 'warning'
-                    }
-                    sx={{ ml: 1 }}
-                  />
-                </ListItem>
-                <Divider variant="inset" component="li" />
-              </React.Fragment>
-            ))}
-          </List>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <NotificationIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="body1" color="text.secondary" gutterBottom>
-              No upcoming reminders
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AlarmIcon />}
-              component={RouterLink}
-              to="/reminders/create"
-              sx={{ mt: 2 }}
-            >
-              Create Reminder
-            </Button>
-          </Box>
-        )}
+        <Typography variant="body1" paragraph>
+          Welcome to Boxwise, your complete inventory management solution. Here are some quick steps to get started:
+        </Typography>
+        
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Typography variant="h6" gutterBottom>1. Add Locations</Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Create locations to organize where your items are stored.
+              </Typography>
+              <Button variant="outlined" size="small" component={RouterLink} to="/locations/create">
+                Add Location
+              </Button>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Typography variant="h6" gutterBottom>2. Create Categories</Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Set up categories to classify your items by type.
+              </Typography>
+              <Button variant="outlined" size="small" component={RouterLink} to="/categories/create">
+                Add Category
+              </Button>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Typography variant="h6" gutterBottom>3. Add Items</Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Start adding your items to your inventory.
+              </Typography>
+              <Button variant="outlined" size="small" component={RouterLink} to="/items/create">
+                Add Item
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+        
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Button 
+            variant="contained" 
+            color="primary"
+            component={RouterLink}
+            to="/items"
+            startIcon={<InventoryIcon />}
+          >
+            Go to Inventory
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );
