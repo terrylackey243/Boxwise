@@ -26,6 +26,11 @@ const useCamera = (enabled = false, constraints = { video: true }) => {
         return;
       }
 
+      // Prevent re-initialization if already loading or ready
+      if (loading || isReady) {
+        return;
+      }
+
       setLoading(true);
       setError(null);
       setIsReady(false);
@@ -72,34 +77,40 @@ const useCamera = (enabled = false, constraints = { video: true }) => {
           throw new Error('No camera detected on your device');
         }
 
-        // Wait for video element to be ready
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
+        // Add a small delay to ensure the video element is ready
+        setTimeout(() => {
+          if (!mounted) return;
           
-          // Wait for video to be ready to play
-          videoRef.current.onloadedmetadata = () => {
-            if (!mounted) return;
+          // Wait for video element to be ready
+          if (videoRef.current) {
+            console.log('Video element found, setting srcObject');
+            videoRef.current.srcObject = mediaStream;
             
-            console.log('Video metadata loaded');
-            videoRef.current.play()
-              .then(() => {
-                if (!mounted) return;
-                console.log('Camera initialized successfully');
-                setIsReady(true);
-                setLoading(false);
-              })
-              .catch(err => {
-                if (!mounted) return;
-                console.error('Error playing video:', err);
-                setError('Could not start video stream. Try tapping the screen.');
-                setLoading(false);
-              });
-          };
-        } else {
-          console.error('Video element not available');
-          setError('Camera initialization failed - video element not ready');
-          setLoading(false);
-        }
+            // Wait for video to be ready to play
+            videoRef.current.onloadedmetadata = () => {
+              if (!mounted) return;
+              
+              console.log('Video metadata loaded');
+              videoRef.current.play()
+                .then(() => {
+                  if (!mounted) return;
+                  console.log('Camera initialized successfully');
+                  setIsReady(true);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  if (!mounted) return;
+                  console.error('Error playing video:', err);
+                  setError('Could not start video stream. Try tapping the screen.');
+                  setLoading(false);
+                });
+            };
+          } else {
+            console.error('Video element not available');
+            setError('Camera initialization failed - video element not ready');
+            setLoading(false);
+          }
+        }, 300); // 300ms delay to ensure DOM is ready
       } catch (err) {
         if (!mounted) return;
         
@@ -130,7 +141,9 @@ const useCamera = (enabled = false, constraints = { video: true }) => {
       mounted = false;
       stopCamera();
     };
-  }, [enabled, activeCamera, constraints]);
+  // Only re-run when enabled or activeCamera changes, not on every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, activeCamera]);
 
   // Switch to a different camera
   const switchCamera = () => {

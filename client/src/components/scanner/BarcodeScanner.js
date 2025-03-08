@@ -1,5 +1,4 @@
-import React, { useState, useRef } from 'react';
-import useCamera from '../../hooks/useCamera';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -10,43 +9,160 @@ import {
   IconButton,
   Typography,
   CircularProgress,
-  Alert
+  Alert,
+  TextField,
+  Divider,
+  Paper
 } from '@mui/material';
 import {
   Close as CloseIcon,
   CameraAlt as CameraIcon,
   FlipCameraAndroid as FlipCameraIcon,
-  PhotoCamera as PhotoCameraIcon
+  PhotoCamera as PhotoCameraIcon,
+  QrCode as QrCodeIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
 
 const BarcodeScanner = ({ open, onClose, onDetected }) => {
+  const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [stream, setStream] = useState(null);
+  const [cameras, setCameras] = useState([]);
+  const [activeCamera, setActiveCamera] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualUpc, setManualUpc] = useState('');
 
-  // Use our custom camera hook
-  const camera = useCamera(open, {
-    video: {
-      facingMode: 'environment',
-      width: { ideal: 1280 },
-      height: { ideal: 720 }
+  // Initialize camera when dialog opens
+  useEffect(() => {
+    let mounted = true;
+    
+    const initializeCamera = async () => {
+      if (!open) return;
+      
+      setLoading(true);
+      setError(null);
+      setIsReady(false);
+      
+      try {
+        // Check if browser supports getUserMedia
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Your browser does not support camera access. This may be because you are not using HTTPS or your browser has restricted camera access.');
+        }
+        
+        // Request camera permission
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+        
+        if (!mounted) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        
+        setStream(mediaStream);
+        
+        // Get list of cameras
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        if (!mounted) return;
+        
+        setCameras(videoDevices);
+        
+        // Wait for the next render cycle to ensure videoRef is available
+        setTimeout(() => {
+          if (!mounted || !videoRef.current) return;
+          
+          // Set up video element
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.onloadedmetadata = () => {
+            if (!mounted) return;
+            
+            videoRef.current.play()
+              .then(() => {
+                if (!mounted) return;
+                setIsReady(true);
+                setLoading(false);
+              })
+              .catch(err => {
+                if (!mounted) return;
+                console.error('Error playing video:', err);
+                setError('Could not start video stream. Try tapping the screen.');
+                setLoading(false);
+              });
+          };
+        }, 500);
+      } catch (err) {
+        if (!mounted) return;
+        
+        console.error('Camera initialization error:', err);
+        setError(err.message || 'Failed to initialize camera');
+        setLoading(false);
+      }
+    };
+    
+    initializeCamera();
+    
+    return () => {
+      mounted = false;
+      
+      // Clean up camera resources
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [open, activeCamera]);
+  
+  // Clean up when dialog closes
+  useEffect(() => {
+    if (!open && stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsReady(false);
     }
-  });
+  }, [open, stream]);
 
-  // Handle camera errors
-  if (camera.error && !error) {
-    setError(camera.error);
-  }
+  // Switch camera
+  const switchCamera = () => {
+    if (cameras.length <= 1) return;
+    
+    // Stop current stream
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    
+    // Switch to next camera
+    setActiveCamera((prev) => (prev + 1) % cameras.length);
+    setIsReady(false);
+  };
 
   // Manual capture for barcode scanning
   const captureBarcode = () => {
-    if (!camera.isReady) return;
+    if (!videoRef.current || !isReady || !canvasRef.current) return;
     
-    // Take a snapshot from the camera
-    const snapshot = camera.takeSnapshot();
-    if (!snapshot) {
-      console.error('Failed to take snapshot');
-      return;
-    }
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
     // For demonstration purposes, we'll just use a mock barcode
     // In a real implementation, you would use a barcode detection library here
@@ -57,7 +173,53 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
   // Try again button handler
   const handleTryAgain = () => {
     setError(null);
-    // The camera hook will automatically reinitialize when open is true
+    
+    // Stop current stream if any
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    
+    // Reset state
+    setIsReady(false);
+    setLoading(true);
+    
+    // Request camera access again
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    })
+      .then(mediaStream => {
+        setStream(mediaStream);
+        
+        // Set up video element
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play()
+              .then(() => {
+                setIsReady(true);
+                setLoading(false);
+              })
+              .catch(err => {
+                console.error('Error playing video:', err);
+                setError('Could not start video stream. Try tapping the screen.');
+                setLoading(false);
+              });
+          };
+        } else {
+          setError('Video element not available');
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error('Error accessing camera:', err);
+        setError('Could not access camera. Please check your camera permissions.');
+        setLoading(false);
+      });
   };
 
   return (
@@ -76,8 +238,16 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Scan Barcode</Typography>
+      <DialogTitle 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          p: 2
+        }}
+      >
+        {/* Use span instead of Typography to avoid nesting heading elements */}
+        <span style={{ fontSize: '1.25rem', fontWeight: 500 }}>Scan Barcode</span>
         <IconButton edge="end" color="inherit" onClick={onClose} aria-label="close">
           <CloseIcon />
         </IconButton>
@@ -85,36 +255,179 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
       
       <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
         {error ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Box sx={{ p: 3 }}>
             <Typography color="error" gutterBottom>{error}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               To use the barcode scanner, you need a device with a camera and must grant camera permissions.
             </Typography>
-            <Button 
-              variant="contained" 
-              onClick={handleTryAgain}
-              startIcon={<CameraIcon />}
-            >
-              Try Again
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={onClose}
-              sx={{ ml: 1 }}
-            >
-              Cancel
-            </Button>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+              <Button 
+                variant="contained" 
+                onClick={handleTryAgain}
+                startIcon={<CameraIcon />}
+                sx={{ mr: 1 }}
+              >
+                Try Again
+              </Button>
+              <Button 
+                variant="outlined" 
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+            </Box>
+            
+            <Divider sx={{ my: 3 }}>
+              <Typography variant="body2" color="text.secondary">OR</Typography>
+            </Divider>
+            
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Enter UPC Code Manually
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <TextField
+                  fullWidth
+                  label="UPC Code"
+                  value={manualUpc}
+                  onChange={(e) => setManualUpc(e.target.value)}
+                  placeholder="Enter UPC code"
+                  variant="outlined"
+                  size="small"
+                  sx={{ mr: 1 }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && manualUpc.trim()) {
+                      onDetected(manualUpc.trim());
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SendIcon />}
+                  disabled={!manualUpc.trim()}
+                  onClick={() => {
+                    if (manualUpc.trim()) {
+                      onDetected(manualUpc.trim());
+                    }
+                  }}
+                >
+                  Submit
+                </Button>
+              </Box>
+              
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                You can manually enter the UPC code if your camera is not available.
+              </Typography>
+            </Paper>
           </Box>
-        ) : camera.loading ? (
-          <Box sx={{ p: 3, textAlign: 'center', height: { xs: 'calc(100vh - 200px)', sm: '400px' }, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-            <CircularProgress size={48} color="primary" sx={{ mb: 3 }} />
-            <Typography variant="h6" gutterBottom>Accessing Camera...</Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Please allow camera access when prompted by your browser
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-              If the camera doesn't start, try refreshing the page or using a different browser
-            </Typography>
+        ) : loading ? (
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <CircularProgress size={48} color="primary" sx={{ mb: 3 }} />
+              <Typography variant="h6" gutterBottom>Accessing Camera...</Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Please allow camera access when prompted by your browser
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                If the camera doesn't start, try refreshing the page or using a different browser
+              </Typography>
+            </Box>
+            
+            <Divider sx={{ my: 3 }}>
+              <Typography variant="body2" color="text.secondary">OR</Typography>
+            </Divider>
+            
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Enter UPC Code Manually
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <TextField
+                  fullWidth
+                  label="UPC Code"
+                  value={manualUpc}
+                  onChange={(e) => setManualUpc(e.target.value)}
+                  placeholder="Enter UPC code"
+                  variant="outlined"
+                  size="small"
+                  sx={{ mr: 1 }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && manualUpc.trim()) {
+                      onDetected(manualUpc.trim());
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SendIcon />}
+                  disabled={!manualUpc.trim()}
+                  onClick={() => {
+                    if (manualUpc.trim()) {
+                      onDetected(manualUpc.trim());
+                    }
+                  }}
+                >
+                  Submit
+                </Button>
+              </Box>
+              
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                Don't want to wait? You can manually enter the UPC code.
+              </Typography>
+            </Paper>
+          </Box>
+        ) : manualMode ? (
+          <Box sx={{ p: 3 }}>
+            <Paper sx={{ p: 2, mb: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Enter UPC Code Manually
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <TextField
+                  fullWidth
+                  label="UPC Code"
+                  value={manualUpc}
+                  onChange={(e) => setManualUpc(e.target.value)}
+                  placeholder="Enter UPC code"
+                  variant="outlined"
+                  sx={{ mr: 1 }}
+                  autoFocus
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && manualUpc.trim()) {
+                      onDetected(manualUpc.trim());
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SendIcon />}
+                  disabled={!manualUpc.trim()}
+                  onClick={() => {
+                    if (manualUpc.trim()) {
+                      onDetected(manualUpc.trim());
+                    }
+                  }}
+                >
+                  Submit
+                </Button>
+              </Box>
+            </Paper>
+            
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<CameraIcon />}
+              onClick={() => setManualMode(false)}
+            >
+              Switch to Camera Mode
+            </Button>
           </Box>
         ) : (
           <Box sx={{ position: 'relative' }}>
@@ -126,7 +439,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
               overflow: 'hidden',
             }}>
               <video 
-                ref={camera.videoRef}
+                ref={videoRef}
                 autoPlay
                 playsInline
                 muted
@@ -186,18 +499,18 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   color="primary"
                   startIcon={<PhotoCameraIcon />}
                   onClick={captureBarcode}
-                  disabled={!camera.isReady}
+                  disabled={!isReady}
                 >
                   Capture Barcode
                 </Button>
               </Box>
               
               {/* Camera switch button */}
-              {camera.cameras.length > 1 && (
+              {cameras.length > 1 && (
                 <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
                   <IconButton 
                     color="primary" 
-                    onClick={camera.switchCamera}
+                    onClick={switchCamera}
                     sx={{ 
                       bgcolor: 'background.paper',
                       '&:hover': { bgcolor: 'background.paper' }
@@ -207,6 +520,20 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   </IconButton>
                 </Box>
               )}
+              
+              {/* Manual entry button */}
+              <Box sx={{ position: 'absolute', bottom: 16, left: 16 }}>
+                <IconButton 
+                  color="primary" 
+                  onClick={() => setManualMode(true)}
+                  sx={{ 
+                    bgcolor: 'background.paper',
+                    '&:hover': { bgcolor: 'background.paper' }
+                  }}
+                >
+                  <QrCodeIcon />
+                </IconButton>
+              </Box>
               
               {/* Info notice */}
               <Alert 
@@ -228,7 +555,10 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
       
       <DialogActions sx={{ p: 2 }}>
         <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-          Position the barcode within the frame
+          {error ? 'Enter UPC code manually or try again' : 
+           loading ? 'Waiting for camera access...' :
+           manualMode ? 'Enter UPC code manually' :
+           'Position the barcode within the frame'}
         </Typography>
         <Button onClick={onClose} color="primary">
           Cancel
