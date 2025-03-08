@@ -406,6 +406,17 @@ const AdminDashboard = () => {
                           Download for Android
                         </Button>
                       </Grid>
+                      <Grid item>
+                        <Button 
+                          variant="outlined" 
+                          color="primary"
+                          href="https://boxwise-mobile-preview.onrender.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View App Preview
+                        </Button>
+                      </Grid>
                     </Grid>
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ml: 2 }}>

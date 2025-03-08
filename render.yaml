@@ -52,12 +52,12 @@ services:
       - key: NODE_ENV
         value: production
 
-  # Mobile App Build Service
+  # Mobile App Preview Service
   - type: web
-    name: boxwise-mobile-build
+    name: boxwise-mobile-preview
     env: node
-    buildCommand: cd mobile && npm install && echo "Mobile app ready for local development. To build for app stores, run 'npm run build' locally."
-    startCommand: cd mobile && npm start
+    buildCommand: cd mobile && npm install && echo "Mobile app preview ready."
+    startCommand: cd mobile && npm run serve
     envVars:
       - key: NODE_ENV
         value: production

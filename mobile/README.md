@@ -57,6 +57,13 @@ npm run android # Run on Android Emulator
 npm run web     # Run in web browser
 ```
 
+## Mobile App Preview
+
+A web-based preview of the mobile app is available at:
+https://boxwise-mobile-preview.onrender.com
+
+This preview shows the app's interface and features, but doesn't provide the full native functionality. It's a great way to get a quick look at what the app offers before building it for your device.
+
 ## Building for Production
 
 ### Prerequisites for building

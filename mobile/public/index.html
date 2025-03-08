@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boxwise Mobile App</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7fafc;
+      color: #1a202c;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      color: #6B46C1;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: #718096;
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+    }
+    .app-preview {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    .phone-frame {
+      width: 300px;
+      height: 600px;
+      border: 12px solid #2D3748;
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background-color: #fff;
+      overflow: hidden;
+    }
+    .screen-content {
+      padding: 1rem;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 30px;
+      background-color: #2D3748;
+      border-bottom-left-radius: 15px;
+      border-bottom-right-radius: 15px;
+      z-index: 10;
+    }
+    .feature-list {
+      margin-bottom: 3rem;
+    }
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+    .feature-icon {
+      width: 50px;
+      height: 50px;
+      background-color: #EBF4FF;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 1rem;
+      flex-shrink: 0;
+      color: #6B46C1;
+      font-size: 1.5rem;
+    }
+    .feature-text h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      color: #4A5568;
+    }
+    .feature-text p {
+      margin: 0;
+      color: #718096;
+    }
+    .cta {
+      text-align: center;
+      background-color: #EBF4FF;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+    .cta h2 {
+      margin-top: 0;
+      color: #4A5568;
+    }
+    .button {
+      display: inline-block;
+      background-color: #6B46C1;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      margin: 0.5rem;
+    }
+    .button:hover {
+      background-color: #553C9A;
+    }
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: #718096;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Boxwise Mobile App</h1>
+      <p class="subtitle">Manage your inventory on the go</p>
+    </header>
+
+    <div class="app-preview">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-content">
+            <h2 style="color: #6B46C1; text-align: center; margin-top: 60px;">Boxwise</h2>
+            <div style="background-color: #f5f5f5; border-radius: 8px; padding: 16px; margin-top: 20px;">
+              <h3 style="margin-top: 0;">Recent Items</h3>
+              <div style="background-color: white; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong>Laptop Charger</strong>
+                  <span style="color: #718096;">Electronics</span>
+                </div>
+                <div style="color: #718096; font-size: 0.9rem; margin-top: 4px;">Office Drawer</div>
+              </div>
+              <div style="background-color: white; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong>Winter Coat</strong>
+                  <span style="color: #718096;">Clothing</span>
+                </div>
+                <div style="color: #718096; font-size: 0.9rem; margin-top: 4px;">Bedroom Closet</div>
+              </div>
+              <div style="background-color: white; border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong>Screwdriver Set</strong>
+                  <span style="color: #718096;">Tools</span>
+                </div>
+                <div style="color: #718096; font-size: 0.9rem; margin-top: 4px;">Garage Shelf</div>
+              </div>
+            </div>
+            <div style="position: fixed; bottom: 0; left: 0; right: 0; background-color: white; display: flex; justify-content: space-around; padding: 16px; border-top: 1px solid #e2e8f0;">
+              <div style="text-align: center; color: #6B46C1;">
+                <div style="font-size: 1.5rem;">📦</div>
+                <div style="font-size: 0.8rem;">Items</div>
+              </div>
+              <div style="text-align: center; color: #718096;">
+                <div style="font-size: 1.5rem;">📷</div>
+                <div style="font-size: 0.8rem;">Camera</div>
+              </div>
+              <div style="text-align: center; color: #718096;">
+                <div style="font-size: 1.5rem;">📱</div>
+                <div style="font-size: 0.8rem;">Scan</div>
+              </div>
+              <div style="text-align: center; color: #718096;">
+                <div style="font-size: 1.5rem;">👤</div>
+                <div style="font-size: 0.8rem;">Profile</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-list">
+      <h2>Key Features</h2>
+      
+      <div class="feature">
+        <div class="feature-icon">📱</div>
+        <div class="feature-text">
+          <h3>UPC Code Scanning</h3>
+          <p>Scan UPC codes directly with your phone camera to quickly identify and add items to your inventory.</p>
+        </div>
+      </div>
+      
+      <div class="feature">
+        <div class="feature-icon">📷</div>
+        <div class="feature-text">
+          <h3>Photo Capture</h3>
+          <p>Take photos of items and upload them immediately to keep a visual record of your belongings.</p>
+        </div>
+      </div>
+      
+      <div class="feature">
+        <div class="feature-icon">🛒</div>
+        <div class="feature-text">
+          <h3>Inventory Checking</h3>
+          <p>Check your inventory while shopping to avoid duplicate purchases and make informed buying decisions.</p>
+        </div>
+      </div>
+      
+      <div class="feature">
+        <div class="feature-icon">➕</div>
+        <div class="feature-text">
+          <h3>Quick Add</h3>
+          <p>Add items to your inventory right when they're purchased with our streamlined quick add process.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta">
+      <h2>Get the Boxwise Mobile App</h2>
+      <p>Download now and start managing your inventory on the go!</p>
+      <a href="https://apps.apple.com/app/boxwise-inventory" class="button">Download for iOS</a>
+      <a href="https://play.google.com/store/apps/details?id=com.boxwise.inventory" class="button">Download for Android</a>
+    </div>
+
+    <footer>
+      <p>© 2025 Boxwise. All rights reserved.</p>
+      <p>This is a preview of the Boxwise Mobile App. The actual app is built using React Native and Expo.</p>
+    </footer>
+  </div>
+</body>
+</html>
