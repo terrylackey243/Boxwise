@@ -337,6 +337,9 @@ exports.deleteItem = async (req, res, next) => {
 // @access  Private
 exports.importItems = async (req, res, next) => {
   try {
+    console.log('Import items endpoint called');
+    console.log('Request files:', req.files);
+    
     if (!req.files || !req.files.csv) {
       return res.status(400).json({
         success: false,
@@ -345,79 +348,116 @@ exports.importItems = async (req, res, next) => {
     }
 
     const file = req.files.csv;
+    console.log('CSV file received:', file.name, 'Size:', file.size);
+    
+    // Read the entire CSV file into memory
+    const csvData = fs.readFileSync(file.tempFilePath, 'utf8');
+    console.log('CSV file content (first 200 chars):', csvData.substring(0, 200));
+    
+    // Parse the CSV data
+    const rows = [];
+    const parser = csv({
+      mapHeaders: ({ header }) => header.toLowerCase().trim(),
+      mapValues: ({ value }) => value.trim()
+    });
+    
+    parser.on('data', (data) => rows.push(data));
+    
+    // Use a promise to wait for the parsing to complete
+    await new Promise((resolve, reject) => {
+      parser.on('end', resolve);
+      parser.on('error', reject);
+      
+      // Feed the CSV data to the parser
+      const Readable = require('stream').Readable;
+      const s = new Readable();
+      s.push(csvData);
+      s.push(null);
+      s.pipe(parser);
+    });
+    
+    console.log(`Parsed ${rows.length} rows from CSV`);
+    
+    // Process each row sequentially
     const results = [];
     const errors = [];
     let successCount = 0;
+    
+    for (let i = 0; i < rows.length; i++) {
+      const data = rows[i];
+      console.log(`Processing row ${i + 1}:`, data);
+      
+      try {
+        // Map CSV columns to item fields
+        const itemData = {
+          name: data.name,
+          description: data.description || '',
+          location: data.location, // This should be a location ID
+          category: data.category || null, // This should be a category ID
+          labels: data.labels ? data.labels.split(/[,;]/).map(id => id.trim()) : [], // Comma or semicolon-separated label IDs
+          assetId: data.assetid || '',
+          quantity: parseInt(data.quantity) || 1,
+          serialNumber: data.serialnumber || '',
+          modelNumber: data.modelnumber || '',
+          manufacturer: data.manufacturer || '',
+          notes: data.notes || '',
+          isInsured: data.isinsured === 'true',
+          isArchived: data.isarchived === 'true',
+          createdBy: req.user.id,
+          group: req.user.group
+        };
 
-    // Process CSV file
-    fs.createReadStream(file.tempFilePath)
-      .pipe(csv())
-      .on('data', async (data) => {
-        try {
-          // Map CSV columns to item fields
-          const itemData = {
-            name: data.name,
-            description: data.description || '',
-            location: data.location, // This should be a location ID
-            category: data.category || null, // This should be a category ID
-            labels: data.labels ? data.labels.split(',') : [], // Comma-separated label IDs
-            assetId: data.assetId || '',
-            quantity: data.quantity || 1,
-            serialNumber: data.serialNumber || '',
-            modelNumber: data.modelNumber || '',
-            manufacturer: data.manufacturer || '',
-            notes: data.notes || '',
-            isInsured: data.isInsured === 'true',
-            isArchived: data.isArchived === 'true',
-            createdBy: req.user.id,
-            group: req.user.group
+        // Add purchase details if available
+        if (data.purchasedfrom || data.purchaseprice || data.purchasedate) {
+          itemData.purchaseDetails = {
+            purchasedFrom: data.purchasedfrom || '',
+            purchasePrice: parseFloat(data.purchaseprice) || 0,
+            purchaseDate: data.purchasedate ? new Date(data.purchasedate) : null
           };
-
-          // Add purchase details if available
-          if (data.purchasedFrom || data.purchasePrice || data.purchaseDate) {
-            itemData.purchaseDetails = {
-              purchasedFrom: data.purchasedFrom || '',
-              purchasePrice: data.purchasePrice || 0,
-              purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null
-            };
-          }
-
-          // Add warranty details if available
-          if (data.hasLifetimeWarranty === 'true' || data.warrantyExpires || data.warrantyNotes) {
-            itemData.warrantyDetails = {
-              hasLifetimeWarranty: data.hasLifetimeWarranty === 'true',
-              warrantyExpires: data.warrantyExpires ? new Date(data.warrantyExpires) : null,
-              warrantyNotes: data.warrantyNotes || ''
-            };
-          }
-
-          // Check if auto-increment asset ID is enabled
-          if (!itemData.assetId) {
-            const group = await Group.findById(req.user.group);
-            if (group.settings.autoIncrementAssetId) {
-              itemData.assetId = await group.getNextAssetId();
-            }
-          }
-
-          const item = await Item.create(itemData);
-          results.push(item);
-          successCount++;
-        } catch (err) {
-          errors.push({
-            row: data,
-            error: err.message
-          });
         }
-      })
-      .on('end', () => {
-        res.status(200).json({
-          success: true,
-          count: successCount,
-          data: results,
-          errors: errors.length > 0 ? errors : null
+
+        // Add warranty details if available
+        if (data.haslifetimewarranty === 'true' || data.warrantyexpires || data.warrantynotes) {
+          itemData.warrantyDetails = {
+            hasLifetimeWarranty: data.haslifetimewarranty === 'true',
+            warrantyExpires: data.warrantyexpires ? new Date(data.warrantyexpires) : null,
+            warrantyNotes: data.warrantynotes || ''
+          };
+        }
+
+        // Check if auto-increment asset ID is enabled
+        if (!itemData.assetId) {
+          const group = await Group.findById(req.user.group);
+          if (group.settings && group.settings.autoIncrementAssetId) {
+            itemData.assetId = await group.getNextAssetId();
+          }
+        }
+
+        console.log('Creating item with data:', itemData);
+        const item = await Item.create(itemData);
+        console.log('Item created successfully:', item._id);
+        
+        results.push(item);
+        successCount++;
+      } catch (err) {
+        console.error(`Error processing row ${i + 1}:`, err);
+        errors.push({
+          row: i + 1,
+          message: err.message
         });
-      });
+      }
+    }
+    
+    console.log('CSV processing complete. Total rows:', rows.length, 'Success:', successCount, 'Errors:', errors.length);
+    
+    res.status(200).json({
+      success: true,
+      totalRows: rows.length,
+      importedRows: successCount,
+      errors: errors.length > 0 ? errors : null
+    });
   } catch (err) {
+    console.error('Unexpected error in importItems:', err);
     next(err);
   }
 };

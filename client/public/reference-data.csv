@@ -1,17 +1,23 @@
 LOCATIONS
-ID,Name
-location_id_1,Main Warehouse
-location_id_2,Storage Room A
-location_id_3,Storage Room B
+ID,Name,Description,Parent,Level
+67c94f198e604d5383b81487,Home,Main home location,,0
+67c94f198e604d5383b81488,Living Room,Living room area,67c94f198e604d5383b81487,1
+67c94f198e604d5383b81489,Kitchen,Kitchen area,67c94f198e604d5383b81487,1
+67c94f198e604d5383b8148a,Bedroom,Main bedroom,67c94f198e604d5383b81487,1
+67c94f198e604d5383b8148b,Garage,Garage storage,,0
+67c94f198e604d5383b8148c,Office,Home office,,0
 
 CATEGORIES
-ID,Name
-category_id_1,Electronics
-category_id_2,Furniture
-category_id_3,Office Supplies
+ID,Name,Description,Icon,Color
+67c94f198e604d5383b8148d,Electronics,Electronic devices and accessories,devices,#3182CE
+67c94f198e604d5383b8148e,Clothing,Clothes, shoes, and accessories,checkroom,#DD6B20
+67c94f198e604d5383b8148f,Furniture,Home and office furniture,chair,#38A169
+67c94f198e604d5383b81490,Kitchen,Kitchen appliances and utensils,kitchen,#D69E2E
+67c94f198e604d5383b81491,Tools,Hand and power tools,handyman,#718096
 
 LABELS
-ID,Name
-label_id_1,Fragile
-label_id_2,Heavy
-label_id_3,Perishable
+ID,Name,Description,Color
+67c94f198e604d5383b81492,Important,Important items,#E53E3E
+67c94f198e604d5383b81493,Fragile,Handle with care,#DD6B20
+67c94f198e604d5383b81494,Seasonal,Used during specific seasons,#3182CE
+67c94f198e604d5383b81495,Valuable,High-value items,#D69E2E
