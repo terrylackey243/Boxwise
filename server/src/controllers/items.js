@@ -1,6 +1,8 @@
 const Item = require('../models/Item');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
+const path = require('path');
+const axios = require('axios');
 
 // @desc    Get all items with pagination and filtering
 // @route   GET /api/items
@@ -263,6 +265,204 @@ exports.quickAddItem = asyncHandler(async (req, res, next) => {
   const item = await Item.create(req.body);
   
   res.status(201).json({
+    success: true,
+    data: item
+  });
+});
+
+// @desc    Import items from CSV
+// @route   POST /api/items/import
+// @access  Private
+exports.importItems = asyncHandler(async (req, res, next) => {
+  // Check if file is uploaded
+  if (!req.files || Object.keys(req.files).length === 0) {
+    return next(new ErrorResponse('Please upload a CSV file', 400));
+  }
+  
+  const file = req.files.file;
+  
+  // Check file type
+  if (file.mimetype !== 'text/csv') {
+    return next(new ErrorResponse('Please upload a CSV file', 400));
+  }
+  
+  // Process CSV file (simplified implementation)
+  res.status(200).json({
+    success: true,
+    message: 'CSV import functionality is not fully implemented in this demo',
+    data: {
+      processed: 0,
+      created: 0,
+      updated: 0,
+      errors: 0
+    }
+  });
+});
+
+// @desc    Export items to CSV
+// @route   GET /api/items/export
+// @access  Private
+exports.exportItems = asyncHandler(async (req, res, next) => {
+  // Get all items for the user's group
+  const items = await Item.find({ group: req.user.group })
+    .populate('location', 'name')
+    .populate('category', 'name');
+  
+  // Simplified implementation
+  res.status(200).json({
+    success: true,
+    message: 'CSV export functionality is not fully implemented in this demo',
+    count: items.length
+  });
+});
+
+// @desc    Generate QR code for item
+// @route   GET /api/items/:id/qrcode
+// @access  Private
+exports.generateQRCode = asyncHandler(async (req, res, next) => {
+  const item = await Item.findById(req.params.id);
+  
+  if (!item) {
+    return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+  }
+  
+  // Check if item belongs to user's group
+  if (item.group.toString() !== req.user.group.toString()) {
+    return next(new ErrorResponse(`Not authorized to access this item`, 403));
+  }
+  
+  // Simplified implementation
+  res.status(200).json({
+    success: true,
+    message: 'QR code generation is not fully implemented in this demo',
+    data: {
+      itemId: item._id,
+      assetId: item.assetId
+    }
+  });
+});
+
+// @desc    Search for item by UPC code
+// @route   GET /api/items/upc/:upc
+// @access  Private
+exports.searchByUPC = asyncHandler(async (req, res, next) => {
+  const upcCode = req.params.upc;
+  
+  if (!upcCode) {
+    return next(new ErrorResponse('Please provide a UPC code', 400));
+  }
+  
+  try {
+    // First check if we have this item in our database
+    const existingItem = await Item.findOne({ 
+      upcCode, 
+      group: req.user.group 
+    });
+    
+    if (existingItem) {
+      return res.status(200).json({
+        success: true,
+        source: 'database',
+        data: existingItem
+      });
+    }
+    
+    // If not found in database, try to look it up from external API
+    const upcUrl = `${process.env.UPC_API_URL}?upc=${upcCode}`;
+    const response = await axios.get(upcUrl);
+    
+    if (response.data && response.data.items && response.data.items.length > 0) {
+      const item = response.data.items[0];
+      
+      return res.status(200).json({
+        success: true,
+        source: 'api',
+        data: {
+          name: item.title,
+          description: item.description,
+          manufacturer: item.brand,
+          upcCode: item.upc,
+          category: item.category,
+          images: item.images
+        }
+      });
+    }
+    
+    // If not found in API either
+    return res.status(404).json({
+      success: false,
+      message: 'No product found with this UPC code'
+    });
+  } catch (error) {
+    console.error('UPC lookup error:', error);
+    return next(new ErrorResponse('Error looking up UPC code', 500));
+  }
+});
+
+// @desc    Loan an item to someone
+// @route   POST /api/items/:id/loan
+// @access  Private
+exports.loanItem = asyncHandler(async (req, res, next) => {
+  const item = await Item.findById(req.params.id);
+  
+  if (!item) {
+    return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+  }
+  
+  // Check if item belongs to user's group
+  if (item.group.toString() !== req.user.group.toString()) {
+    return next(new ErrorResponse(`Not authorized to loan this item`, 403));
+  }
+  
+  // Check if required fields are provided
+  if (!req.body.loanedTo) {
+    return next(new ErrorResponse('Please provide who the item is loaned to', 400));
+  }
+  
+  // Update item with loan information
+  item.status = 'loaned';
+  item.loanedTo = req.body.loanedTo;
+  item.loanDate = Date.now();
+  item.expectedReturnDate = req.body.expectedReturnDate || null;
+  item.loanNotes = req.body.loanNotes || '';
+  
+  await item.save();
+  
+  res.status(200).json({
+    success: true,
+    data: item
+  });
+});
+
+// @desc    Return a loaned item
+// @route   POST /api/items/:id/return
+// @access  Private
+exports.returnItem = asyncHandler(async (req, res, next) => {
+  const item = await Item.findById(req.params.id);
+  
+  if (!item) {
+    return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+  }
+  
+  // Check if item belongs to user's group
+  if (item.group.toString() !== req.user.group.toString()) {
+    return next(new ErrorResponse(`Not authorized to return this item`, 403));
+  }
+  
+  // Check if item is actually loaned
+  if (item.status !== 'loaned') {
+    return next(new ErrorResponse(`This item is not currently loaned out`, 400));
+  }
+  
+  // Update item with return information
+  item.status = 'available';
+  item.returnDate = Date.now();
+  item.returnCondition = req.body.returnCondition || 'good';
+  item.returnNotes = req.body.returnNotes || '';
+  
+  await item.save();
+  
+  res.status(200).json({
     success: true,
     data: item
   });
