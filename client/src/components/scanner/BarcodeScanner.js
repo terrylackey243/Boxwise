@@ -9,7 +9,8 @@ import {
   DialogTitle,
   IconButton,
   Paper,
-  Typography
+  Typography,
+  CircularProgress
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -22,12 +23,46 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
   const [cameras, setCameras] = useState([]);
   const [activeCamera, setActiveCamera] = useState(0);
   const [scanning, setScanning] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Initialize scanner when dialog opens
+  // Check for available cameras and request permissions when dialog opens
   useEffect(() => {
     if (open) {
-      initializeScanner();
+      setLoading(true);
+      setError(null);
+      
+      // First, check if the browser supports getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Your browser does not support camera access');
+        setLoading(false);
+        return;
+      }
+      
+      // Request camera permission explicitly
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(() => {
+          // Now enumerate devices after permission is granted
+          return navigator.mediaDevices.enumerateDevices();
+        })
+        .then(devices => {
+          const videoDevices = devices.filter(device => device.kind === 'videoinput');
+          console.log('Available cameras:', videoDevices);
+          setCameras(videoDevices);
+          
+          if (videoDevices.length === 0) {
+            setError('No camera detected on your device');
+          } else {
+            // Initialize scanner after we have the camera list
+            initializeScanner();
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error accessing camera:', err);
+          setError('Could not access camera. Please check your camera permissions.');
+          setLoading(false);
+        });
     } else {
       stopScanner();
     }
@@ -37,29 +72,19 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
     };
   }, [open, activeCamera]);
 
-  // Check for available cameras
-  useEffect(() => {
-    if (open && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-      navigator.mediaDevices.enumerateDevices()
-        .then(devices => {
-          const videoDevices = devices.filter(device => device.kind === 'videoinput');
-          setCameras(videoDevices);
-        })
-        .catch(err => {
-          console.error('Error enumerating devices:', err);
-          setError('Could not access camera devices');
-        });
-    }
-  }, [open]);
-
   const initializeScanner = () => {
-    if (!scannerRef.current) return;
+    if (!scannerRef.current) {
+      console.error('Scanner ref is not available');
+      setError('Scanner initialization failed');
+      return;
+    }
     
     setScanning(true);
     setError(null);
     
     // Check if the browser supports getUserMedia (required for camera access)
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('getUserMedia not supported');
       setError('Your browser does not support camera access');
       setScanning(false);
       return;
@@ -67,54 +92,87 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
     
     // Check if we have any cameras
     if (cameras.length === 0) {
+      console.error('No cameras available');
       setError('No camera detected on your device');
       setScanning(false);
       return;
     }
     
-    Quagga.init({
-      inputStream: {
-        name: "Live",
-        type: "LiveStream",
-        target: scannerRef.current,
-        constraints: {
-          width: { min: 640 },
-          height: { min: 480 },
-          facingMode: "environment",
-          deviceId: cameras.length > 0 ? cameras[activeCamera].deviceId : undefined
+    console.log('Initializing Quagga with camera:', cameras[activeCamera]);
+    
+    // Use simpler constraints for better compatibility
+    const constraints = {
+      width: 640,
+      height: 480,
+      facingMode: "environment"
+    };
+    
+    // Only add deviceId if we have cameras and it's not the default camera
+    // This helps with compatibility on some devices
+    if (cameras.length > 1 && activeCamera > 0) {
+      constraints.deviceId = cameras[activeCamera].deviceId;
+    }
+    
+    try {
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: scannerRef.current,
+          constraints: constraints,
+          area: { // Define scan area for better performance
+            top: "25%",    // top offset
+            right: "10%",  // right offset
+            left: "10%",   // left offset
+            bottom: "25%", // bottom offset
+          },
         },
-      },
-      locator: {
-        patchSize: "medium",
-        halfSample: true
-      },
-      numOfWorkers: navigator.hardwareConcurrency || 4,
-      decoder: {
-        readers: ["upc_reader", "upc_e_reader", "ean_reader", "ean_8_reader"]
-      },
-      locate: true
-    }, (err) => {
-      if (err) {
-        console.error('Error initializing Quagga:', err);
-        setError('Could not initialize camera scanner. Make sure you have granted camera permissions.');
-        setScanning(false);
-        return;
-      }
-      
-      Quagga.start();
-      
-      // Set up barcode detection handler
-      Quagga.onDetected((result) => {
-        if (result && result.codeResult && result.codeResult.code) {
-          const code = result.codeResult.code;
-          console.log('Barcode detected:', code);
-          
-          // Stop scanner and call the callback with the detected code
-          stopScanner();
-          onDetected(code);
+        locator: {
+          patchSize: "medium",
+          halfSample: true
+        },
+        numOfWorkers: 1, // Reduced for better compatibility
+        frequency: 10,   // Lower frequency for better performance
+        decoder: {
+          readers: ["upc_reader", "upc_e_reader", "ean_reader", "ean_8_reader", "code_128_reader"]
+        },
+        locate: true
+      }, (err) => {
+        if (err) {
+          console.error('Error initializing Quagga:', err);
+          setError('Could not initialize camera scanner. Make sure you have granted camera permissions.');
+          setScanning(false);
+          return;
         }
+        
+        console.log('Quagga initialized successfully');
+        
+        // Add debug info to help troubleshoot
+        Quagga.onProcessed(function(result) {
+          if (result) {
+            console.log('Frame processed');
+          }
+        });
+        
+        Quagga.start();
+        
+        // Set up barcode detection handler
+        Quagga.onDetected((result) => {
+          if (result && result.codeResult && result.codeResult.code) {
+            const code = result.codeResult.code;
+            console.log('Barcode detected:', code);
+            
+            // Stop scanner and call the callback with the detected code
+            stopScanner();
+            onDetected(code);
+          }
+        });
       });
-    });
+    } catch (error) {
+      console.error('Exception during Quagga initialization:', error);
+      setError('Failed to initialize camera. Please try again or use a different browser.');
+      setScanning(false);
+    }
   };
 
   const stopScanner = () => {
@@ -177,6 +235,17 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
             >
               Cancel
             </Button>
+          </Box>
+        ) : loading ? (
+          <Box sx={{ p: 3, textAlign: 'center', height: { xs: 'calc(100vh - 200px)', sm: '400px' }, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <CircularProgress size={48} color="primary" sx={{ mb: 3 }} />
+            <Typography variant="h6" gutterBottom>Accessing Camera...</Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Please allow camera access when prompted by your browser
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
+              If the camera doesn't start, try refreshing the page or using a different browser
+            </Typography>
           </Box>
         ) : (
           <Box sx={{ position: 'relative' }}>
