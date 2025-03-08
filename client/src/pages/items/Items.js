@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
+import bulkService from '../../services/bulkService';
 import {
   Container,
   Grid,
@@ -45,6 +46,7 @@ import {
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
+import BulkAddDialog from '../../components/bulk/BulkAddDialog';
 import useIsMobile from '../../hooks/useIsMobile';
 import useHasCamera from '../../hooks/useHasCamera';
 
@@ -89,6 +91,9 @@ const Items = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const isMobile = useIsMobile();
   const hasCamera = useHasCamera();
+  
+  // Bulk add state
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -345,15 +350,25 @@ const Items = () => {
           )}
         </Box>
         
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          component={RouterLink}
-          to="/items/create"
-        >
-          Add Item
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setBulkAddOpen(true)}
+          >
+            Bulk Add
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            component={RouterLink}
+            to="/items/create"
+          >
+            Add Item
+          </Button>
+        </Box>
       </Box>
       
       {/* Search and Filters */}
@@ -755,6 +770,64 @@ const Items = () => {
           </Fab>
         </Tooltip>
       )}
+      
+      {/* Bulk Add Dialog */}
+      <BulkAddDialog
+        open={bulkAddOpen}
+        onClose={() => setBulkAddOpen(false)}
+        onSubmit={async (items) => {
+          try {
+            const result = await bulkService.bulkAdd('items', items);
+            setErrorAlert({ 
+              type: 'success', 
+              message: `Successfully added ${result.count} items` 
+            });
+            
+            // Refresh the items list
+            const params = new URLSearchParams();
+            params.set('page', page + 1);
+            params.set('limit', rowsPerPage);
+            const response = await axios.get(`/api/items?${params.toString()}`);
+            
+            if (response.data.success) {
+              setItems(response.data.data);
+              setFilteredItems(response.data.data);
+              setTotalItems(response.data.total);
+            }
+            
+            return result;
+          } catch (err) {
+            setErrorAlert('Error adding items: ' + (err.message || 'Unknown error'));
+            throw err;
+          }
+        }}
+        entityType="items"
+        fields={{
+          name: {
+            label: 'Name',
+            required: true
+          },
+          description: {
+            label: 'Description',
+            multiline: true,
+            rows: 2
+          },
+          upcCode: {
+            label: 'UPC Code'
+          },
+          quantity: {
+            label: 'Quantity',
+            type: 'number',
+            required: true
+          }
+        }}
+        defaultValues={{
+          name: '',
+          description: '',
+          upcCode: '',
+          quantity: 1
+        }}
+      />
       
       {/* Action Menu */}
       <Menu

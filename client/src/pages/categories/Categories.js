@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
+import bulkService from '../../services/bulkService';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -30,6 +31,7 @@ import {
   Category as CategoryIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
+import BulkAddDialog from '../../components/bulk/BulkAddDialog';
 
 const Categories = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -38,6 +40,7 @@ const Categories = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -128,14 +131,24 @@ const Categories = () => {
           Categories
         </Typography>
         
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          component={RouterLink}
-          to="/categories/create"
-        >
-          Add Category
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setBulkAddOpen(true)}
+          >
+            Bulk Add
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            component={RouterLink}
+            to="/categories/create"
+          >
+            Add Category
+          </Button>
+        </Box>
       </Box>
       
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -248,6 +261,45 @@ const Categories = () => {
           Delete
         </MenuItem>
       </Menu>
+      
+      {/* Bulk Add Dialog */}
+      <BulkAddDialog
+        open={bulkAddOpen}
+        onClose={() => setBulkAddOpen(false)}
+        onSubmit={async (categories) => {
+          try {
+            const result = await bulkService.bulkAdd('categories', categories);
+            setSuccessAlert(`Successfully added ${result.count} categories`);
+            
+            // Refresh the categories list
+            const response = await axios.get('/api/categories');
+            if (response.data.success) {
+              setCategories(response.data.data || []);
+            }
+            
+            return result;
+          } catch (err) {
+            setErrorAlert('Error adding categories: ' + (err.message || 'Unknown error'));
+            throw err;
+          }
+        }}
+        entityType="categories"
+        fields={{
+          name: {
+            label: 'Name',
+            required: true
+          },
+          description: {
+            label: 'Description',
+            multiline: true,
+            rows: 2
+          }
+        }}
+        defaultValues={{
+          name: '',
+          description: ''
+        }}
+      />
     </Container>
   );
 };

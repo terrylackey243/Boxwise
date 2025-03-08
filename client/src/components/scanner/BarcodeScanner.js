@@ -39,6 +39,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
   // Initialize camera when dialog opens
   useEffect(() => {
     let mounted = true;
+    let timeoutId = null;
     
     const initializeCamera = async () => {
       if (!open) return;
@@ -46,6 +47,21 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
       setLoading(true);
       setError(null);
       setIsReady(false);
+      
+      // Set a timeout to prevent infinite loading
+      timeoutId = setTimeout(() => {
+        if (mounted && loading) {
+          console.error('Camera initialization timed out');
+          setError('Camera initialization timed out. Please try manual entry instead.');
+          setLoading(false);
+          
+          // Clean up any partial initialization
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+          }
+        }
+      }, 10000); // 10 second timeout
       
       try {
         // Check if browser supports getUserMedia
@@ -91,11 +107,17 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                 if (!mounted) return;
                 setIsReady(true);
                 setLoading(false);
+                
+                // Clear the timeout since we've successfully initialized
+                if (timeoutId) {
+                  clearTimeout(timeoutId);
+                  timeoutId = null;
+                }
               })
               .catch(err => {
                 if (!mounted) return;
                 console.error('Error playing video:', err);
-                setError('Could not start video stream. Try tapping the screen.');
+                setError('Could not start video stream. Try manual entry instead.');
                 setLoading(false);
               });
           };
@@ -114,6 +136,11 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
     return () => {
       mounted = false;
       
+      // Clear any pending timeouts
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
       // Clean up camera resources
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -123,7 +150,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
         videoRef.current.srcObject = null;
       }
     };
-  }, [open, activeCamera]);
+  }, [open, activeCamera, loading, stream]);
   
   // Clean up when dialog closes
   useEffect(() => {
@@ -334,6 +361,22 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
               <Typography variant="caption" color="text.secondary">
                 If the camera doesn't start, try refreshing the page or using a different browser
               </Typography>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => {
+                  // Clean up camera resources
+                  if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    setStream(null);
+                  }
+                  setLoading(false);
+                  setManualMode(true);
+                }}
+                sx={{ mt: 2 }}
+              >
+                Skip and Enter UPC Manually
+              </Button>
             </Box>
             
             <Divider sx={{ my: 3 }}>

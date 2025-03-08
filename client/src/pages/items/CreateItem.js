@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
+import { useMobile } from '../../context/MobileContext';
+import MobilePhotoSection from './MobilePhotoSection';
 import {
   Container,
   Grid,
@@ -31,20 +33,53 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   QrCode as QrCodeIcon,
-  QrCodeScanner as QrCodeScannerIcon
+  QrCodeScanner as QrCodeScannerIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
 import useHasCamera from '../../hooks/useHasCamera';
 
+// Function to get the full location hierarchy path
+const getLocationHierarchy = (location, allLocations) => {
+  if (!location) return '';
+  
+  // Start with the current location name
+  let path = location.name;
+  let currentLocation = location;
+  
+  // Traverse up the parent hierarchy
+  while (currentLocation.parent) {
+    // Find the parent location
+    const parentLocation = allLocations.find(loc => loc._id === currentLocation.parent);
+    
+    // If parent not found, break the loop
+    if (!parentLocation) break;
+    
+    // Add parent name to the path
+    path = `${parentLocation.name} > ${path}`;
+    
+    // Move up to the parent
+    currentLocation = parentLocation;
+  }
+  
+  return path;
+};
+
 const CreateItem = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
+  const { isMobile } = useMobile();
+  
+  // Get location ID from URL query parameters if it exists
+  const queryParams = new URLSearchParams(location.search);
+  const locationId = queryParams.get('location');
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [lookingUpUPC, setLookingUpUPC] = useState(false);
-  const [showUpcLookup, setShowUpcLookup] = useState(true);
+  const [showUpcLookup, setShowUpcLookup] = useState(false);
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
@@ -52,10 +87,20 @@ const CreateItem = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const hasCamera = useHasCamera();
   
+  // State for quick add dialogs
+  const [newLocationDialog, setNewLocationDialog] = useState(false);
+  const [newCategoryDialog, setNewCategoryDialog] = useState(false);
+  const [newLabelDialog, setNewLabelDialog] = useState(false);
+  
+  // State for new entities
+  const [newLocation, setNewLocation] = useState({ name: '', description: '', parent: '' });
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newLabel, setNewLabel] = useState({ name: '', description: '', color: '#3f51b5' });
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    location: '',
+    location: locationId || '',
     category: '',
     labels: [],
     quantity: 1,
@@ -232,15 +277,14 @@ const CreateItem = () => {
       ...prevData,
       customFields: [
         ...prevData.customFields,
-        { name: '', value: '' }
+        { name: '', value: '', type: 'text' }
       ]
     }));
   };
-
+  
   // Function to detect the type of input based on its value
   const detectFieldType = (value) => {
-    // Check if it's a URL or email - both will be stored as text in the database
-    // but displayed differently in the UI
+    // Check if it's a URL or email
     if (/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value)) {
       return 'url';
     }
@@ -267,24 +311,7 @@ const CreateItem = () => {
     // Default to text
     return 'text';
   };
-
-  // Function to map UI field types to database field types
-  const mapFieldTypeToDbType = (uiType) => {
-    // The database only supports 'text', 'integer', 'boolean', 'timestamp'
-    switch (uiType) {
-      case 'url':
-      case 'email':
-        return 'text';
-      case 'integer':
-      case 'boolean':
-      case 'timestamp':
-      case 'text':
-        return uiType;
-      default:
-        return 'text';
-    }
-  };
-
+  
   const handleCustomFieldChange = (index, field, value) => {
     const updatedCustomFields = [...formData.customFields];
     
@@ -304,7 +331,7 @@ const CreateItem = () => {
       customFields: updatedCustomFields
     }));
   };
-
+  
   const handleRemoveCustomField = (index) => {
     const updatedCustomFields = formData.customFields.filter((_, i) => i !== index);
     
@@ -374,17 +401,8 @@ const CreateItem = () => {
     setSubmitting(true);
     
     try {
-      // Map UI field types to database field types before submitting
-      const submissionData = {
-        ...formData,
-        customFields: formData.customFields.map(field => ({
-          ...field,
-          type: mapFieldTypeToDbType(field.type)
-        }))
-      };
-      
       // Make API call to create the item
-      const response = await axios.post('/api/items', submissionData);
+      const response = await axios.post('/api/items', formData);
       
       if (response.data.success) {
         setSuccessAlert('Item created successfully');
@@ -560,109 +578,139 @@ const CreateItem = () => {
                   />
                 </Grid>
                 
-                <Grid item xs={12} sm={6}>
-                  <Autocomplete
-                    options={locations}
-                    getOptionLabel={(option) => {
-                      // Handle both objects and string IDs
-                      if (typeof option === 'string') {
-                        const locationObj = locations.find(loc => loc._id === option);
-                        return locationObj ? locationObj.name : '';
-                      }
-                      return option.name;
-                    }}
-                    value={formData.location ? locations.find(loc => loc._id === formData.location) || null : null}
-                    onChange={(event, newValue) => {
-                      setFormData(prevData => ({
-                        ...prevData,
-                        location: newValue ? newValue._id : ''
-                      }));
-                      
-                      // Clear error for this field if it exists
-                      if (errors.location) {
-                        setErrors(prevErrors => ({
-                          ...prevErrors,
-                          location: null
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Autocomplete
+                      options={locations}
+                      getOptionLabel={(option) => {
+                        // Handle both objects and string IDs
+                        if (typeof option === 'string') {
+                          const locationObj = locations.find(loc => loc._id === option);
+                          return locationObj ? getLocationHierarchy(locationObj, locations) : '';
+                        }
+                        return getLocationHierarchy(option, locations);
+                      }}
+                      value={formData.location ? locations.find(loc => loc._id === formData.location) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          location: newValue ? newValue._id : ''
                         }));
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Location"
-                        required
-                        error={!!errors.location}
-                        helperText={errors.location}
-                      />
-                    )}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Autocomplete
-                    options={categories}
-                    getOptionLabel={(option) => {
-                      // Handle both objects and string IDs
-                      if (typeof option === 'string') {
-                        const categoryObj = categories.find(cat => cat._id === option);
-                        return categoryObj ? categoryObj.name : '';
-                      }
-                      return option.name;
-                    }}
-                    value={formData.category ? categories.find(cat => cat._id === formData.category) || null : null}
-                    onChange={(event, newValue) => {
-                      setFormData(prevData => ({
-                        ...prevData,
-                        category: newValue ? newValue._id : ''
-                      }));
-                      
-                      // Clear error for this field if it exists
-                      if (errors.category) {
-                        setErrors(prevErrors => ({
-                          ...prevErrors,
-                          category: null
-                        }));
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Category"
-                        required
-                        error={!!errors.category}
-                        helperText={errors.category}
-                      />
-                    )}
-                  />
+                        
+                        // Clear error for this field if it exists
+                        if (errors.location) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            location: null
+                          }));
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Location"
+                          required
+                          error={!!errors.location}
+                          helperText={errors.location}
+                        />
+                      )}
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton 
+                      color="primary"
+                      onClick={() => setNewLocationDialog(true)}
+                      sx={{ ml: 1, mt: 1 }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <Autocomplete
-                    multiple
-                    options={labels}
-                    getOptionLabel={(option) => option.name}
-                    value={formData.labels}
-                    onChange={handleLabelChange}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Labels"
-                        placeholder="Select labels"
-                      />
-                    )}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          label={option.name}
-                          {...getTagProps({ index })}
-                          sx={{
-                            bgcolor: option.color,
-                            color: 'white',
-                          }}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Autocomplete
+                      options={categories}
+                      getOptionLabel={(option) => {
+                        // Handle both objects and string IDs
+                        if (typeof option === 'string') {
+                          const categoryObj = categories.find(cat => cat._id === option);
+                          return categoryObj ? categoryObj.name : '';
+                        }
+                        return option.name;
+                      }}
+                      value={formData.category ? categories.find(cat => cat._id === formData.category) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          category: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.category) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            category: null
+                          }));
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Category"
+                          required
+                          error={!!errors.category}
+                          helperText={errors.category}
                         />
-                      ))
-                    }
-                  />
+                      )}
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton 
+                      color="primary"
+                      onClick={() => setNewCategoryDialog(true)}
+                      sx={{ ml: 1, mt: 1 }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Autocomplete
+                      multiple
+                      options={labels}
+                      getOptionLabel={(option) => option.name}
+                      value={formData.labels}
+                      onChange={handleLabelChange}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Labels"
+                          placeholder="Select labels"
+                        />
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip
+                            label={option.name}
+                            {...getTagProps({ index })}
+                            sx={{
+                              bgcolor: option.color,
+                              color: 'white',
+                            }}
+                          />
+                        ))
+                      }
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton 
+                      color="primary"
+                      onClick={() => setNewLabelDialog(true)}
+                      sx={{ ml: 1, mt: 1 }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
                 </Grid>
               </Grid>
             </Paper>
@@ -853,7 +901,7 @@ const CreateItem = () => {
               </Grid>
             </Paper>
             
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: 3, mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Custom Fields
@@ -875,7 +923,7 @@ const CreateItem = () => {
                 <Grid container spacing={2}>
                   {formData.customFields.map((field, index) => (
                     <React.Fragment key={index}>
-                      <Grid item xs={4}>
+                      <Grid item xs={5}>
                         <TextField
                           fullWidth
                           label="Field Name"
@@ -885,175 +933,63 @@ const CreateItem = () => {
                         />
                       </Grid>
                       
-                      <Grid item xs={4}>
-                        {field.type === 'integer' ? (
-                          <TextField
-                            fullWidth
-                            label="Field Value (Number)"
-                            value={field.value}
-                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                            size="small"
-                            type="number"
-                            inputProps={{ step: 1 }}
-                            helperText="Enter a whole number"
-                          />
-                        ) : field.type === 'boolean' ? (
-                          <FormControl fullWidth size="small">
-                            <InputLabel id={`custom-field-${index}-boolean-label`}>Field Value (Yes/No)</InputLabel>
-                            <Select
-                              labelId={`custom-field-${index}-boolean-label`}
-                              value={field.value === 'true' ? 'true' : field.value === 'false' ? 'false' : ''}
-                              onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                              label="Field Value (Yes/No)"
-                            >
-                              <MenuItem value="true">Yes</MenuItem>
-                              <MenuItem value="false">No</MenuItem>
-                            </Select>
-                          </FormControl>
-                        ) : field.type === 'timestamp' ? (
-                          <TextField
-                            fullWidth
-                            label="Field Value (Date)"
-                            value={field.value}
-                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                            size="small"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                          />
-                        ) : (
-                          <TextField
-                            fullWidth
-                            label="Field Value"
-                            value={field.value}
-                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                            size="small"
-                            helperText={field.type ? `Detected as: ${field.type}` : ''}
-                          />
-                        )}
+                      <Grid item xs={5}>
+                        <TextField
+                          fullWidth
+                          label="Field Value"
+                          value={field.value}
+                          onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                          size="small"
+                        />
                       </Grid>
                       
                       <Grid item xs={2}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                          <Chip 
-                            label={field.type || 'text'} 
-                            size="small"
-                            color={
-                              field.type === 'url' ? 'primary' :
-                              field.type === 'email' ? 'secondary' :
-                              field.type === 'timestamp' ? 'success' :
-                              field.type === 'integer' ? 'info' :
-                              field.type === 'boolean' ? 'warning' :
-                              'default'
-                            }
-                            sx={{ mb: 1 }}
-                          />
-                          <FormControl size="small">
-                            <Select
-                              value={field.type || 'text'}
-                              onChange={(e) => {
-                                // Update the field type and convert the value if needed
-                                const newType = e.target.value;
-                                let newValue = field.value;
-                                
-                                // Convert value based on new type
-                                if (newType === 'boolean') {
-                                  newValue = newValue ? 'true' : 'false';
-                                } else if (newType === 'integer') {
-                                  newValue = isNaN(parseInt(newValue)) ? '0' : parseInt(newValue).toString();
-                                } else if (newType === 'timestamp' && !newValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                  newValue = new Date().toISOString().split('T')[0];
-                                }
-                                
-                                // Update both type and value
-                                const updatedCustomFields = [...formData.customFields];
-                                updatedCustomFields[index] = {
-                                  ...updatedCustomFields[index],
-                                  type: newType,
-                                  value: newValue
-                                };
-                                
-                                setFormData(prevData => ({
-                                  ...prevData,
-                                  customFields: updatedCustomFields
-                                }));
-                              }}
-                              displayEmpty
-                              size="small"
-                              sx={{ minWidth: 100 }}
-                            >
-                              <MenuItem value="text">Text</MenuItem>
-                              <MenuItem value="integer">Integer</MenuItem>
-                              <MenuItem value="boolean">Boolean</MenuItem>
-                              <MenuItem value="timestamp">Timestamp</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={2}>
-                        <Button
-                          color="error"
+                        <IconButton 
+                          color="error" 
                           onClick={() => handleRemoveCustomField(index)}
-                          sx={{ height: '100%' }}
+                          sx={{ mt: 1 }}
                         >
-                          Remove
-                        </Button>
+                          <DeleteIcon />
+                        </IconButton>
                       </Grid>
                     </React.Fragment>
                   ))}
                 </Grid>
               )}
             </Paper>
+            
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                startIcon={<SaveIcon />}
+                disabled={submitting}
+                sx={{ minWidth: 120 }}
+              >
+                {submitting ? <CircularProgress size={24} /> : 'Save'}
+              </Button>
+            </Box>
           </Grid>
           
           {/* Sidebar */}
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
-              <Typography variant="h6" gutterBottom>
-                Actions
-              </Typography>
-              
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                startIcon={submitting ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
-                type="submit"
-                disabled={submitting}
-                sx={{ mb: 2 }}
-              >
-                {submitting ? 'Creating...' : 'Create Item'}
-              </Button>
-              
-              <Button
-                fullWidth
-                component={RouterLink}
-                to="/items"
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              
-              <Divider sx={{ my: 3 }} />
-              
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Required fields are marked with an asterisk (*).
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary">
-                After creating this item, you'll be able to add attachments like photos, receipts, and manuals.
-              </Typography>
-            </Paper>
+            {/* Mobile Photo Section */}
+            <MobilePhotoSection />
+            
+            {/* Other sidebar sections would go here */}
           </Grid>
         </Grid>
       </form>
       
-      {/* Barcode Scanner */}
-      <BarcodeScanner
-        open={scannerOpen}
-        onClose={handleCloseScanner}
-        onDetected={handleBarcodeDetected}
-      />
+      {/* Barcode Scanner Dialog */}
+      {scannerOpen && (
+        <BarcodeScanner
+          open={scannerOpen}
+          onClose={handleCloseScanner}
+          onDetected={handleBarcodeDetected}
+        />
+      )}
     </Container>
   );
 };

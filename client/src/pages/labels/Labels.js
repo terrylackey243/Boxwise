@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
+import bulkService from '../../services/bulkService';
 import {
   Container,
   Grid,
@@ -29,6 +30,7 @@ import {
   Label as LabelIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
+import BulkAddDialog from '../../components/bulk/BulkAddDialog';
 
 const Labels = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -37,6 +39,7 @@ const Labels = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedLabel, setSelectedLabel] = useState(null);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
 
   useEffect(() => {
     const fetchLabels = async () => {
@@ -146,14 +149,24 @@ const Labels = () => {
           Labels
         </Typography>
         
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          component={RouterLink}
-          to="/labels/create"
-        >
-          Add Label
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setBulkAddOpen(true)}
+          >
+            Bulk Add
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            component={RouterLink}
+            to="/labels/create"
+          >
+            Add Label
+          </Button>
+        </Box>
       </Box>
       
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -272,6 +285,67 @@ const Labels = () => {
           Delete
         </MenuItem>
       </Menu>
+      
+      {/* Bulk Add Dialog */}
+      <BulkAddDialog
+        open={bulkAddOpen}
+        onClose={() => setBulkAddOpen(false)}
+        onSubmit={async (labels) => {
+          try {
+            const result = await bulkService.bulkAdd('labels', labels);
+            setSuccessAlert(`Successfully added ${result.count} labels`);
+            
+            // Refresh the labels list
+            const [labelsResponse, countsResponse] = await Promise.all([
+              axios.get('/api/labels'),
+              axios.get('/api/labels/counts')
+            ]);
+            
+            if (labelsResponse.data?.data && countsResponse.data?.data) {
+              // Create a map of label IDs to item counts
+              const countMap = {};
+              countsResponse.data.data.forEach(item => {
+                countMap[item.labelId] = item.count;
+              });
+              
+              // Process the labels from the API response with real item counts
+              const labelsWithItemCount = labelsResponse.data.data.map(label => ({
+                ...label,
+                itemCount: countMap[label._id] || 0
+              }));
+              
+              setLabels(labelsWithItemCount);
+            }
+            
+            return result;
+          } catch (err) {
+            setErrorAlert('Error adding labels: ' + (err.message || 'Unknown error'));
+            throw err;
+          }
+        }}
+        entityType="labels"
+        fields={{
+          name: {
+            label: 'Name',
+            required: true
+          },
+          description: {
+            label: 'Description',
+            multiline: true,
+            rows: 2
+          },
+          color: {
+            label: 'Color (hex)',
+            required: true,
+            helperText: 'e.g. #FF5733'
+          }
+        }}
+        defaultValues={{
+          name: '',
+          description: '',
+          color: '#3f51b5'
+        }}
+      />
     </Container>
   );
 };

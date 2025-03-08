@@ -1,31 +1,36 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Custom hook to detect if the device is a mobile device
+ * Custom hook to detect if the current device is a mobile device
  * @returns {boolean} True if the device is a mobile device, false otherwise
  */
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Function to check if the device is mobile
     const checkMobile = () => {
-      // Check if the user agent contains mobile-specific keywords
-      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-      const isMobileDevice = mobileRegex.test(navigator.userAgent);
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
       
-      // Also check screen size as a fallback
+      // Regular expression to check for mobile devices
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      
+      // Check if the user agent matches the mobile regex
+      const isMobileDevice = mobileRegex.test(userAgent);
+      
+      // Also check screen width as a fallback
       const isSmallScreen = window.innerWidth <= 768;
       
       setIsMobile(isMobileDevice || isSmallScreen);
     };
 
-    // Check initially
+    // Initial check
     checkMobile();
-    
+
     // Add event listener for window resize
     window.addEventListener('resize', checkMobile);
-    
-    // Clean up
+
+    // Cleanup
     return () => {
       window.removeEventListener('resize', checkMobile);
     };

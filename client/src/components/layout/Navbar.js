@@ -138,7 +138,7 @@ const Navbar = ({ toggleColorMode, mode }) => {
     {
       text: 'Mobile App',
       icon: <MobileIcon />,
-      path: '/mobile-app.html',
+      path: '/mobile-app',
       auth: true
     },
     {

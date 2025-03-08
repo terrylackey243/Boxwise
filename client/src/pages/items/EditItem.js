@@ -23,7 +23,11 @@ import {
   Chip,
   InputAdornment,
   IconButton,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -34,6 +38,32 @@ import {
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
 import useHasCamera from '../../hooks/useHasCamera';
+
+// Function to get the full location hierarchy path
+const getLocationHierarchy = (location, allLocations) => {
+  if (!location) return '';
+  
+  // Start with the current location name
+  let path = location.name;
+  let currentLocation = location;
+  
+  // Traverse up the parent hierarchy
+  while (currentLocation.parent) {
+    // Find the parent location
+    const parentLocation = allLocations.find(loc => loc._id === currentLocation.parent);
+    
+    // If parent not found, break the loop
+    if (!parentLocation) break;
+    
+    // Add parent name to the path
+    path = `${parentLocation.name} > ${path}`;
+    
+    // Move up to the parent
+    currentLocation = parentLocation;
+  }
+  
+  return path;
+};
 
 const EditItem = () => {
   const { id } = useParams();
@@ -48,6 +78,16 @@ const EditItem = () => {
   const [item, setItem] = useState(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const hasCamera = useHasCamera();
+  
+  // State for quick add dialogs
+  const [newLocationDialog, setNewLocationDialog] = useState(false);
+  const [newCategoryDialog, setNewCategoryDialog] = useState(false);
+  const [newLabelDialog, setNewLabelDialog] = useState(false);
+  
+  // State for new entities
+  const [newLocation, setNewLocation] = useState({ name: '', description: '', parent: '' });
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newLabel, setNewLabel] = useState({ name: '', description: '', color: '#3f51b5' });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -484,81 +524,139 @@ const EditItem = () => {
                   />
                 </Grid>
                 
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth error={!!errors.location} required>
-                    <InputLabel id="location-label">Location</InputLabel>
-                    <Select
-                      labelId="location-label"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleChange}
-                      label="Location"
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Autocomplete
+                      options={locations}
+                      getOptionLabel={(option) => {
+                        // Handle both objects and string IDs
+                        if (typeof option === 'string') {
+                          const locationObj = locations.find(loc => loc._id === option);
+                          return locationObj ? getLocationHierarchy(locationObj, locations) : '';
+                        }
+                        return getLocationHierarchy(option, locations);
+                      }}
+                      value={formData.location ? locations.find(loc => loc._id === formData.location) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          location: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.location) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            location: null
+                          }));
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Location"
+                          required
+                          error={!!errors.location}
+                          helperText={errors.location}
+                        />
+                      )}
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton 
+                      color="primary"
+                      onClick={() => setNewLocationDialog(true)}
+                      sx={{ ml: 1, mt: 1 }}
                     >
-                      {locations.map(location => (
-                        <MenuItem key={location._id} value={location._id}>
-                          {location.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.location && (
-                      <Typography variant="caption" color="error">
-                        {errors.location}
-                      </Typography>
-                    )}
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth error={!!errors.category} required>
-                    <InputLabel id="category-label">Category</InputLabel>
-                    <Select
-                      labelId="category-label"
-                      name="category"
-                      value={formData.category}
-                      onChange={handleChange}
-                      label="Category"
-                    >
-                      {categories.map(category => (
-                        <MenuItem key={category._id} value={category._id}>
-                          {category.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.category && (
-                      <Typography variant="caption" color="error">
-                        {errors.category}
-                      </Typography>
-                    )}
-                  </FormControl>
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <Autocomplete
-                    multiple
-                    options={labels}
-                    getOptionLabel={(option) => option.name}
-                    value={formData.labels}
-                    onChange={handleLabelChange}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Labels"
-                        placeholder="Select labels"
-                      />
-                    )}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          label={option.name}
-                          {...getTagProps({ index })}
-                          sx={{
-                            bgcolor: option.color,
-                            color: 'white',
-                          }}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Autocomplete
+                      options={categories}
+                      getOptionLabel={(option) => {
+                        // Handle both objects and string IDs
+                        if (typeof option === 'string') {
+                          const categoryObj = categories.find(cat => cat._id === option);
+                          return categoryObj ? categoryObj.name : '';
+                        }
+                        return option.name;
+                      }}
+                      value={formData.category ? categories.find(cat => cat._id === formData.category) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          category: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.category) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            category: null
+                          }));
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Category"
+                          required
+                          error={!!errors.category}
+                          helperText={errors.category}
                         />
-                      ))
-                    }
-                  />
+                      )}
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton 
+                      color="primary"
+                      onClick={() => setNewCategoryDialog(true)}
+                      sx={{ ml: 1, mt: 1 }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Autocomplete
+                      multiple
+                      options={labels}
+                      getOptionLabel={(option) => option.name}
+                      value={formData.labels}
+                      onChange={handleLabelChange}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Labels"
+                          placeholder="Select labels"
+                        />
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip
+                            label={option.name}
+                            {...getTagProps({ index })}
+                            sx={{
+                              bgcolor: option.color,
+                              color: 'white',
+                            }}
+                          />
+                        ))
+                      }
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton 
+                      color="primary"
+                      onClick={() => setNewLabelDialog(true)}
+                      sx={{ ml: 1, mt: 1 }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
                 </Grid>
               </Grid>
             </Paper>
@@ -985,6 +1083,260 @@ const EditItem = () => {
         onClose={handleCloseScanner}
         onDetected={handleBarcodeDetected}
       />
+      
+      {/* Add Location Dialog */}
+      <Dialog open={newLocationDialog} onClose={() => setNewLocationDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Location</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newLocation.name}
+              onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newLocation.description}
+              onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="parent-location-label">Parent Location</InputLabel>
+              <Select
+                labelId="parent-location-label"
+                value={newLocation.parent}
+                onChange={(e) => setNewLocation({ ...newLocation, parent: e.target.value })}
+                label="Parent Location"
+              >
+                <MenuItem value="">None (Top Level)</MenuItem>
+                {locations.map(loc => (
+                  <MenuItem key={loc._id} value={loc._id}>{getLocationHierarchy(loc, locations)}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewLocationDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={async () => {
+              if (!newLocation.name.trim()) {
+                setErrorAlert('Location name is required');
+                return;
+              }
+              
+              try {
+                const response = await axios.post('/api/locations', {
+                  name: newLocation.name,
+                  description: newLocation.description,
+                  parent: newLocation.parent || null
+                });
+                
+                if (response.data.success) {
+                  // Add the new location to the locations array
+                  const newLoc = response.data.data;
+                  setLocations([...locations, newLoc]);
+                  
+                  // Select the new location in the form
+                  setFormData(prevData => ({
+                    ...prevData,
+                    location: newLoc._id
+                  }));
+                  
+                  // Reset the new location form
+                  setNewLocation({ name: '', description: '', parent: '' });
+                  
+                  // Close the dialog
+                  setNewLocationDialog(false);
+                  
+                  setSuccessAlert('Location created successfully');
+                } else {
+                  setErrorAlert('Error creating location: ' + response.data.message);
+                }
+              } catch (err) {
+                setErrorAlert('Error creating location: ' + (err.response?.data?.message || err.message));
+                console.error(err);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Add Category Dialog */}
+      <Dialog open={newCategoryDialog} onClose={() => setNewCategoryDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Category</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newCategory.description}
+              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewCategoryDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={async () => {
+              if (!newCategory.name.trim()) {
+                setErrorAlert('Category name is required');
+                return;
+              }
+              
+              try {
+                const response = await axios.post('/api/categories', {
+                  name: newCategory.name,
+                  description: newCategory.description
+                });
+                
+                if (response.data.success) {
+                  // Add the new category to the categories array
+                  const newCat = response.data.data;
+                  setCategories([...categories, newCat]);
+                  
+                  // Select the new category in the form
+                  setFormData(prevData => ({
+                    ...prevData,
+                    category: newCat._id
+                  }));
+                  
+                  // Reset the new category form
+                  setNewCategory({ name: '', description: '' });
+                  
+                  // Close the dialog
+                  setNewCategoryDialog(false);
+                  
+                  setSuccessAlert('Category created successfully');
+                } else {
+                  setErrorAlert('Error creating category: ' + response.data.message);
+                }
+              } catch (err) {
+                setErrorAlert('Error creating category: ' + (err.response?.data?.message || err.message));
+                console.error(err);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Add Label Dialog */}
+      <Dialog open={newLabelDialog} onClose={() => setNewLabelDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Label</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newLabel.name}
+              onChange={(e) => setNewLabel({ ...newLabel, name: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newLabel.description}
+              onChange={(e) => setNewLabel({ ...newLabel, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+            <TextField
+              fullWidth
+              label="Color"
+              type="color"
+              value={newLabel.color}
+              onChange={(e) => setNewLabel({ ...newLabel, color: e.target.value })}
+              margin="normal"
+              InputProps={{
+                startAdornment: (
+                  <Box 
+                    sx={{ 
+                      width: 24, 
+                      height: 24, 
+                      borderRadius: '50%', 
+                      backgroundColor: newLabel.color,
+                      mr: 1,
+                      border: '1px solid rgba(0, 0, 0, 0.23)'
+                    }} 
+                  />
+                )
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewLabelDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={async () => {
+              if (!newLabel.name.trim()) {
+                setErrorAlert('Label name is required');
+                return;
+              }
+              
+              try {
+                const response = await axios.post('/api/labels', {
+                  name: newLabel.name,
+                  description: newLabel.description,
+                  color: newLabel.color
+                });
+                
+                if (response.data.success) {
+                  // Add the new label to the labels array
+                  const newLab = response.data.data;
+                  setLabels([...labels, newLab]);
+                  
+                  // Add the new label to the selected labels in the form
+                  setFormData(prevData => ({
+                    ...prevData,
+                    labels: [...prevData.labels, newLab]
+                  }));
+                  
+                  // Reset the new label form
+                  setNewLabel({ name: '', description: '', color: '#3f51b5' });
+                  
+                  // Close the dialog
+                  setNewLabelDialog(false);
+                  
+                  setSuccessAlert('Label created successfully');
+                } else {
+                  setErrorAlert('Error creating label: ' + response.data.message);
+                }
+              } catch (err) {
+                setErrorAlert('Error creating label: ' + (err.response?.data?.message || err.message));
+                console.error(err);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

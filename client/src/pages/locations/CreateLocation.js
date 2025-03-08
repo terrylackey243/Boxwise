@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
 import {
   Container,
@@ -26,7 +26,12 @@ import { AlertContext } from '../../context/AlertContext';
 
 const CreateLocation = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
+  
+  // Get parent location ID from URL query parameters if it exists
+  const queryParams = new URLSearchParams(location.search);
+  const parentLocationId = queryParams.get('parent');
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +40,7 @@ const CreateLocation = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    parentLocation: ''
+    parentLocation: parentLocationId || ''
   });
   
   const [errors, setErrors] = useState({});

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
+import bulkService from '../../services/bulkService';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -38,6 +39,7 @@ import {
   FolderOpen as FolderOpenIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
+import BulkAddDialog from '../../components/bulk/BulkAddDialog';
 
 const Locations = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -47,6 +49,7 @@ const Locations = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [expandedLocations, setExpandedLocations] = useState({});
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -237,14 +240,24 @@ const Locations = () => {
           Locations
         </Typography>
         
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          component={RouterLink}
-          to="/locations/create"
-        >
-          Add Location
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setBulkAddOpen(true)}
+          >
+            Bulk Add
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            component={RouterLink}
+            to="/locations/create"
+          >
+            Add Location
+          </Button>
+        </Box>
       </Box>
       
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -319,6 +332,50 @@ const Locations = () => {
           Delete
         </MenuItem>
       </Menu>
+      
+      {/* Bulk Add Dialog */}
+      <BulkAddDialog
+        open={bulkAddOpen}
+        onClose={() => setBulkAddOpen(false)}
+        onSubmit={async (locations) => {
+          try {
+            const result = await bulkService.bulkAdd('locations', locations);
+            setSuccessAlert(`Successfully added ${result.count} locations`);
+            
+            // Refresh the locations list
+            const response = await axios.get('/api/locations');
+            if (response.data.success) {
+              setLocations(response.data.data || []);
+            }
+            
+            return result;
+          } catch (err) {
+            setErrorAlert('Error adding locations: ' + (err.message || 'Unknown error'));
+            throw err;
+          }
+        }}
+        entityType="locations"
+        fields={{
+          name: {
+            label: 'Name',
+            required: true
+          },
+          description: {
+            label: 'Description',
+            multiline: true,
+            rows: 2
+          },
+          parentId: {
+            label: 'Parent Location',
+            helperText: 'Leave blank for top-level location'
+          }
+        }}
+        defaultValues={{
+          name: '',
+          description: '',
+          parentId: ''
+        }}
+      />
     </Container>
   );
 };

@@ -14,6 +14,7 @@ import AdminRoute from './components/routing/AdminRoute';
 import Navbar from './components/layout/Navbar';
 import Alert from './components/layout/Alert';
 import Layout from './components/layout/Layout';
+import MobileAppWrapper from './components/mobile/MobileAppWrapper';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -40,6 +41,7 @@ import Reports from './pages/reports/Reports';
 import QRGenerator from './pages/tools/QRGenerator';
 import LabelGenerator from './pages/tools/LabelGenerator';
 import ImportExport from './pages/tools/ImportExport';
+import MobileApp from './pages/tools/MobileApp';
 import Achievements from './pages/achievements/Achievements';
 import Reminders from './pages/reminders/Reminders';
 import ReminderDetail from './pages/reminders/ReminderDetail';
@@ -166,10 +168,11 @@ const App = () => {
       <AlertProvider>
         <AuthProvider>
           <Router>
-            <Navbar toggleColorMode={toggleColorMode} mode={mode} />
-            <Alert />
-            <Layout>
-              <Routes>
+            <MobileAppWrapper>
+              <Navbar toggleColorMode={toggleColorMode} mode={mode} />
+              <Alert />
+              <Layout>
+                <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -205,6 +208,7 @@ const App = () => {
               <Route path="/tools/qr-generator" element={<PrivateRoute><QRGenerator /></PrivateRoute>} />
               <Route path="/tools/label-generator" element={<PrivateRoute><LabelGenerator /></PrivateRoute>} />
               <Route path="/tools/import-export" element={<PrivateRoute><ImportExport /></PrivateRoute>} />
+              <Route path="/mobile-app" element={<PrivateRoute><MobileApp /></PrivateRoute>} />
               
               {/* User */}
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
@@ -225,7 +229,8 @@ const App = () => {
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-            </Layout>
+              </Layout>
+            </MobileAppWrapper>
           </Router>
         </AuthProvider>
       </AlertProvider>
