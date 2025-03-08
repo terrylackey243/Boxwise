@@ -5,9 +5,36 @@ import jwt_decode from 'jwt-decode';
 // Create context
 export const AuthContext = createContext();
 
+// Get token from localStorage with validation
+const getTokenFromStorage = () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Validate token format
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      console.warn('Invalid token found in localStorage, removing it');
+      localStorage.removeItem('token');
+      return null;
+    }
+    
+    // Try to decode token to verify it's valid JWT
+    try {
+      jwt_decode(token);
+      return token;
+    } catch (err) {
+      console.warn('Failed to decode token from localStorage, removing it:', err);
+      localStorage.removeItem('token');
+      return null;
+    }
+  } catch (err) {
+    console.error('Error accessing localStorage:', err);
+    return null;
+  }
+};
+
 // Initial state
 const initialState = {
-  token: localStorage.getItem('token'),
+  token: getTokenFromStorage(),
   isAuthenticated: false,
   loading: true,
   user: null,
@@ -26,14 +53,28 @@ const authReducer = (state, action) => {
       };
     case 'REGISTER_SUCCESS':
     case 'LOGIN_SUCCESS':
-      localStorage.setItem('token', action.payload.token);
-      return {
-        ...state,
-        token: action.payload.token,
-        isAuthenticated: true,
-        loading: false,
-        error: null
-      };
+      // Ensure token exists and is valid before setting in state
+      if (action.payload && action.payload.token && typeof action.payload.token === 'string') {
+        localStorage.setItem('token', action.payload.token);
+        return {
+          ...state,
+          token: action.payload.token,
+          isAuthenticated: true,
+          loading: false,
+          error: null
+        };
+      } else {
+        console.error('Invalid token in LOGIN_SUCCESS/REGISTER_SUCCESS action:', action.payload);
+        localStorage.removeItem('token');
+        return {
+          ...state,
+          token: null,
+          isAuthenticated: false,
+          loading: false,
+          user: null,
+          error: 'Authentication failed: Invalid token received'
+        };
+      }
     case 'AUTH_ERROR':
     case 'REGISTER_FAIL':
     case 'LOGIN_FAIL':
@@ -84,9 +125,23 @@ export const AuthProvider = ({ children }) => {
       setAuthToken(localStorage.token);
       
       try {
-        // Check if token is expired
-        const decoded = jwt_decode(localStorage.token);
-        console.log('Token decoded:', decoded);
+        // Check if token is expired - with error handling for invalid tokens
+        let decoded;
+        try {
+          decoded = jwt_decode(localStorage.token);
+          console.log('Token decoded successfully:', decoded);
+        } catch (decodeError) {
+          console.error('Error decoding token:', decodeError);
+          dispatch({ type: 'AUTH_ERROR', payload: 'Invalid authentication token' });
+          return;
+        }
+        
+        // Make sure decoded token has expected fields
+        if (!decoded || !decoded.exp) {
+          console.error('Token is missing required fields');
+          dispatch({ type: 'AUTH_ERROR', payload: 'Invalid token format' });
+          return;
+        }
         
         const currentTime = Date.now() / 1000;
         console.log('Current time:', currentTime, 'Token expires:', decoded.exp);
@@ -160,6 +215,21 @@ export const AuthProvider = ({ children }) => {
       console.log('Sending login request to /api/auth/login');
       const res = await axios.post('/api/auth/login', formData);
       console.log('Login response received:', res.data);
+      
+      // Validate token before storing
+      if (!res.data.token || typeof res.data.token !== 'string' || res.data.token.trim() === '') {
+        console.error('Invalid token received from server:', res.data);
+        throw new Error('Server returned an invalid authentication token');
+      }
+      
+      // Verify token can be decoded
+      try {
+        const decoded = jwt_decode(res.data.token);
+        console.log('Token validated and decoded:', decoded);
+      } catch (decodeErr) {
+        console.error('Error decoding token from server:', decodeErr);
+        throw new Error('Server returned a malformed authentication token');
+      }
       
       // Set token in localStorage and axios headers
       console.log('Setting token in localStorage and axios headers');
