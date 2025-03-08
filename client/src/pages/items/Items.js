@@ -477,8 +477,7 @@ const Items = () => {
                     <TableRow
                       key={item._id}
                       hover
-                      component={RouterLink}
-                      to={`/items/${item._id}`}
+                      onClick={() => navigate(`/items/${item._id}`)}
                       sx={{
                         textDecoration: 'none',
                         color: 'inherit',
