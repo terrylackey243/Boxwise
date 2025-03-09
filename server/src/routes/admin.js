@@ -14,6 +14,12 @@ const Location = require('../models/Location');
 const Label = require('../models/Label');
 const Category = require('../models/Category');
 
+// Import system routes
+const systemRoutes = require('./system');
+
+// Mount system routes
+router.use('/system', systemRoutes);
+
 // Database admin routes
 router.post('/database/execute', protect, authorize('admin', 'owner'), executeQuery);
 
