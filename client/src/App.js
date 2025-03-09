@@ -43,7 +43,6 @@ import TestPage from './pages/TestPage';
 import Reports from './pages/reports/Reports';
 import QRGenerator from './pages/tools/QRGenerator';
 import LabelGenerator from './pages/tools/LabelGenerator';
-import ImportExport from './pages/tools/ImportExport';
 import MobileApp from './pages/tools/MobileApp';
 import Achievements from './pages/achievements/Achievements';
 import Reminders from './pages/reminders/Reminders';
@@ -212,7 +211,6 @@ const App = () => {
               <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
               <Route path="/tools/qr-generator" element={<PrivateRoute><QRGenerator /></PrivateRoute>} />
               <Route path="/tools/label-generator" element={<PrivateRoute><LabelGenerator /></PrivateRoute>} />
-              <Route path="/tools/import-export" element={<PrivateRoute><ImportExport /></PrivateRoute>} />
               <Route path="/mobile-app" element={<PrivateRoute><MobileApp /></PrivateRoute>} />
               
               {/* User */}

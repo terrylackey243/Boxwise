@@ -1,2 +1,0 @@
-Name,Description,Location,Category,Labels,AssetId,Quantity,SerialNumber,ModelNumber,Manufacturer,ItemUrl,ManualUrl,Notes,IsInsured,IsArchived,PurchasedFrom,PurchasePrice,PurchaseDate,HasLifetimeWarranty,WarrantyExpires,WarrantyNotes
-Example Item,This is a sample item description,location_id,category_id,label_id1;label_id2,ASSET001,1,SN12345,MOD123,Acme Inc.,https://example.com/product,https://example.com/manual,Additional notes here,false,false,Supplier XYZ,199.99,2023-01-15,false,2025-01-15,Warranty information here

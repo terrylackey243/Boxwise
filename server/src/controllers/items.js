@@ -1,4 +1,7 @@
 const Item = require('../models/Item');
+const Location = require('../models/Location');
+const Category = require('../models/Category');
+const Label = require('../models/Label');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
 const path = require('path');
@@ -270,51 +273,6 @@ exports.quickAddItem = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Import items from CSV
-// @route   POST /api/items/import
-// @access  Private
-exports.importItems = asyncHandler(async (req, res, next) => {
-  // Check if file is uploaded
-  if (!req.files || Object.keys(req.files).length === 0) {
-    return next(new ErrorResponse('Please upload a CSV file', 400));
-  }
-  
-  const file = req.files.file;
-  
-  // Check file type
-  if (file.mimetype !== 'text/csv') {
-    return next(new ErrorResponse('Please upload a CSV file', 400));
-  }
-  
-  // Process CSV file (simplified implementation)
-  res.status(200).json({
-    success: true,
-    message: 'CSV import functionality is not fully implemented in this demo',
-    data: {
-      processed: 0,
-      created: 0,
-      updated: 0,
-      errors: 0
-    }
-  });
-});
-
-// @desc    Export items to CSV
-// @route   GET /api/items/export
-// @access  Private
-exports.exportItems = asyncHandler(async (req, res, next) => {
-  // Get all items for the user's group
-  const items = await Item.find({ group: req.user.group })
-    .populate('location', 'name')
-    .populate('category', 'name');
-  
-  // Simplified implementation
-  res.status(200).json({
-    success: true,
-    message: 'CSV export functionality is not fully implemented in this demo',
-    count: items.length
-  });
-});
 
 // @desc    Generate QR code for item
 // @route   GET /api/items/:id/qrcode

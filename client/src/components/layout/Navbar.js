@@ -39,7 +39,6 @@ import {
   Logout as LogoutIcon,
   Login as LoginIcon,
   PersonAdd as RegisterIcon,
-  Upload as ImportExportIcon,
   AdminPanelSettings as AdminIcon,
   Alarm as ReminderIcon,
   PhoneAndroid as MobileIcon
@@ -129,12 +128,6 @@ const Navbar = ({ toggleColorMode, mode }) => {
       text: 'Label Generator',
       icon: <LabelIcon />,
       path: '/tools/label-generator',
-      auth: true
-    },
-    {
-      text: 'Import/Export',
-      icon: <ImportExportIcon />,
-      path: '/tools/import-export',
       auth: true
     },
     {

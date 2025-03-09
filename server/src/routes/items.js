@@ -5,8 +5,6 @@ const {
   createItem,
   updateItem,
   deleteItem,
-  importItems,
-  exportItems,
   generateQRCode,
   searchByUPC,
   loanItem,
@@ -26,11 +24,6 @@ router.route('/')
   .get(protect, getItems)
   .post(protect, checkSubscriptionLimits, createItem);
 
-router.route('/import')
-  .post(protect, checkSubscriptionLimits, importItems);
-
-router.route('/export')
-  .get(protect, exportItems);
 
 router.route('/quick-add')
   .post(protect, checkSubscriptionLimits, quickAddItem);

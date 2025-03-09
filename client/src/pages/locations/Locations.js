@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
 import bulkService from '../../services/bulkService';
 import { Link as RouterLink } from 'react-router-dom';
+import Fuse from 'fuse.js';
 import {
   Container,
   Grid,
@@ -77,7 +78,16 @@ const Locations = () => {
   }, [setErrorAlert]);
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Auto-expand all locations when searching
+    if (value.trim() !== '') {
+      handleExpandAll();
+    } else {
+      // Collapse all when search is cleared
+      handleCollapseAll();
+    }
   };
 
   const handleMenuOpen = (event, location) => {
@@ -121,6 +131,26 @@ const Locations = () => {
       ...prev,
       [locationId]: !prev[locationId]
     }));
+  };
+
+  // Function to expand all locations
+  const handleExpandAll = () => {
+    const allExpanded = {};
+    const expandAllLocations = (locationArray) => {
+      locationArray.forEach(location => {
+        if (location.children && location.children.length > 0) {
+          allExpanded[location._id] = true;
+          expandAllLocations(location.children);
+        }
+      });
+    };
+    expandAllLocations(locations);
+    setExpandedLocations(allExpanded);
+  };
+
+  // Function to collapse all locations
+  const handleCollapseAll = () => {
+    setExpandedLocations({});
   };
   
   // Function to flatten the hierarchical locations data for dropdowns
@@ -210,27 +240,56 @@ const Locations = () => {
     });
   };
 
-  // Filter locations based on search term
+  // Filter locations based on search term using fuzzy search
   const filterLocations = (locationsArray, term) => {
     if (!term) return locationsArray;
     
-    return locationsArray.filter(location => {
-      const matchesSearch = 
-        location.name.toLowerCase().includes(term.toLowerCase()) ||
-        (location.description && location.description.toLowerCase().includes(term.toLowerCase()));
+    // Recursive function to apply fuzzy search to a location and its children
+    const fuzzyFilterLocation = (location) => {
+      // Configure Fuse.js options for this location
+      const fuseOptions = {
+        keys: ['name', 'description'],
+        threshold: 0.4, // Lower threshold means more strict matching (0.0 is exact match)
+        includeScore: true
+      };
       
-      if (matchesSearch) return true;
+      // Create a Fuse instance for this location
+      const fuse = new Fuse([location], fuseOptions);
+      const result = fuse.search(term);
       
+      // Check if this location matches
+      const matchesSearch = result.length > 0;
+      
+      // Check children if they exist
+      let matchingChildren = [];
       if (location.children && location.children.length > 0) {
-        const filteredChildren = filterLocations(location.children, term);
-        if (filteredChildren.length > 0) {
-          location.children = filteredChildren;
-          return true;
-        }
+        // Apply fuzzy search to each child
+        matchingChildren = location.children
+          .map(fuzzyFilterLocation)
+          .filter(child => child !== null);
       }
       
-      return false;
-    });
+      // Return the location if it matches or has matching children
+      if (matchesSearch) {
+        return {
+          ...location,
+          children: matchingChildren
+        };
+      } else if (matchingChildren.length > 0) {
+        return {
+          ...location,
+          children: matchingChildren
+        };
+      }
+      
+      // No match for this location or its children
+      return null;
+    };
+    
+    // Apply fuzzy filter to each top-level location
+    return locationsArray
+      .map(fuzzyFilterLocation)
+      .filter(location => location !== null);
   };
 
   const filteredLocations = filterLocations([...locations], searchTerm);
@@ -292,6 +351,25 @@ const Locations = () => {
           }}
         />
       </Paper>
+      
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={handleExpandAll}
+          startIcon={<ExpandMoreIcon />}
+        >
+          Expand All
+        </Button>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={handleCollapseAll}
+          startIcon={<ExpandLessIcon />}
+        >
+          Collapse All
+        </Button>
+      </Box>
       
       {filteredLocations.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
