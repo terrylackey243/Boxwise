@@ -83,37 +83,127 @@ const ImportExport = () => {
     setExportLoading(true);
     
     try {
-      // Make API call to export data
-      let url = '/api/items/export';
+      let csvData = '';
       
-      // Add appropriate query parameters based on export type
-      switch (exportType) {
-        case 'active':
-          url += '?archived=false';
-          break;
-        case 'archived':
-          url += '?archived=true';
-          break;
-        case 'locations':
-          url += '?dataType=locations';
-          break;
-        case 'labels':
-          url += '?dataType=labels';
-          break;
-        case 'categories':
-          url += '?dataType=categories';
-          break;
-        default: // 'all'
-          // No query parameter needed
-          break;
+      // Handle different export types
+      if (exportType === 'locations') {
+        // Export locations
+        const response = await axios.get('/api/locations?flat=true');
+        if (response.data.success) {
+          // Create CSV header
+          csvData = 'ID,Name,Description,Parent,Full Path\n';
+          
+          // Add data rows
+          const locations = response.data.data;
+          
+          // Function to get the full location hierarchy path
+          const getLocationHierarchy = (location) => {
+            if (!location) return '';
+            
+            // Start with the current location name
+            let path = location.name;
+            let currentLocation = location;
+            
+            // Traverse up the parent hierarchy
+            while (currentLocation.parent) {
+              // Find the parent location
+              const parentLocation = locations.find(loc => loc._id === currentLocation.parent);
+              
+              // If parent not found, break the loop
+              if (!parentLocation) break;
+              
+              // Add parent name to the path
+              path = `${parentLocation.name} > ${path}`;
+              
+              // Move up to the parent
+              currentLocation = parentLocation;
+            }
+            
+            return path;
+          };
+          
+          // Sort locations
+          const sortedLocations = [...locations].sort((a, b) => {
+            // Top-level locations (no parent) come first
+            if (!a.parent && b.parent) return -1;
+            if (a.parent && !b.parent) return 1;
+            
+            // If both have parents or both don't have parents, sort by name
+            return a.name.localeCompare(b.name);
+          });
+          
+          // Add each location to the CSV
+          sortedLocations.forEach(location => {
+            const fullPath = getLocationHierarchy(location);
+            csvData += `${location._id},${location.name.replace(/,/g, ' ')},${(location.description || '').replace(/,/g, ' ')},${location.parent || ''},"${fullPath.replace(/"/g, '""')}"\n`;
+          });
+        }
+      } else if (exportType === 'categories') {
+        // Export categories
+        const response = await axios.get('/api/categories');
+        if (response.data.success) {
+          // Create CSV header
+          csvData = 'ID,Name,Description\n';
+          
+          // Add data rows
+          response.data.data.forEach(category => {
+            csvData += `${category._id},${category.name.replace(/,/g, ' ')},${(category.description || '').replace(/,/g, ' ')}\n`;
+          });
+        }
+      } else if (exportType === 'labels') {
+        // Export labels
+        const response = await axios.get('/api/labels');
+        if (response.data.success) {
+          // Create CSV header
+          csvData = 'ID,Name,Description,Color\n';
+          
+          // Add data rows
+          response.data.data.forEach(label => {
+            csvData += `${label._id},${label.name.replace(/,/g, ' ')},${(label.description || '').replace(/,/g, ' ')},${label.color || '#000000'}\n`;
+          });
+        }
+      } else {
+        // Export items (all, active, or archived)
+        let url = '/api/items?limit=1000'; // Get up to 1000 items
+        
+        if (exportType === 'active') {
+          url += '&archived=false';
+        } else if (exportType === 'archived') {
+          url += '&archived=true';
+        }
+        
+        const response = await axios.get(url);
+        
+        if (response.data.success) {
+          // Create CSV header with all relevant fields including itemUrl and manualUrl
+          csvData = 'ID,Asset ID,Name,Description,Category,Location,Quantity,Serial Number,Model Number,Manufacturer,Item URL,Manual URL,Insured,Archived,Created At\n';
+          
+          // Add data rows
+          response.data.data.forEach(item => {
+            const category = item.category ? (typeof item.category === 'object' ? item.category.name : item.category) : '';
+            const location = item.location ? (typeof item.location === 'object' ? item.location.name : item.location) : '';
+            
+            csvData += `${item._id},` +
+              `${item.assetId || ''},` +
+              `"${(item.name || '').replace(/"/g, '""')}",` +
+              `"${(item.description || '').replace(/"/g, '""')}",` +
+              `"${category.replace(/"/g, '""')}",` +
+              `"${location.replace(/"/g, '""')}",` +
+              `${item.quantity || 1},` +
+              `"${(item.serialNumber || '').replace(/"/g, '""')}",` +
+              `"${(item.modelNumber || '').replace(/"/g, '""')}",` +
+              `"${(item.manufacturer || '').replace(/"/g, '""')}",` +
+              `"${(item.itemUrl || '').replace(/"/g, '""')}",` +
+              `"${(item.manualUrl || '').replace(/"/g, '""')}",` +
+              `${item.isInsured ? 'Yes' : 'No'},` +
+              `${item.isArchived ? 'Yes' : 'No'},` +
+              `${new Date(item.createdAt).toISOString().split('T')[0]}\n`;
+          });
+        }
       }
       
-      const response = await axios.get(url, {
-        responseType: 'blob' // Important for handling file downloads
-      });
-      
       // Create and download the file
-      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const fileUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = fileUrl;
@@ -135,32 +225,87 @@ const ImportExport = () => {
     setReferenceDataLoading(true);
     
     try {
-      // Create a combined reference data file with locations, categories, and labels
-      const locationsResponse = await axios.get('/api/items/export?dataType=locations', {
-        responseType: 'blob'
-      });
+      // Fetch locations, categories, and labels data
+      // Use flat=true to get all locations in a flat list instead of hierarchical structure
+      const [locationsRes, categoriesRes, labelsRes] = await Promise.all([
+        axios.get('/api/locations?flat=true'),
+        axios.get('/api/categories'),
+        axios.get('/api/labels')
+      ]);
       
-      const categoriesResponse = await axios.get('/api/items/export?dataType=categories', {
-        responseType: 'blob'
-      });
+      // Format locations data as CSV with hierarchy
+      let locationsCSV = "ID,Name,Description,Parent,Full Path\n";
+      if (locationsRes.data.success && locationsRes.data.data) {
+        const locations = locationsRes.data.data;
+        
+        // Function to get the full location hierarchy path
+        const getLocationHierarchy = (location) => {
+          if (!location) return '';
+          
+          // Start with the current location name
+          let path = location.name;
+          let currentLocation = location;
+          
+          // Traverse up the parent hierarchy
+          while (currentLocation.parent) {
+            // Find the parent location
+            const parentLocation = locations.find(loc => loc._id === currentLocation.parent);
+            
+            // If parent not found, break the loop
+            if (!parentLocation) break;
+            
+            // Add parent name to the path
+            path = `${parentLocation.name} > ${path}`;
+            
+            // Move up to the parent
+            currentLocation = parentLocation;
+          }
+          
+          return path;
+        };
+        
+        // Sort locations to ensure parent locations come before children
+        // This helps when importing data and maintaining relationships
+        const sortedLocations = [...locations].sort((a, b) => {
+          // Top-level locations (no parent) come first
+          if (!a.parent && b.parent) return -1;
+          if (a.parent && !b.parent) return 1;
+          
+          // If both have parents or both don't have parents, sort by name
+          return a.name.localeCompare(b.name);
+        });
+        
+        // Add each location to the CSV
+        sortedLocations.forEach(location => {
+          const fullPath = getLocationHierarchy(location);
+          locationsCSV += `${location._id},${location.name.replace(/,/g, ' ')},${(location.description || '').replace(/,/g, ' ')},${location.parent || ''},"${fullPath.replace(/"/g, '""')}"\n`;
+        });
+      }
       
-      const labelsResponse = await axios.get('/api/items/export?dataType=labels', {
-        responseType: 'blob'
-      });
+      // Format categories data as CSV
+      let categoriesCSV = "ID,Name,Description\n";
+      if (categoriesRes.data.success && categoriesRes.data.data) {
+        categoriesRes.data.data.forEach(category => {
+          categoriesCSV += `${category._id},${category.name.replace(/,/g, ' ')},${(category.description || '').replace(/,/g, ' ')}\n`;
+        });
+      }
       
-      // Convert blobs to text
-      const locationsText = await locationsResponse.data.text();
-      const categoriesText = await categoriesResponse.data.text();
-      const labelsText = await labelsResponse.data.text();
+      // Format labels data as CSV
+      let labelsCSV = "ID,Name,Description,Color\n";
+      if (labelsRes.data.success && labelsRes.data.data) {
+        labelsRes.data.data.forEach(label => {
+          labelsCSV += `${label._id},${label.name.replace(/,/g, ' ')},${(label.description || '').replace(/,/g, ' ')},${label.color || '#000000'}\n`;
+        });
+      }
       
       // Combine the data with headers
       const combinedData = 
         "LOCATIONS\n" + 
-        locationsText + 
-        "\n\nCATEGORIES\n" + 
-        categoriesText + 
-        "\n\nLABELS\n" + 
-        labelsText;
+        locationsCSV + 
+        "\nCATEGORIES\n" + 
+        categoriesCSV + 
+        "\nLABELS\n" + 
+        labelsCSV;
       
       // Create and download the combined file
       const blob = new Blob([combinedData], { type: 'text/csv;charset=utf-8;' });
