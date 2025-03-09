@@ -24,6 +24,8 @@ import LandingPage from './pages/LandingPage';
 import Items from './pages/items/Items';
 import ItemDetail from './pages/items/ItemDetail';
 import CreateItem from './pages/items/CreateItem';
+import CreateItemByUpc from './pages/items/CreateItemByUpc';
+import CreateItemByUrl from './pages/items/CreateItemByUrl';
 import EditItem from './pages/items/EditItem';
 import Locations from './pages/locations/Locations';
 import LocationDetail from './pages/locations/LocationDetail';
@@ -185,6 +187,8 @@ const App = () => {
               {/* Items */}
               <Route path="/items" element={<PrivateRoute><Items /></PrivateRoute>} />
               <Route path="/items/create" element={<PrivateRoute><CreateItem /></PrivateRoute>} />
+              <Route path="/items/create-by-upc" element={<PrivateRoute><CreateItemByUpc /></PrivateRoute>} />
+              <Route path="/items/create-by-url" element={<PrivateRoute><CreateItemByUrl /></PrivateRoute>} />
               <Route path="/items/edit/:id" element={<PrivateRoute><EditItem /></PrivateRoute>} />
               <Route path="/items/:id" element={<PrivateRoute><ItemDetail /></PrivateRoute>} />
               

@@ -71,7 +71,7 @@ const getLocationHierarchy = (location, allLocations) => {
   return path;
 };
 
-const CreateItem = () => {
+const CreateItemByUpc = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -86,9 +86,12 @@ const CreateItem = () => {
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [lookingUpUPC, setLookingUpUPC] = useState(false);
+  const [showUpcLookup, setShowUpcLookup] = useState(true);
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
+  const [upcCode, setUpcCode] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [nextAssetId, setNextAssetId] = useState('');
   const hasCamera = useHasCamera();
@@ -128,6 +131,14 @@ const CreateItem = () => {
     manualUrl: ''
   });
   
+  // Set UPC code from prefill data if available
+  useEffect(() => {
+    if (prefillData.upcCode) {
+      setUpcCode(prefillData.upcCode);
+      // Show UPC lookup section if we have a UPC code
+      setShowUpcLookup(true);
+    }
+  }, [prefillData]);
   
   const [errors, setErrors] = useState({});
 
@@ -207,6 +218,17 @@ const CreateItem = () => {
     }
   };
   
+  const handleUpcChange = (e) => {
+    const value = e.target.value;
+    setUpcCode(value);
+    
+    // Also update the formData with the UPC code
+    setFormData(prevData => ({
+      ...prevData,
+      upcCode: value
+    }));
+  };
+  
   // Handle barcode scanner
   const handleOpenScanner = () => {
     setScannerOpen(true);
@@ -222,11 +244,69 @@ const CreateItem = () => {
     // Close the scanner
     setScannerOpen(false);
     
-    // Update the formData with the UPC code
+    // Set the UPC code
+    setUpcCode(code);
+    
+    // Also update the formData with the UPC code
     setFormData(prevData => ({
       ...prevData,
       upcCode: code
     }));
+    
+    // Automatically trigger UPC lookup
+    setTimeout(() => {
+      handleUpcLookup();
+    }, 500);
+  };
+  
+  const handleUpcLookup = async () => {
+    if (!upcCode.trim()) {
+      setErrorAlert('Please enter a UPC code');
+      return;
+    }
+    
+    setLookingUpUPC(true);
+    
+    try {
+      const response = await axios.get(`/api/upc/${upcCode.trim()}`);
+      
+      if (response.data.success) {
+        const productData = response.data.data;
+        
+        // Update form data with product information
+        setFormData(prevData => ({
+          ...prevData,
+          name: productData.name || prevData.name,
+          description: productData.description || prevData.description,
+          manufacturer: productData.manufacturer || prevData.manufacturer,
+          modelNumber: productData.modelNumber || prevData.modelNumber,
+          upcCode: productData.upcCode || prevData.upcCode
+        }));
+        
+        // Try to match category if available
+        if (productData.category && categories.length > 0) {
+          const matchedCategory = categories.find(
+            cat => cat.name.toLowerCase() === productData.category.toLowerCase()
+          );
+          
+          if (matchedCategory) {
+            setFormData(prevData => ({
+              ...prevData,
+              category: matchedCategory._id
+            }));
+          }
+        }
+        
+        setSuccessAlert('Product information retrieved successfully');
+      } else {
+        setErrorAlert('No product found for this UPC code');
+      }
+    } catch (err) {
+      setErrorAlert('Error looking up UPC code: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    } finally {
+      setLookingUpUPC(false);
+    }
   };
 
   const handleLabelChange = (event, newValue) => {
@@ -474,7 +554,7 @@ const CreateItem = () => {
         <Link component={RouterLink} to="/items" underline="hover" color="inherit">
           Items
         </Link>
-        <Typography color="text.primary">Create Item</Typography>
+        <Typography color="text.primary">Create Item by UPC</Typography>
       </Breadcrumbs>
       
       {/* Header */}
@@ -489,7 +569,7 @@ const CreateItem = () => {
         </Button>
         
         <Typography variant="h4" component="h1">
-          Create Item
+          Create Item by UPC Lookup
         </Typography>
       </Box>
       
@@ -497,13 +577,71 @@ const CreateItem = () => {
         <Grid container spacing={3}>
           {/* Main Form */}
           <Grid item xs={12} md={8}>
+            {showUpcLookup && (
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  UPC Lookup
+                </Typography>
+                
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={8}>
+                    <TextField
+                      fullWidth
+                      label="UPC Code"
+                      value={upcCode}
+                      onChange={handleUpcChange}
+                      placeholder="Enter UPC code to lookup product information"
+                      onKeyDown={(e) => {
+                        // Trigger lookup when Enter or Tab is pressed
+                        if (e.key === 'Enter' || e.key === 'Tab') {
+                          // Prevent default behavior for Enter to avoid form submission
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                          
+                          // Only trigger lookup if there's a UPC code
+                          if (upcCode.trim()) {
+                            handleUpcLookup();
+                          }
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Tooltip title="Scan Barcode">
+                              <IconButton 
+                                color="primary" 
+                                onClick={handleOpenScanner}
+                                size="small"
+                              >
+                                <QrCodeScannerIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      color="primary"
+                      startIcon={lookingUpUPC ? <CircularProgress size={24} color="inherit" /> : <SearchIcon />}
+                      onClick={handleUpcLookup}
+                      disabled={lookingUpUPC || !upcCode.trim()}
+                    >
+                      {lookingUpUPC ? 'Looking Up...' : 'Lookup'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )}
             
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="h6">
-                  Basic Information
-                </Typography>
-              </Box>
+              <Typography variant="h6" gutterBottom>
+                Basic Information
+              </Typography>
               
               <Grid container spacing={2}>
                 <Grid item xs={12}>
@@ -1298,4 +1436,4 @@ const CreateItem = () => {
   );
 };
 
-export default CreateItem;
+export default CreateItemByUpc;

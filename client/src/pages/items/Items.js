@@ -261,7 +261,25 @@ const Items = () => {
             component={RouterLink}
             to="/items/create"
           >
-            Add Item
+            Create Manually
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            component={RouterLink}
+            to="/items/create-by-url"
+          >
+            Create by URL
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            component={RouterLink}
+            to="/items/create-by-upc"
+          >
+            Create by UPC
           </Button>
         </Box>
       </Box>

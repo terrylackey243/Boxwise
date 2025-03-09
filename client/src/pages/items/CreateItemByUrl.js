@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
+import urlService from '../../services/urlService';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useMobile } from '../../context/MobileContext';
 import MobilePhotoSection from './MobilePhotoSection';
@@ -71,7 +72,7 @@ const getLocationHierarchy = (location, allLocations) => {
   return path;
 };
 
-const CreateItem = () => {
+const CreateItemByUrl = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -86,9 +87,12 @@ const CreateItem = () => {
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [lookingUpUrl, setLookingUpUrl] = useState(false);
+  const [showUrlLookup, setShowUrlLookup] = useState(true);
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
+  const [productUrl, setProductUrl] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [nextAssetId, setNextAssetId] = useState('');
   const hasCamera = useHasCamera();
@@ -123,11 +127,19 @@ const CreateItem = () => {
     warrantyExpires: '',
     warrantyNotes: '',
     customFields: [],
-    upcCode: prefillData.upcCode || '',
+    upcCode: '', // Keep for compatibility with other parts of the system
     itemUrl: '',
     manualUrl: ''
   });
   
+  // Set URL from prefill data if available
+  useEffect(() => {
+    if (prefillData.itemUrl) {
+      setProductUrl(prefillData.itemUrl);
+      // Show URL lookup section if we have a URL
+      setShowUrlLookup(true);
+    }
+  }, [prefillData]);
   
   const [errors, setErrors] = useState({});
 
@@ -207,6 +219,17 @@ const CreateItem = () => {
     }
   };
   
+  const handleUrlChange = (e) => {
+    const value = e.target.value;
+    setProductUrl(value);
+    
+    // Also update the formData with the URL
+    setFormData(prevData => ({
+      ...prevData,
+      itemUrl: value
+    }));
+  };
+  
   // Handle barcode scanner
   const handleOpenScanner = () => {
     setScannerOpen(true);
@@ -222,11 +245,89 @@ const CreateItem = () => {
     // Close the scanner
     setScannerOpen(false);
     
-    // Update the formData with the UPC code
+    // Set the URL (assuming the barcode contains a URL)
+    setProductUrl(code);
+    
+    // Also update the formData with the URL
     setFormData(prevData => ({
       ...prevData,
-      upcCode: code
+      itemUrl: code
     }));
+    
+    // Automatically trigger URL lookup
+    setTimeout(() => {
+      handleUrlLookup();
+    }, 500);
+  };
+  
+  const handleUrlLookup = async () => {
+    if (!productUrl.trim()) {
+      setErrorAlert('Please enter a product URL');
+      return;
+    }
+    
+    // Validate URL format
+    let url = productUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+      setProductUrl(url);
+    }
+    
+    setLookingUpUrl(true);
+    
+    try {
+      // First try to use the URL lookup service
+      const response = await urlService.lookupUrl(url);
+      
+      if (response.success) {
+        const productData = response.data;
+        
+        // Update form data with product information
+        setFormData(prevData => ({
+          ...prevData,
+          name: productData.name || prevData.name,
+          description: productData.description || prevData.description,
+          manufacturer: productData.manufacturer || prevData.manufacturer,
+          modelNumber: productData.modelNumber || prevData.modelNumber,
+          itemUrl: productData.itemUrl || url
+        }));
+        
+        // Try to match category if available
+        if (productData.category && categories.length > 0) {
+          const matchedCategory = categories.find(
+            cat => cat.name.toLowerCase() === productData.category.toLowerCase()
+          );
+          
+          if (matchedCategory) {
+            setFormData(prevData => ({
+              ...prevData,
+              category: matchedCategory._id
+            }));
+          }
+        }
+        
+        setSuccessAlert('Product information retrieved successfully');
+      } else {
+        setErrorAlert('No product found for this URL');
+      }
+    } catch (err) {
+      console.error('Error looking up URL:', err);
+      
+      // Provide a more user-friendly error message
+      if (err.response?.status === 500) {
+        setErrorAlert('Unable to retrieve product information. The website may be blocking our request or the URL may be invalid.');
+      } else {
+        setErrorAlert('Error looking up URL: ' + (err.response?.data?.message || err.message));
+      }
+      
+      // Still update the itemUrl field with the URL
+      setFormData(prevData => ({
+        ...prevData,
+        itemUrl: url
+      }));
+    } finally {
+      setLookingUpUrl(false);
+    }
   };
 
   const handleLabelChange = (event, newValue) => {
@@ -474,7 +575,7 @@ const CreateItem = () => {
         <Link component={RouterLink} to="/items" underline="hover" color="inherit">
           Items
         </Link>
-        <Typography color="text.primary">Create Item</Typography>
+        <Typography color="text.primary">Create Item by URL</Typography>
       </Breadcrumbs>
       
       {/* Header */}
@@ -489,7 +590,7 @@ const CreateItem = () => {
         </Button>
         
         <Typography variant="h4" component="h1">
-          Create Item
+          Create Item by URL Lookup
         </Typography>
       </Box>
       
@@ -497,13 +598,56 @@ const CreateItem = () => {
         <Grid container spacing={3}>
           {/* Main Form */}
           <Grid item xs={12} md={8}>
+            {showUrlLookup && (
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  URL Lookup
+                </Typography>
+                
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={8}>
+                    <TextField
+                      fullWidth
+                      label="URL"
+                      value={productUrl}
+                      onChange={handleUrlChange}
+                      placeholder="Enter product URL to lookup information"
+                      onKeyDown={(e) => {
+                        // Trigger lookup when Enter or Tab is pressed
+                        if (e.key === 'Enter' || e.key === 'Tab') {
+                          // Prevent default behavior for Enter to avoid form submission
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                          
+                          // Only trigger lookup if there's a URL
+                          if (productUrl.trim()) {
+                            handleUrlLookup();
+                          }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      color="primary"
+                      startIcon={lookingUpUrl ? <CircularProgress size={24} color="inherit" /> : <SearchIcon />}
+                      onClick={handleUrlLookup}
+                      disabled={lookingUpUrl || !productUrl.trim()}
+                    >
+                      {lookingUpUrl ? 'Looking Up...' : 'Lookup'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )}
             
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="h6">
-                  Basic Information
-                </Typography>
-              </Box>
+              <Typography variant="h6" gutterBottom>
+                Basic Information
+              </Typography>
               
               <Grid container spacing={2}>
                 <Grid item xs={12}>
@@ -1298,4 +1442,4 @@ const CreateItem = () => {
   );
 };
 
-export default CreateItem;
+export default CreateItemByUrl;
