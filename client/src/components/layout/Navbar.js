@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
   Box,
@@ -52,8 +52,10 @@ const Navbar = ({ toggleColorMode, mode }) => {
   const { isAuthenticated, user, logout } = useContext(AuthContext);
   const { setSuccessAlert } = useContext(AlertContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isLandingPage = location.pathname === '/';
 
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -325,7 +327,7 @@ const Navbar = ({ toggleColorMode, mode }) => {
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Container maxWidth="xl">
           <Toolbar disableGutters>
-            {!isDesktop && (
+            {!isDesktop && !isLandingPage && (
               <IconButton
                 size="large"
                 edge="start"
@@ -457,7 +459,7 @@ const Navbar = ({ toggleColorMode, mode }) => {
       </AppBar>
       
       {/* Mobile drawer (temporary) */}
-      {!isDesktop && (
+      {!isDesktop && !isLandingPage && (
         <Drawer
           anchor="left"
           open={mobileDrawerOpen}
@@ -469,7 +471,7 @@ const Navbar = ({ toggleColorMode, mode }) => {
       )}
       
       {/* Desktop drawer (permanent) */}
-      {isDesktop && (
+      {isDesktop && !isLandingPage && (
         <Drawer
           variant="permanent"
           sx={{

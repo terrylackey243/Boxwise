@@ -16,7 +16,8 @@ import {
   Divider,
   CircularProgress,
   Breadcrumbs,
-  Link
+  Link,
+  Autocomplete
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -242,29 +243,44 @@ const CreateLocation = () => {
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel id="parent-location-label">Parent Location</InputLabel>
-                    <Select
-                      labelId="parent-location-label"
-                      name="parentLocation"
-                      value={formData.parentLocation}
-                      onChange={handleChange}
-                      label="Parent Location"
-                    >
-                      {flattenedLocations.map(location => (
-                        <MenuItem 
-                          key={location._id} 
-                          value={location._id}
-                          sx={{ 
-                            pl: location.level ? location.level * 2 + 2 : 2,
-                            fontWeight: location._id === '' ? 'bold' : 'normal'
-                          }}
-                        >
-                          {location.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    options={flattenedLocations}
+                    getOptionLabel={(option) => {
+                      if (typeof option === 'string') {
+                        const locationObj = flattenedLocations.find(loc => loc._id === option);
+                        return locationObj ? locationObj.name : '';
+                      }
+                      return option.name;
+                    }}
+                    value={formData.parentLocation ? flattenedLocations.find(loc => loc._id === formData.parentLocation) || null : null}
+                    onChange={(event, newValue) => {
+                      setFormData(prevData => ({
+                        ...prevData,
+                        parentLocation: newValue ? newValue._id : ''
+                      }));
+                    }}
+                    isOptionEqualToValue={(option, value) => option._id === value._id}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Parent Location"
+                        fullWidth
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <li 
+                        {...props} 
+                        style={{ 
+                          paddingLeft: option.level ? option.level * 16 + 16 : 16,
+                          fontWeight: option._id === '' ? 'bold' : 'normal'
+                        }}
+                      >
+                        {option.name}
+                      </li>
+                    )}
+                    disablePortal={false}
+                    PopperProps={{ placement: 'bottom-start' }}
+                  />
                 </Grid>
               </Grid>
             </Paper>

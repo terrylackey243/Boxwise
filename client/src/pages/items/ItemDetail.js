@@ -538,6 +538,32 @@ const ItemDetail = () => {
                   
                   <TableRow>
                     <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                      Item URL
+                    </TableCell>
+                    <TableCell>
+                      {item.itemUrl ? (
+                        <Link href={item.itemUrl} target="_blank" rel="noopener noreferrer">
+                          {item.itemUrl}
+                        </Link>
+                      ) : '-'}
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                      Manual URL
+                    </TableCell>
+                    <TableCell>
+                      {item.manualUrl ? (
+                        <Link href={item.manualUrl} target="_blank" rel="noopener noreferrer">
+                          {item.manualUrl}
+                        </Link>
+                      ) : '-'}
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                       Notes
                     </TableCell>
                     <TableCell>{item.notes || '-'}</TableCell>

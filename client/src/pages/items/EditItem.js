@@ -34,11 +34,15 @@ import {
   ArrowBack as ArrowBackIcon,
   Add as AddIcon,
   QrCodeScanner as QrCodeScannerIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  OpenInNew as OpenInNewIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
 import useHasCamera from '../../hooks/useHasCamera';
+import { useMobile } from '../../context/MobileContext';
+import MobilePhotoSection from './MobilePhotoSection';
 
 // Function to get the full location hierarchy path
 const getLocationHierarchy = (location, allLocations) => {
@@ -70,6 +74,7 @@ const EditItem = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
+  const { isMobile } = useMobile();
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +116,9 @@ const EditItem = () => {
     warrantyExpires: '',
     warrantyNotes: '',
     customFields: [],
-    upcCode: ''
+    upcCode: '',
+    itemUrl: '',
+    manualUrl: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -167,7 +174,9 @@ const EditItem = () => {
             warrantyExpires: item.warrantyDetails?.warrantyExpires ? new Date(item.warrantyDetails.warrantyExpires).toISOString().split('T')[0] : '',
             warrantyNotes: item.warrantyDetails?.warrantyNotes || '',
             customFields: item.customFields || [],
-            upcCode: item.upcCode || ''
+            upcCode: item.upcCode || '',
+            itemUrl: item.itemUrl || '',
+            manualUrl: item.manualUrl || ''
           });
         } else {
           setErrorAlert('Error loading item: ' + itemRes.data.message);
@@ -621,68 +630,48 @@ const EditItem = () => {
                 
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <FormControl fullWidth error={!!errors.location} required>
-                      <InputLabel id="location-label">Location</InputLabel>
-                      <Select
-                        labelId="location-label"
-                        value={formData.location}
-                        onChange={(e) => {
-                          setFormData(prevData => ({
-                            ...prevData,
-                            location: e.target.value
-                          }));
-                          
-                          // Clear error for this field if it exists
-                          if (errors.location) {
-                            setErrors(prevErrors => ({
-                              ...prevErrors,
-                              location: null
-                            }));
+                    <Autocomplete
+                      options={locations}
+                      getOptionLabel={(option) => {
+                        // Handle both objects and string IDs
+                        if (typeof option === 'string') {
+                          const locationObj = locations.find(loc => loc._id === option);
+                          if (locationObj) {
+                            return getLocationHierarchy(locationObj, locations);
                           }
-                        }}
-                        label="Location"
-                      >
-                        <MenuItem value="">
-                          <em>Select Location</em>
-                        </MenuItem>
-                        {locations.map((location) => {
-                          // Get the full location hierarchy path
-                          const getLocationHierarchy = (loc) => {
-                            if (!loc) return '';
-                            
-                            // Start with the current location name
-                            let path = loc.name;
-                            let currentLoc = loc;
-                            
-                            // Traverse up the parent hierarchy
-                            while (currentLoc.parent) {
-                              // Find the parent location
-                              const parentLocation = locations.find(l => l._id === currentLoc.parent);
-                              
-                              // If parent not found, break the loop
-                              if (!parentLocation) break;
-                              
-                              // Add parent name to the path
-                              path = `${parentLocation.name} > ${path}`;
-                              
-                              // Move up to the parent
-                              currentLoc = parentLocation;
-                            }
-                            
-                            return path;
-                          };
-                          
-                          const hierarchyPath = getLocationHierarchy(location);
-                          
-                          return (
-                            <MenuItem key={location._id} value={location._id}>
-                              {hierarchyPath}
-                            </MenuItem>
-                          );
-                        })}
-                      </Select>
-                      {errors.location && <Typography color="error" variant="caption">{errors.location}</Typography>}
-                    </FormControl>
+                          return '';
+                        }
+                        return getLocationHierarchy(option, locations);
+                      }}
+                      value={formData.location ? locations.find(loc => loc._id === formData.location) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          location: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.location) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            location: null
+                          }));
+                        }
+                      }}
+                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Location"
+                          required
+                          error={!!errors.location}
+                          helperText={errors.location}
+                        />
+                      )}
+                      disablePortal={false}
+                      PopperProps={{ placement: 'bottom-start' }}
+                      sx={{ flex: 1 }}
+                    />
                     <Tooltip title="Add New Location">
                       <IconButton 
                         color="primary"
@@ -732,6 +721,8 @@ const EditItem = () => {
                           helperText={errors.category}
                         />
                       )}
+                      disablePortal={false}
+                      PopperProps={{ placement: 'bottom-start' }}
                       sx={{ flex: 1 }}
                     />
                     <Tooltip title="Add New Category">
@@ -780,6 +771,8 @@ const EditItem = () => {
                           );
                         })
                       }
+                      disablePortal={false}
+                      PopperProps={{ placement: 'bottom-start' }}
                       sx={{ flex: 1 }}
                     />
                     <Tooltip title="Add New Label">
@@ -796,6 +789,7 @@ const EditItem = () => {
               </Grid>
             </Paper>
             
+            {/* Details Section */}
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Details
@@ -912,46 +906,57 @@ const EditItem = () => {
                   />
                 </Grid>
                 
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Notes"
-                    name="notes"
-                    value={formData.notes}
+                    label="Item URL"
+                    name="itemUrl"
+                    value={formData.itemUrl || ''}
                     onChange={handleChange}
-                    multiline
-                    rows={2}
+                    placeholder="https://example.com/product"
+                    InputProps={{
+                      endAdornment: formData.itemUrl ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => window.open(formData.itemUrl, '_blank')}
+                            edge="end"
+                            size="small"
+                          >
+                            <OpenInNewIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null
+                    }}
                   />
                 </Grid>
                 
                 <Grid item xs={12} sm={6}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        name="isInsured"
-                        checked={formData.isInsured}
-                        onChange={handleChange}
-                      />
-                    }
-                    label="Insured"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        name="isArchived"
-                        checked={formData.isArchived}
-                        onChange={handleChange}
-                      />
-                    }
-                    label="Archived"
+                  <TextField
+                    fullWidth
+                    label="Manual URL"
+                    name="manualUrl"
+                    value={formData.manualUrl || ''}
+                    onChange={handleChange}
+                    placeholder="https://example.com/manual"
+                    InputProps={{
+                      endAdornment: formData.manualUrl ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => window.open(formData.manualUrl, '_blank')}
+                            edge="end"
+                            size="small"
+                          >
+                            <OpenInNewIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null
+                    }}
                   />
                 </Grid>
               </Grid>
             </Paper>
             
+            {/* Purchase Details Section */}
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Purchase Details
@@ -979,13 +984,12 @@ const EditItem = () => {
                     error={!!errors.purchasePrice}
                     helperText={errors.purchasePrice}
                     InputProps={{
-                      startAdornment: <Box component="span" sx={{ mr: 1 }}>$</Box>,
-                      inputProps: { step: 0.01, min: 0 }
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
                     }}
                   />
                 </Grid>
                 
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Purchase Date"
@@ -996,22 +1000,38 @@ const EditItem = () => {
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.isInsured}
+                        onChange={handleChange}
+                        name="isInsured"
+                        color="primary"
+                      />
+                    }
+                    label="Item is Insured"
+                  />
+                </Grid>
               </Grid>
             </Paper>
             
+            {/* Warranty Details Section */}
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Warranty Details
               </Typography>
               
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <FormControlLabel
                     control={
                       <Checkbox
-                        name="hasLifetimeWarranty"
                         checked={formData.hasLifetimeWarranty}
                         onChange={handleChange}
+                        name="hasLifetimeWarranty"
+                        color="primary"
                       />
                     }
                     label="Lifetime Warranty"
@@ -1019,7 +1039,7 @@ const EditItem = () => {
                 </Grid>
                 
                 {!formData.hasLifetimeWarranty && (
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label="Warranty Expires"
@@ -1048,272 +1068,212 @@ const EditItem = () => {
               </Grid>
             </Paper>
             
-            <Paper sx={{ p: 3 }}>
+            {/* Notes Section */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Notes
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Notes"
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
+                    multiline
+                    rows={4}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+            
+            {/* Custom Fields Section */}
+            <Paper sx={{ p: 3, mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Custom Fields
                 </Typography>
-                
                 <Button
+                  variant="outlined"
                   startIcon={<AddIcon />}
                   onClick={handleAddCustomField}
+                  size="small"
                 >
                   Add Field
                 </Button>
               </Box>
               
               {formData.customFields.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                   No custom fields added yet. Click "Add Field" to create one.
                 </Typography>
               ) : (
                 <Grid container spacing={2}>
                   {formData.customFields.map((field, index) => (
-                    <React.Fragment key={index}>
-                      <Grid item xs={4}>
+                    <Grid item xs={12} key={index}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                         <TextField
-                          fullWidth
                           label="Field Name"
                           value={field.name}
                           onChange={(e) => handleCustomFieldChange(index, 'name', e.target.value)}
-                          size="small"
+                          sx={{ flex: 1 }}
                         />
-                      </Grid>
-                      
-                      <Grid item xs={4}>
-                        {field.type === 'integer' ? (
-                          <TextField
-                            fullWidth
-                            label="Field Value (Number)"
-                            value={field.value}
-                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                            size="small"
-                            type="number"
-                            inputProps={{ step: 1 }}
-                            helperText="Enter a whole number"
-                          />
-                        ) : field.type === 'boolean' ? (
-                          <FormControl fullWidth size="small">
-                            <InputLabel id={`custom-field-${index}-boolean-label`}>Field Value (Yes/No)</InputLabel>
-                            <Select
-                              labelId={`custom-field-${index}-boolean-label`}
-                              value={field.value === 'true' ? 'true' : field.value === 'false' ? 'false' : ''}
-                              onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                              label="Field Value (Yes/No)"
-                            >
-                              <MenuItem value="true">Yes</MenuItem>
-                              <MenuItem value="false">No</MenuItem>
-                            </Select>
-                          </FormControl>
-                        ) : field.type === 'timestamp' ? (
-                          <TextField
-                            fullWidth
-                            label="Field Value (Date)"
-                            value={field.value}
-                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                            size="small"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                          />
-                        ) : (
-                          <TextField
-                            fullWidth
-                            label="Field Value"
-                            value={field.value}
-                            onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
-                            size="small"
-                            helperText={field.type ? `Detected as: ${field.type}` : ''}
-                          />
-                        )}
-                      </Grid>
-                      
-                      <Grid item xs={2}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                          <Chip 
-                            label={field.type || 'text'} 
-                            size="small"
-                            color={
-                              field.type === 'url' ? 'primary' :
-                              field.type === 'email' ? 'secondary' :
-                              field.type === 'timestamp' ? 'success' :
-                              field.type === 'integer' ? 'info' :
-                              field.type === 'boolean' ? 'warning' :
-                              'default'
-                            }
-                            sx={{ mb: 1 }}
-                          />
-                          <FormControl size="small">
-                            <Select
-                              value={field.type || 'text'}
-                              onChange={(e) => {
-                                // Update the field type and convert the value if needed
-                                const newType = e.target.value;
-                                let newValue = field.value;
-                                
-                                // Convert value based on new type
-                                if (newType === 'boolean') {
-                                  newValue = newValue ? 'true' : 'false';
-                                } else if (newType === 'integer') {
-                                  newValue = isNaN(parseInt(newValue)) ? '0' : parseInt(newValue).toString();
-                                } else if (newType === 'timestamp' && !newValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                  newValue = new Date().toISOString().split('T')[0];
-                                }
-                                
-                                // Update both type and value
-                                const updatedCustomFields = [...formData.customFields];
-                                updatedCustomFields[index] = {
-                                  ...updatedCustomFields[index],
-                                  type: newType,
-                                  value: newValue
-                                };
-                                
-                                setFormData(prevData => ({
-                                  ...prevData,
-                                  customFields: updatedCustomFields
-                                }));
-                              }}
-                              displayEmpty
-                              size="small"
-                              sx={{ minWidth: 100 }}
-                            >
-                              <MenuItem value="text">Text</MenuItem>
-                              <MenuItem value="integer">Integer</MenuItem>
-                              <MenuItem value="boolean">Boolean</MenuItem>
-                              <MenuItem value="timestamp">Timestamp</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={2}>
-                        <Button
+                        <TextField
+                          label="Value"
+                          value={field.value}
+                          onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                          sx={{ flex: 1 }}
+                        />
+                        <IconButton
                           color="error"
                           onClick={() => handleRemoveCustomField(index)}
-                          sx={{ height: '100%' }}
+                          sx={{ mt: 1 }}
                         >
-                          Remove
-                        </Button>
-                      </Grid>
-                    </React.Fragment>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    </Grid>
                   ))}
                 </Grid>
               )}
             </Paper>
+            
+            {/* Status Section */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Status
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.isArchived}
+                        onChange={handleChange}
+                        name="isArchived"
+                        color="primary"
+                      />
+                    }
+                    label="Archive this item"
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+            
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                startIcon={<SaveIcon />}
+                disabled={submitting}
+              >
+                {submitting ? <CircularProgress size={24} /> : 'Save'}
+              </Button>
+            </Box>
           </Grid>
           
           {/* Sidebar */}
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
-              <Typography variant="h6" gutterBottom>
-                Actions
-              </Typography>
-              
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                startIcon={submitting ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
-                type="submit"
-                disabled={submitting}
-                sx={{ mb: 2 }}
-              >
-                {submitting ? 'Saving...' : 'Save Changes'}
-              </Button>
-              
-              <Button
-                fullWidth
-                component={RouterLink}
-                to={`/items/${id}`}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              
-              <Divider sx={{ my: 3 }} />
-              
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Required fields are marked with an asterisk (*).
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary">
-                You can edit the Asset ID if needed.
-              </Typography>
-            </Paper>
+            {/* Mobile Photo Section */}
+            {isMobile && <MobilePhotoSection />}
           </Grid>
         </Grid>
       </form>
       
-      {/* Barcode Scanner */}
-      <BarcodeScanner
-        open={scannerOpen}
-        onClose={handleCloseScanner}
-        onDetected={handleBarcodeDetected}
-      />
+      {/* Barcode Scanner Dialog */}
+      {scannerOpen && (
+        <BarcodeScanner
+          open={scannerOpen}
+          onClose={handleCloseScanner}
+          onDetected={handleBarcodeDetected}
+        />
+      )}
       
-      {/* Add Location Dialog */}
-      <Dialog open={newLocationDialog} onClose={() => setNewLocationDialog(false)} maxWidth="sm" fullWidth>
+      {/* New Location Dialog */}
+      <Dialog open={newLocationDialog} onClose={() => setNewLocationDialog(false)}>
         <DialogTitle>Add New Location</DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={newLocation.name}
-              onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              value={newLocation.description}
-              onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
-              margin="normal"
-              multiline
-              rows={3}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="parent-location-label">Parent Location</InputLabel>
-              <Select
-                labelId="parent-location-label"
-                value={newLocation.parent}
-                onChange={(e) => setNewLocation({ ...newLocation, parent: e.target.value })}
-                label="Parent Location"
-              >
-                <MenuItem value="">None (Top Level)</MenuItem>
-                {locations.map(loc => (
-                  <MenuItem key={loc._id} value={loc._id}>{getLocationHierarchy(loc, locations)}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Name"
+                value={newLocation.name}
+                onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={newLocation.description}
+                onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Autocomplete
+                options={[{ _id: '', name: 'None (Top Level)' }, ...locations]}
+                getOptionLabel={(option) => {
+                  if (option._id === '') return 'None (Top Level)';
+                  return getLocationHierarchy(option, locations);
+                }}
+                value={newLocation.parent ? locations.find(loc => loc._id === newLocation.parent) || null : { _id: '', name: 'None (Top Level)' }}
+                onChange={(event, newValue) => {
+                  setNewLocation({ 
+                    ...newLocation, 
+                    parent: newValue && newValue._id !== '' ? newValue._id : '' 
+                  });
+                }}
+                isOptionEqualToValue={(option, value) => {
+                  if (option._id === '' && (!value || value._id === '')) return true;
+                  return option._id === value._id;
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Parent Location"
+                    fullWidth
+                  />
+                )}
+                disablePortal={false}
+                PopperProps={{ placement: 'bottom-start' }}
+                fullWidth
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewLocationDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
+            color="primary"
             onClick={async () => {
-              if (!newLocation.name.trim()) {
-                setErrorAlert('Location name is required');
-                return;
-              }
-              
               try {
-                const response = await axios.post('/api/locations', {
-                  name: newLocation.name,
-                  description: newLocation.description,
-                  parent: newLocation.parent || null
-                });
+                if (!newLocation.name.trim()) {
+                  setErrorAlert('Location name is required');
+                  return;
+                }
+                
+                const response = await axios.post('/api/locations', newLocation);
                 
                 if (response.data.success) {
-                  // Add the new location to the locations array
-                  const newLoc = response.data.data;
-                  setLocations([...locations, newLoc]);
+                  setSuccessAlert('Location created successfully');
                   
-                  // Select the new location in the form
+                  // Add the new location to the locations list
+                  const createdLocation = response.data.data;
+                  setLocations([...locations, createdLocation]);
+                  
+                  // Select the new location
                   setFormData(prevData => ({
                     ...prevData,
-                    location: newLoc._id
+                    location: createdLocation._id
                   }));
                   
                   // Reset the new location form
@@ -1321,8 +1281,6 @@ const EditItem = () => {
                   
                   // Close the dialog
                   setNewLocationDialog(false);
-                  
-                  setSuccessAlert('Location created successfully');
                 } else {
                   setErrorAlert('Error creating location: ' + response.data.message);
                 }
@@ -1337,55 +1295,57 @@ const EditItem = () => {
         </DialogActions>
       </Dialog>
       
-      {/* Add Category Dialog */}
-      <Dialog open={newCategoryDialog} onClose={() => setNewCategoryDialog(false)} maxWidth="sm" fullWidth>
+      {/* New Category Dialog */}
+      <Dialog open={newCategoryDialog} onClose={() => setNewCategoryDialog(false)}>
         <DialogTitle>Add New Category</DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={newCategory.name}
-              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              value={newCategory.description}
-              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-              margin="normal"
-              multiline
-              rows={3}
-            />
-          </Box>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Name"
+                value={newCategory.name}
+                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={newCategory.description}
+                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewCategoryDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
+            color="primary"
             onClick={async () => {
-              if (!newCategory.name.trim()) {
-                setErrorAlert('Category name is required');
-                return;
-              }
-              
               try {
-                const response = await axios.post('/api/categories', {
-                  name: newCategory.name,
-                  description: newCategory.description
-                });
+                if (!newCategory.name.trim()) {
+                  setErrorAlert('Category name is required');
+                  return;
+                }
+                
+                const response = await axios.post('/api/categories', newCategory);
                 
                 if (response.data.success) {
-                  // Add the new category to the categories array
-                  const newCat = response.data.data;
-                  setCategories([...categories, newCat]);
+                  setSuccessAlert('Category created successfully');
                   
-                  // Select the new category in the form
+                  // Add the new category to the categories list
+                  const createdCategory = response.data.data;
+                  setCategories([...categories, createdCategory]);
+                  
+                  // Select the new category
                   setFormData(prevData => ({
                     ...prevData,
-                    category: newCat._id
+                    category: createdCategory._id
                   }));
                   
                   // Reset the new category form
@@ -1393,8 +1353,6 @@ const EditItem = () => {
                   
                   // Close the dialog
                   setNewCategoryDialog(false);
-                  
-                  setSuccessAlert('Category created successfully');
                 } else {
                   setErrorAlert('Error creating category: ' + response.data.message);
                 }
@@ -1409,78 +1367,67 @@ const EditItem = () => {
         </DialogActions>
       </Dialog>
       
-      {/* Add Label Dialog */}
-      <Dialog open={newLabelDialog} onClose={() => setNewLabelDialog(false)} maxWidth="sm" fullWidth>
+      {/* New Label Dialog */}
+      <Dialog open={newLabelDialog} onClose={() => setNewLabelDialog(false)}>
         <DialogTitle>Add New Label</DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={newLabel.name}
-              onChange={(e) => setNewLabel({ ...newLabel, name: e.target.value })}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              value={newLabel.description}
-              onChange={(e) => setNewLabel({ ...newLabel, description: e.target.value })}
-              margin="normal"
-              multiline
-              rows={3}
-            />
-            <TextField
-              fullWidth
-              label="Color"
-              type="color"
-              value={newLabel.color}
-              onChange={(e) => setNewLabel({ ...newLabel, color: e.target.value })}
-              margin="normal"
-              InputProps={{
-                startAdornment: (
-                  <Box 
-                    sx={{ 
-                      width: 24, 
-                      height: 24, 
-                      borderRadius: '50%', 
-                      backgroundColor: newLabel.color,
-                      mr: 1,
-                      border: '1px solid rgba(0, 0, 0, 0.23)'
-                    }} 
-                  />
-                )
-              }}
-            />
-          </Box>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Name"
+                value={newLabel.name}
+                onChange={(e) => setNewLabel({ ...newLabel, name: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={newLabel.description}
+                onChange={(e) => setNewLabel({ ...newLabel, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Color"
+                value={newLabel.color}
+                onChange={(e) => setNewLabel({ ...newLabel, color: e.target.value })}
+                type="color"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewLabelDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
+            color="primary"
             onClick={async () => {
-              if (!newLabel.name.trim()) {
-                setErrorAlert('Label name is required');
-                return;
-              }
-              
               try {
-                const response = await axios.post('/api/labels', {
-                  name: newLabel.name,
-                  description: newLabel.description,
-                  color: newLabel.color
-                });
+                if (!newLabel.name.trim()) {
+                  setErrorAlert('Label name is required');
+                  return;
+                }
+                
+                const response = await axios.post('/api/labels', newLabel);
                 
                 if (response.data.success) {
-                  // Add the new label to the labels array
-                  const newLab = response.data.data;
-                  setLabels([...labels, newLab]);
+                  setSuccessAlert('Label created successfully');
                   
-                  // Add the new label to the selected labels in the form
+                  // Add the new label to the labels list
+                  const createdLabel = response.data.data;
+                  setLabels([...labels, createdLabel]);
+                  
+                  // Add the new label to the selected labels
                   setFormData(prevData => ({
                     ...prevData,
-                    labels: [...prevData.labels, newLab]
+                    labels: [...prevData.labels, createdLabel]
                   }));
                   
                   // Reset the new label form
@@ -1488,8 +1435,6 @@ const EditItem = () => {
                   
                   // Close the dialog
                   setNewLabelDialog(false);
-                  
-                  setSuccessAlert('Label created successfully');
                 } else {
                   setErrorAlert('Error creating label: ' + response.data.message);
                 }

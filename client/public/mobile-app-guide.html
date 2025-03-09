@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boxwise Mobile App Guide</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #6B46C1;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #553C9A;
+            margin-top: 30px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        h3 {
+            color: #6B46C1;
+            margin-top: 20px;
+        }
+        .feature {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .feature h3 {
+            margin-top: 0;
+            color: #553C9A;
+        }
+        .feature-icon {
+            font-size: 24px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .button {
+            display: inline-block;
+            background-color: #6B46C1;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #553C9A;
+        }
+        .cta {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .instructions {
+            background-color: #f8f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            border-left: 4px solid #6B46C1;
+        }
+        .instructions ol {
+            margin-left: 20px;
+            padding-left: 0;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        .screenshot {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .tip {
+            background-color: #e6fffa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #38B2AC;
+        }
+        .tip h4 {
+            margin-top: 0;
+            color: #2C7A7B;
+        }
+        .step {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: #6B46C1;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+            .feature {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Boxwise Mobile App Guide</h1>
+    
+    <p>Welcome to the Boxwise Mobile App Guide! This guide will help you get the most out of the mobile features of Boxwise, allowing you to manage your inventory on the go.</p>
+    
+    <div class="cta">
+        <a href="/" class="button">Open Boxwise Mobile App</a>
+    </div>
+    
+    <h2>Getting Started</h2>
+    
+    <p>The Boxwise mobile app is a progressive web app (PWA), which means you can access it directly from your mobile browser without needing to install anything from an app store. Here's how to get started:</p>
+    
+    <div class="instructions">
+        <ol>
+            <li><strong>Open your mobile browser</strong> (Safari on iOS, Chrome on Android, etc.)</li>
+            <li><strong>Navigate to your Boxwise URL</strong> (the same URL you use on desktop)</li>
+            <li><strong>Log in to your account</strong> using your existing credentials</li>
+            <li><strong>Add to home screen</strong> (optional) - For easier access, you can add the app to your home screen:
+                <ul>
+                    <li>On iOS: Tap the share icon, then "Add to Home Screen"</li>
+                    <li>On Android: Tap the menu icon, then "Add to Home Screen"</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+    
+    <h2>Key Mobile Features</h2>
+    
+    <div class="feature">
+        <h3>📷 Barcode Scanning</h3>
+        <p>Use your device's camera to scan UPC barcodes directly. This feature is available when adding or editing items, and in the shopping assistant.</p>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>When adding a new item</strong>, look for the UPC Lookup button at the top of the form.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Tap the scan icon</strong> next to the UPC code field.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Allow camera access</strong> if prompted.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>Point your camera at the barcode</strong> until it's detected.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">5</span>
+            <strong>The product information will be automatically filled in</strong> if available in the database.
+        </div>
+        
+        <div class="tip">
+            <h4>Pro Tip</h4>
+            <p>You can also scan barcodes directly from the items list by tapping the scan button in the search bar or using the scan button in the bottom navigation.</p>
+        </div>
+    </div>
+    
+    <div class="feature">
+        <h3>📸 Photo Capture</h3>
+        <p>Take photos of your items directly with your device camera and upload them immediately to your inventory records.</p>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>When adding or editing an item</strong>, scroll down to the Photos section.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Tap the "Take Photo" button</strong>.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Allow camera access</strong> if prompted.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>Take a photo</strong> by tapping the capture button.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">5</span>
+            <strong>Review the photo</strong> and tap "Save" to add it to the item, or "Retake" to try again.
+        </div>
+        
+        <div class="tip">
+            <h4>Pro Tip</h4>
+            <p>You can switch between front and back cameras by tapping the flip camera icon in the top right corner of the camera view.</p>
+        </div>
+    </div>
+    
+    <div class="feature">
+        <h3>🛒 Shopping Assistant</h3>
+        <p>Check your inventory while shopping to avoid duplicate purchases. The shopping assistant helps you quickly search for items or scan barcodes to see if you already own them.</p>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Tap the shopping cart icon</strong> in the bottom right corner of the screen.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Search for an item by name</strong> using the search field, or tap "Scan" to scan a barcode.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>View the search results</strong> to see if the item is already in your inventory.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>If the item is not in your inventory</strong> but was found in the product database, you can tap "Add to Inventory" to quickly add it.
+        </div>
+        
+        <div class="tip">
+            <h4>Pro Tip</h4>
+            <p>Use the shopping assistant while you're at the store to check if you already own an item before purchasing it. This helps avoid duplicate purchases and saves money!</p>
+        </div>
+    </div>
+    
+    <div class="feature">
+        <h3>📱 Mobile Navigation</h3>
+        <p>The mobile app includes a bottom navigation bar for easy access to key features, and a drawer menu for more options.</p>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Use the bottom navigation</strong> to quickly access Home, Items, Scan, and Add Item.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Tap the menu icon</strong> on the left side of the bottom navigation to open the drawer menu.
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>The drawer menu</strong> provides access to all sections of the app, including Locations, Categories, Labels, and more.
+        </div>
+        
+        <div class="tip">
+            <h4>Pro Tip</h4>
+            <p>The scan button in the bottom navigation provides quick access to the barcode scanner from anywhere in the app.</p>
+        </div>
+    </div>
+    
+    <h2>Use Cases</h2>
+    
+    <h3>Adding Items on the Go</h3>
+    <p>With the mobile app, you can add items to your inventory right when you purchase them:</p>
+    <ol>
+        <li>Tap the "Add" button in the bottom navigation</li>
+        <li>Fill in the basic information (name, location, category)</li>
+        <li>Use the UPC lookup to scan the barcode and automatically fill in product details</li>
+        <li>Take photos of the item using the "Take Photo" button</li>
+        <li>Add purchase details (where purchased, price, date)</li>
+        <li>Tap "Save" to add the item to your inventory</li>
+    </ol>
+    
+    <h3>Checking Inventory While Shopping</h3>
+    <p>Avoid duplicate purchases by checking your inventory while shopping:</p>
+    <ol>
+        <li>Tap the shopping cart icon to open the Shopping Assistant</li>
+        <li>Search for the item by name or scan its barcode</li>
+        <li>If the item is already in your inventory, you'll see details about it</li>
+        <li>If it's not in your inventory but was found in the product database, you can add it directly</li>
+        <li>If it's not found at all, you can still add it manually</li>
+    </ol>
+    
+    <h3>Taking Photos of Existing Items</h3>
+    <p>Add photos to existing items in your inventory:</p>
+    <ol>
+        <li>Navigate to the item in your inventory</li>
+        <li>Tap on the item to view its details</li>
+        <li>Tap "Edit" to edit the item</li>
+        <li>Scroll down to the Photos section</li>
+        <li>Tap "Take Photo" to capture a new photo</li>
+        <li>Save the item to update it with the new photo</li>
+    </ol>
+    
+    <h2>Tips for Mobile Use</h2>
+    
+    <div class="tip">
+        <h4>Offline Use</h4>
+        <p>The mobile app requires an internet connection to function properly. Make sure you have a stable connection when using the app, especially when adding or editing items.</p>
+    </div>
+    
+    <div class="tip">
+        <h4>Battery Usage</h4>
+        <p>Using the camera for barcode scanning and photo capture can drain your battery. Consider closing the app when not in use to conserve battery life.</p>
+    </div>
+    
+    <div class="tip">
+        <h4>Storage Space</h4>
+        <p>Photos taken with the app are stored in your account and don't take up space on your device. However, the app itself may cache data locally, so if you're running low on storage, consider clearing your browser cache.</p>
+    </div>
+    
+    <div class="tip">
+        <h4>Camera Permissions</h4>
+        <p>The app requires camera permissions for barcode scanning and photo capture. If you accidentally denied these permissions, you'll need to update them in your device settings.</p>
+    </div>
+    
+    <div class="cta">
+        <a href="/" class="button">Start Using Boxwise Mobile</a>
+    </div>
+    
+    <p style="text-align: center; margin-top: 40px; color: #666;">
+        Boxwise Mobile Web App - Manage your inventory on the go
+    </p>
+</body>
+</html>

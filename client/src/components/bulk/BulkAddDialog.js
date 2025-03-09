@@ -19,7 +19,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Autocomplete
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -195,34 +196,38 @@ const BulkAddDialog = ({
                 {Object.entries(fields).map(([field, config]) => (
                   <React.Fragment key={`${entity.id}-${field}`}>
                     {config.select ? (
-                      <FormControl fullWidth size="small">
-                        <InputLabel id={`${field}-label-${entity.id}`}>{config.label}</InputLabel>
-                        <Select
-                          labelId={`${field}-label-${entity.id}`}
-                          value={entity[field] || ''}
-                          onChange={(e) => handleFieldChange(entity.id, field, e.target.value)}
-                          label={config.label}
-                          required={config.required}
-                          {...(config.SelectProps || {})}
-                        >
-                          {config.options ? (
-                            config.options.map((option) => (
-                              <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                              </MenuItem>
-                            ))
-                          ) : (
-                            <MenuItem value="" disabled>
-                              <em>No options available</em>
-                            </MenuItem>
-                          )}
-                        </Select>
-                        {config.helperText && (
-                          <Typography variant="caption" color="text.secondary">
-                            {config.helperText}
-                          </Typography>
+                      <Autocomplete
+                        options={config.options || []}
+                        getOptionLabel={(option) => {
+                          if (typeof option === 'string') {
+                            const foundOption = config.options?.find(opt => opt.value === option);
+                            return foundOption ? foundOption.label : option;
+                          }
+                          return option.label;
+                        }}
+                        value={
+                          entity[field] 
+                            ? config.options?.find(opt => opt.value === entity[field]) || null 
+                            : null
+                        }
+                        onChange={(event, newValue) => {
+                          handleFieldChange(entity.id, field, newValue ? newValue.value : '');
+                        }}
+                        isOptionEqualToValue={(option, value) => option.value === value.value}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={config.label}
+                            required={config.required}
+                            size="small"
+                            helperText={config.helperText}
+                          />
                         )}
-                      </FormControl>
+                        disablePortal={false}
+                        PopperProps={{ placement: 'bottom-start' }}
+                        fullWidth
+                        size="small"
+                      />
                     ) : (
                       <TextField
                         label={config.label}

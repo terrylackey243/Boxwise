@@ -149,6 +149,16 @@ const ItemSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Item URL
+  itemUrl: {
+    type: String,
+    trim: true
+  },
+  // Manual URL
+  manualUrl: {
+    type: String,
+    trim: true
+  },
   // Loan details section
   loanDetails: {
     loanedTo: {

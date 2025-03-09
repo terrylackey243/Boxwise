@@ -22,7 +22,8 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Chip
+  Chip,
+  Autocomplete
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -211,6 +212,8 @@ const SpreadsheetBulkAddDialog = ({
             if (item.serialNumber) updatedRow.serialNumber = item.serialNumber;
             if (item.modelNumber) updatedRow.modelNumber = item.modelNumber;
             if (item.manufacturer) updatedRow.manufacturer = item.manufacturer;
+            if (item.itemUrl) updatedRow.itemUrl = item.itemUrl;
+            if (item.manualUrl) updatedRow.manualUrl = item.manualUrl;
             if (item.isInsured !== undefined) updatedRow.isInsured = item.isInsured;
             if (item.notes) updatedRow.notes = item.notes;
             
@@ -254,6 +257,14 @@ const SpreadsheetBulkAddDialog = ({
           return !config.required || row[field];
         });
       });
+
+      // Make sure each row has an assetId (even though it's hidden)
+      validRows.forEach((row, index) => {
+        if (!row.assetId && entityType === 'items') {
+          // If somehow a row is missing an assetId, generate one
+          row.assetId = `ITEM-${Date.now()}-${index}`;
+        }
+      });
       
       if (validRows.length === 0) {
         setError('Please fill in at least one row with all required fields');
@@ -286,7 +297,7 @@ const SpreadsheetBulkAddDialog = ({
   };
 
   // Define a consistent height for all input fields
-  const inputHeight = 56; // Standard height for TextField with size="small"
+  const inputHeight = 40; // Reduced height for more compact layout
   
   // Render a cell based on field configuration
   const renderCell = (row, field, config) => {
@@ -338,21 +349,30 @@ const SpreadsheetBulkAddDialog = ({
         );
       } else if (config.type === 'boolean') {
         return (
-          <FormControl fullWidth size="small" sx={{ height: inputHeight }}>
-            <Select
-              value={value === '' ? 'false' : value ? 'true' : 'false'}
-              onChange={(e) => handleNestedChange(e.target.value === 'true')}
-              displayEmpty
-              required={config.required}
-              sx={{ height: inputHeight }}
-            >
-              <MenuItem value="">
-                <em>Select</em>
-              </MenuItem>
-              <MenuItem value="true">Yes</MenuItem>
-              <MenuItem value="false">No</MenuItem>
-            </Select>
-          </FormControl>
+          <Autocomplete
+            options={[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' }
+            ]}
+            getOptionLabel={(option) => option.label}
+            value={value === '' ? null : { value: !!value, label: value ? 'Yes' : 'No' }}
+            onChange={(event, newValue) => {
+              handleNestedChange(newValue ? newValue.value : false);
+            }}
+            isOptionEqualToValue={(option, value) => option.value === value.value}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Select Yes/No"
+                required={config.required}
+                size="small"
+                sx={{ height: inputHeight }}
+              />
+            )}
+            disablePortal={false}
+            size="small"
+            sx={{ height: inputHeight }}
+          />
         );
       } else {
         return (
@@ -365,8 +385,8 @@ const SpreadsheetBulkAddDialog = ({
             variant="outlined"
             multiline={config.multiline}
             rows={config.rows}
-            sx={{ height: config.multiline ? 'auto' : inputHeight }}
-            InputProps={{ sx: { height: config.multiline ? 'auto' : inputHeight } }}
+            sx={{ height: inputHeight }}
+            InputProps={{ sx: { height: inputHeight } }}
           />
         );
       }
@@ -375,110 +395,162 @@ const SpreadsheetBulkAddDialog = ({
     // Handle regular fields
     if (field === 'location') {
       return (
-        <FormControl fullWidth size="small" sx={{ height: inputHeight }}>
-          <Select
-            value={row[field] || ''}
-            onChange={(e) => handleFieldChange(row.id, field, e.target.value)}
-            displayEmpty
-            required={config.required}
-            sx={{ height: inputHeight }}
-          >
-                <MenuItem value="">
-                  <em>Select Location</em>
-                </MenuItem>
-                {locations.map((location) => {
-                  // Get the full location hierarchy path
-                  const getLocationHierarchy = (loc) => {
-                    if (!loc) return '';
-                    
-                    // Start with the current location name
-                    let path = loc.name;
-                    let currentLoc = loc;
-                    
-                    // Traverse up the parent hierarchy
-                    while (currentLoc.parent) {
-                      // Find the parent location
-                      const parentLocation = locations.find(l => l._id === currentLoc.parent);
-                      
-                      // If parent not found, break the loop
-                      if (!parentLocation) break;
-                      
-                      // Add parent name to the path
-                      path = `${parentLocation.name} > ${path}`;
-                      
-                      // Move up to the parent
-                      currentLoc = parentLocation;
-                    }
-                    
-                    return path;
-                  };
+        <Autocomplete
+          options={locations}
+          getOptionLabel={(option) => {
+            if (typeof option === 'string') {
+              const locationObj = locations.find(loc => loc._id === option);
+              if (locationObj) {
+                // Get the full location hierarchy path
+                const getLocationHierarchy = (loc) => {
+                  if (!loc) return '';
                   
-                  const hierarchyPath = getLocationHierarchy(location);
+                  // Start with the current location name
+                  let path = loc.name;
+                  let currentLoc = loc;
                   
-                  return (
-                    <MenuItem key={location._id} value={location._id}>
-                      {hierarchyPath}
-                    </MenuItem>
-                  );
-                })}
-          </Select>
-        </FormControl>
+                  // Traverse up the parent hierarchy
+                  while (currentLoc.parent) {
+                    // Find the parent location
+                    const parentLocation = locations.find(l => l._id === currentLoc.parent);
+                    
+                    // If parent not found, break the loop
+                    if (!parentLocation) break;
+                    
+                    // Add parent name to the path
+                    path = `${parentLocation.name} > ${path}`;
+                    
+                    // Move up to the parent
+                    currentLoc = parentLocation;
+                  }
+                  
+                  return path;
+                };
+                
+                return getLocationHierarchy(locationObj);
+              }
+              return '';
+            }
+            
+            // Get the full location hierarchy path
+            const getLocationHierarchy = (loc) => {
+              if (!loc) return '';
+              
+              // Start with the current location name
+              let path = loc.name;
+              let currentLoc = loc;
+              
+              // Traverse up the parent hierarchy
+              while (currentLoc.parent) {
+                // Find the parent location
+                const parentLocation = locations.find(l => l._id === currentLoc.parent);
+                
+                // If parent not found, break the loop
+                if (!parentLocation) break;
+                
+                // Add parent name to the path
+                path = `${parentLocation.name} > ${path}`;
+                
+                // Move up to the parent
+                currentLoc = parentLocation;
+              }
+              
+              return path;
+            };
+            
+            return getLocationHierarchy(option);
+          }}
+          value={row[field] ? locations.find(loc => loc._id === row[field]) || null : null}
+          onChange={(event, newValue) => {
+            handleFieldChange(row.id, field, newValue ? newValue._id : '');
+          }}
+          isOptionEqualToValue={(option, value) => option._id === value._id}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Select Location"
+              required={config.required}
+              size="small"
+              sx={{ height: inputHeight }}
+            />
+          )}
+          disablePortal={false}
+          size="small"
+          sx={{ height: inputHeight }}
+        />
       );
     } else if (field === 'category') {
       return (
-        <FormControl fullWidth size="small" sx={{ height: inputHeight }}>
-          <Select
-            value={row[field] || ''}
-            onChange={(e) => handleFieldChange(row.id, field, e.target.value)}
-            displayEmpty
-            required={config.required}
-            sx={{ height: inputHeight }}
-          >
-            <MenuItem value="">
-              <em>Select Category</em>
-            </MenuItem>
-            {categories.map((category) => (
-              <MenuItem key={category._id} value={category._id}>
-                {category.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Autocomplete
+          options={categories}
+          getOptionLabel={(option) => {
+            if (typeof option === 'string') {
+              const categoryObj = categories.find(cat => cat._id === option);
+              return categoryObj ? categoryObj.name : '';
+            }
+            return option.name;
+          }}
+          value={row[field] ? categories.find(cat => cat._id === row[field]) || null : null}
+          onChange={(event, newValue) => {
+            handleFieldChange(row.id, field, newValue ? newValue._id : '');
+          }}
+          isOptionEqualToValue={(option, value) => option._id === value._id}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Select Category"
+              required={config.required}
+              size="small"
+              sx={{ height: inputHeight }}
+            />
+          )}
+          disablePortal={false}
+          size="small"
+          sx={{ height: inputHeight }}
+        />
       );
     } else if (field === 'labels') {
       return (
-        <FormControl fullWidth size="small" sx={{ height: inputHeight }}>
-          <Select
-            multiple
-            value={row[field] || []}
-            onChange={(e) => handleFieldChange(row.id, field, e.target.value)}
-            sx={{ height: inputHeight }}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => {
-                  const label = labels.find(l => l._id === value);
-                  return (
-                    <Chip 
-                      key={value} 
-                      label={label ? label.name : value}
-                      size="small"
-                      sx={{
-                        bgcolor: label ? label.color : undefined,
-                        color: 'white',
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-            )}
-          >
-            {labels.map((label) => (
-              <MenuItem key={label._id} value={label._id}>
-                {label.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Autocomplete
+          multiple
+          options={labels}
+          getOptionLabel={(option) => option.name}
+          value={row[field] ? row[field].map(labelId => labels.find(l => l._id === labelId)).filter(Boolean) : []}
+          onChange={(event, newValue) => {
+            handleFieldChange(row.id, field, newValue.map(label => label._id));
+          }}
+          isOptionEqualToValue={(option, value) => option._id === value._id}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Select Labels"
+              size="small"
+              sx={{ height: inputHeight }}
+            />
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const props = getTagProps({ index });
+              // Extract key from props to avoid React warning
+              const { key, ...chipProps } = props;
+              return (
+                <Chip
+                  key={key}
+                  label={option.name}
+                  {...chipProps}
+                  size="small"
+                  sx={{
+                    bgcolor: option.color,
+                    color: 'white',
+                  }}
+                />
+              );
+            })
+          }
+          disablePortal={false}
+          size="small"
+          sx={{ height: inputHeight }}
+        />
       );
     } else if (config.type === 'number') {
       return (
@@ -511,21 +583,30 @@ const SpreadsheetBulkAddDialog = ({
       );
     } else if (config.type === 'boolean') {
       return (
-        <FormControl fullWidth size="small" sx={{ height: inputHeight }}>
-          <Select
-            value={row[field] === undefined ? '' : row[field] ? 'true' : 'false'}
-            onChange={(e) => handleFieldChange(row.id, field, e.target.value === 'true')}
-            displayEmpty
-            required={config.required}
-            sx={{ height: inputHeight }}
-          >
-            <MenuItem value="">
-              <em>Select</em>
-            </MenuItem>
-            <MenuItem value="true">Yes</MenuItem>
-            <MenuItem value="false">No</MenuItem>
-          </Select>
-        </FormControl>
+        <Autocomplete
+          options={[
+            { value: true, label: 'Yes' },
+            { value: false, label: 'No' }
+          ]}
+          getOptionLabel={(option) => option.label}
+          value={row[field] === undefined ? null : { value: !!row[field], label: row[field] ? 'Yes' : 'No' }}
+          onChange={(event, newValue) => {
+            handleFieldChange(row.id, field, newValue ? newValue.value : false);
+          }}
+          isOptionEqualToValue={(option, value) => option.value === value.value}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Select Yes/No"
+              required={config.required}
+              size="small"
+              sx={{ height: inputHeight }}
+            />
+          )}
+          disablePortal={false}
+          size="small"
+          sx={{ height: inputHeight }}
+        />
       );
     } else {
       return (
@@ -538,8 +619,8 @@ const SpreadsheetBulkAddDialog = ({
           variant="outlined"
           multiline={config.multiline}
           rows={config.rows}
-          sx={{ height: config.multiline ? 'auto' : inputHeight }}
-          InputProps={{ sx: { height: config.multiline ? 'auto' : inputHeight } }}
+            sx={{ height: inputHeight }}
+            InputProps={{ sx: { height: inputHeight } }}
         />
       );
     }
@@ -600,11 +681,7 @@ const SpreadsheetBulkAddDialog = ({
                   <TableCell sx={{ fontWeight: 'bold', minWidth: '144px' }}>
                     UPC Lookup
                   </TableCell>
-                  {entityType === 'items' && (
-                    <TableCell sx={{ fontWeight: 'bold', minWidth: '144px' }}>
-                      Asset ID
-                    </TableCell>
-                  )}
+                  {/* Asset ID column is hidden since it's auto-generated */}
                   {Object.entries(fields).map(([field, config]) => (
                     <TableCell key={field} sx={{ fontWeight: 'bold', minWidth: '144px' }}>
                       {config.label} {config.required && <span style={{ color: 'red' }}>*</span>}
@@ -634,24 +711,7 @@ const SpreadsheetBulkAddDialog = ({
                         }}
                       />
                     </TableCell>
-                    {entityType === 'items' && (
-                      <TableCell>
-                        <TextField
-                          value={row.assetId || ''}
-                          onChange={(e) => handleFieldChange(row.id, 'assetId', e.target.value)}
-                          placeholder="Asset ID"
-                          fullWidth
-                          size="small"
-                          variant="outlined"
-                          sx={{ height: inputHeight }}
-                          InputProps={{ 
-                            sx: { height: inputHeight },
-                            readOnly: true
-                          }}
-                          helperText="Auto-generated"
-                        />
-                      </TableCell>
-                    )}
+                    {/* Asset ID field is hidden since it's auto-generated */}
                     {Object.entries(fields).map(([field, config]) => (
                       <TableCell key={`${row.id}-${field}`}>
                         {renderCell(row, field, config)}

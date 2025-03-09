@@ -20,6 +20,7 @@ import MobileAppWrapper from './components/mobile/MobileAppWrapper';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import LandingPage from './pages/LandingPage';
 import Items from './pages/items/Items';
 import ItemDetail from './pages/items/ItemDetail';
 import CreateItem from './pages/items/CreateItem';
@@ -173,7 +174,7 @@ const App = () => {
               <Alert />
               <Layout>
                 <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               {/* Register route removed - new users must be created by admins */}
               <Route path="/test" element={<TestPage />} />

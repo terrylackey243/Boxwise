@@ -47,6 +47,19 @@ const MobileApp = () => {
           Use your smartphone to scan barcodes, take photos of items, check inventory while shopping, and add items right when you purchase them.
         </Typography>
         
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1 }}>
+          <Button
+            component="a"
+            href="/mobile-app-guide.html"
+            target="_blank"
+            variant="outlined"
+            color="primary"
+            startIcon={<PhoneAndroidIcon />}
+          >
+            View Mobile App Guide
+          </Button>
+        </Box>
+        
         {isMobile ? (
           <Box sx={{ mb: 3 }}>
             <Typography variant="h6" gutterBottom color="primary">
@@ -61,10 +74,30 @@ const MobileApp = () => {
             <Typography variant="h6" gutterBottom>
               Access on your mobile device
             </Typography>
-            <Typography variant="body1">
-              Simply visit this website on your mobile device's browser to access all mobile features.
-              No separate app download required.
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Box sx={{ flex: '1 1 300px', pr: 3 }}>
+                <Typography variant="body1" paragraph>
+                  Simply visit this website on your mobile device's browser to access all mobile features.
+                  No separate app download required.
+                </Typography>
+                <Typography variant="body1">
+                  Scan the QR code with your mobile device to open the app directly.
+                </Typography>
+              </Box>
+              <Box sx={{ flex: '0 0 auto', textAlign: 'center', p: 2 }}>
+                <img 
+                  src="/static/images/mobile-app-qr.png" 
+                  alt="QR Code for Mobile App" 
+                  style={{ 
+                    width: 150, 
+                    height: 150, 
+                    border: '1px solid #eee', 
+                    borderRadius: 8,
+                    padding: 8
+                  }} 
+                />
+              </Box>
+            </Box>
           </Box>
         )}
       </Paper>

@@ -38,7 +38,8 @@ import {
   Search as SearchIcon,
   QrCode as QrCodeIcon,
   QrCodeScanner as QrCodeScannerIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  OpenInNew as OpenInNewIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 import BarcodeScanner from '../../components/scanner/BarcodeScanner';
@@ -125,7 +126,9 @@ const CreateItem = () => {
     warrantyExpires: '',
     warrantyNotes: '',
     customFields: [],
-    upcCode: prefillData.upcCode || ''
+    upcCode: prefillData.upcCode || '',
+    itemUrl: '',
+    manualUrl: ''
   });
   
   // Set UPC code from prefill data if available
@@ -684,68 +687,47 @@ const CreateItem = () => {
                 
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <FormControl fullWidth error={!!errors.location} required>
-                      <InputLabel id="location-label">Location</InputLabel>
-                      <Select
-                        labelId="location-label"
-                        value={formData.location}
-                        onChange={(e) => {
-                          setFormData(prevData => ({
-                            ...prevData,
-                            location: e.target.value
-                          }));
-                          
-                          // Clear error for this field if it exists
-                          if (errors.location) {
-                            setErrors(prevErrors => ({
-                              ...prevErrors,
-                              location: null
-                            }));
+                    <Autocomplete
+                      options={locations}
+                      getOptionLabel={(option) => {
+                        // Handle both objects and string IDs
+                        if (typeof option === 'string') {
+                          const locationObj = locations.find(loc => loc._id === option);
+                          if (locationObj) {
+                            return getLocationHierarchy(locationObj, locations);
                           }
-                        }}
-                        label="Location"
-                      >
-                        <MenuItem value="">
-                          <em>Select Location</em>
-                        </MenuItem>
-                        {locations.map((location) => {
-                          // Get the full location hierarchy path
-                          const getLocationHierarchy = (loc) => {
-                            if (!loc) return '';
-                            
-                            // Start with the current location name
-                            let path = loc.name;
-                            let currentLoc = loc;
-                            
-                            // Traverse up the parent hierarchy
-                            while (currentLoc.parent) {
-                              // Find the parent location
-                              const parentLocation = locations.find(l => l._id === currentLoc.parent);
-                              
-                              // If parent not found, break the loop
-                              if (!parentLocation) break;
-                              
-                              // Add parent name to the path
-                              path = `${parentLocation.name} > ${path}`;
-                              
-                              // Move up to the parent
-                              currentLoc = parentLocation;
-                            }
-                            
-                            return path;
-                          };
-                          
-                          const hierarchyPath = getLocationHierarchy(location);
-                          
-                          return (
-                            <MenuItem key={location._id} value={location._id}>
-                              {hierarchyPath}
-                            </MenuItem>
-                          );
-                        })}
-                      </Select>
-                      {errors.location && <Typography color="error" variant="caption">{errors.location}</Typography>}
-                    </FormControl>
+                          return '';
+                        }
+                        return getLocationHierarchy(option, locations);
+                      }}
+                      value={formData.location ? locations.find(loc => loc._id === formData.location) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          location: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.location) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            location: null
+                          }));
+                        }
+                      }}
+                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Location"
+                          required
+                          error={!!errors.location}
+                          helperText={errors.location}
+                        />
+                      )}
+                      disablePortal={false}
+                      sx={{ flex: 1 }}
+                    />
                     <Tooltip title="Add New Location">
                       <IconButton 
                         color="primary"
@@ -795,6 +777,7 @@ const CreateItem = () => {
                           helperText={errors.category}
                         />
                       )}
+                      disablePortal={false}
                       sx={{ flex: 1 }}
                     />
                     <Tooltip title="Add New Category">
@@ -843,6 +826,7 @@ const CreateItem = () => {
                           );
                         })
                       }
+                      disablePortal={false}
                       sx={{ flex: 1 }}
                     />
                     <Tooltip title="Add New Label">
@@ -917,6 +901,54 @@ const CreateItem = () => {
                     name="manufacturer"
                     value={formData.manufacturer}
                     onChange={handleChange}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Item URL"
+                    name="itemUrl"
+                    value={formData.itemUrl || ''}
+                    onChange={handleChange}
+                    placeholder="https://example.com/product"
+                    InputProps={{
+                      endAdornment: formData.itemUrl ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => window.open(formData.itemUrl, '_blank')}
+                            edge="end"
+                            size="small"
+                          >
+                            <OpenInNewIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Manual URL"
+                    name="manualUrl"
+                    value={formData.manualUrl || ''}
+                    onChange={handleChange}
+                    placeholder="https://example.com/manual"
+                    InputProps={{
+                      endAdornment: formData.manualUrl ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => window.open(formData.manualUrl, '_blank')}
+                            edge="end"
+                            size="small"
+                          >
+                            <OpenInNewIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null
+                    }}
                   />
                 </Grid>
                 
@@ -1168,20 +1200,33 @@ const CreateItem = () => {
               multiline
               rows={3}
             />
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="parent-location-label">Parent Location</InputLabel>
-              <Select
-                labelId="parent-location-label"
-                value={newLocation.parent}
-                onChange={(e) => setNewLocation({ ...newLocation, parent: e.target.value })}
-                label="Parent Location"
-              >
-                <MenuItem value="">None (Top Level)</MenuItem>
-                {locations.map(loc => (
-                  <MenuItem key={loc._id} value={loc._id}>{getLocationHierarchy(loc, locations)}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              options={[{ _id: '', name: 'None (Top Level)' }, ...locations]}
+              getOptionLabel={(option) => {
+                if (option._id === '') return 'None (Top Level)';
+                return getLocationHierarchy(option, locations);
+              }}
+              value={newLocation.parent ? locations.find(loc => loc._id === newLocation.parent) || null : { _id: '', name: 'None (Top Level)' }}
+              onChange={(event, newValue) => {
+                setNewLocation({ 
+                  ...newLocation, 
+                  parent: newValue && newValue._id !== '' ? newValue._id : '' 
+                });
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (option._id === '' && (!value || value._id === '')) return true;
+                return option._id === value._id;
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Parent Location"
+                  margin="normal"
+                  fullWidth
+                />
+              )}
+              disablePortal={false}
+            />
           </Box>
         </DialogContent>
         <DialogActions>

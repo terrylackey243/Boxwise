@@ -157,6 +157,13 @@ const MobileNavigation = () => {
           </ListItemIcon>
           <ListItemText primary="Mobile App Features" />
         </ListItem>
+        
+        <ListItem button component="a" href="/mobile-app-guide.html" target="_blank">
+          <ListItemIcon>
+            <PhoneAndroidIcon />
+          </ListItemIcon>
+          <ListItemText primary="Mobile App Guide" />
+        </ListItem>
       </List>
     </Box>
   );
