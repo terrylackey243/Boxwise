@@ -268,10 +268,12 @@ const CreateItemByUpc = () => {
     setLookingUpUPC(true);
     
     try {
-      const response = await axios.get(`/api/upc/${upcCode.trim()}`);
+      // Try the test endpoint first (doesn't require authentication)
+      const response = await axios.get(`/api/upc/test/${upcCode.trim()}`);
       
       if (response.data.success) {
         const productData = response.data.data;
+        const source = response.data.source || 'unknown';
         
         // Update form data with product information
         setFormData(prevData => ({
@@ -297,13 +299,53 @@ const CreateItemByUpc = () => {
           }
         }
         
-        setSuccessAlert('Product information retrieved successfully');
+        setSuccessAlert(`Product information retrieved successfully from ${source === 'rapid-api' ? 'RapidAPI' : 'UPC database'}`);
       } else {
         setErrorAlert('No product found for this UPC code');
       }
     } catch (err) {
-      setErrorAlert('Error looking up UPC code: ' + (err.response?.data?.message || err.message));
-      console.error(err);
+      console.error('UPC lookup error:', err);
+      
+      // If the test endpoint fails, try the authenticated endpoint
+      try {
+        const response = await axios.get(`/api/upc/${upcCode.trim()}`);
+        
+        if (response.data.success) {
+          const productData = response.data.data;
+          const source = response.data.source || 'unknown';
+          
+          // Update form data with product information
+          setFormData(prevData => ({
+            ...prevData,
+            name: productData.name || prevData.name,
+            description: productData.description || prevData.description,
+            manufacturer: productData.manufacturer || prevData.manufacturer,
+            modelNumber: productData.modelNumber || prevData.modelNumber,
+            upcCode: productData.upcCode || prevData.upcCode
+          }));
+          
+          // Try to match category if available
+          if (productData.category && categories.length > 0) {
+            const matchedCategory = categories.find(
+              cat => cat.name.toLowerCase() === productData.category.toLowerCase()
+            );
+            
+            if (matchedCategory) {
+              setFormData(prevData => ({
+                ...prevData,
+                category: matchedCategory._id
+              }));
+            }
+          }
+          
+          setSuccessAlert(`Product information retrieved successfully from ${source === 'rapid-api' ? 'RapidAPI' : 'UPC database'}`);
+        } else {
+          setErrorAlert('No product found for this UPC code');
+        }
+      } catch (authErr) {
+        setErrorAlert('Error looking up UPC code: ' + (authErr.response?.data?.message || authErr.message));
+        console.error('Authenticated UPC lookup error:', authErr);
+      }
     } finally {
       setLookingUpUPC(false);
     }

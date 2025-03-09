@@ -39,7 +39,8 @@ import {
   NavigateNext as NavigateNextIcon,
   Alarm as AlarmIcon,
   Build as BuildIcon,
-  VerifiedUser as WarrantyIcon
+  VerifiedUser as WarrantyIcon,
+  ContentCopy as DuplicateIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 
@@ -57,6 +58,7 @@ const ItemDetail = () => {
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [reminderType, setReminderType] = useState('');
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [loanFormData, setLoanFormData] = useState({
     loanedTo: '',
     notes: ''
@@ -288,6 +290,46 @@ const ItemDetail = () => {
     }
   };
 
+  const handleDuplicateItem = async () => {
+    try {
+      // Create a copy of the item without the _id field
+      const itemCopy = { ...item };
+      
+      // Remove fields that should not be duplicated
+      delete itemCopy._id;
+      delete itemCopy.createdAt;
+      delete itemCopy.updatedAt;
+      delete itemCopy.__v;
+      
+      // Modify the name to indicate it's a copy
+      itemCopy.name = `${itemCopy.name} (Copy)`;
+      
+      // Reset loan details if any
+      if (itemCopy.loanDetails) {
+        itemCopy.loanDetails.isLoaned = false;
+        delete itemCopy.loanDetails.loanedTo;
+        delete itemCopy.loanDetails.loanDate;
+        delete itemCopy.loanDetails.notes;
+      }
+      
+      // Make API call to create a new item with the copied data
+      const response = await axios.post('/api/items', itemCopy);
+      
+      if (response.data.success) {
+        setSuccessAlert('Item duplicated successfully');
+        // Navigate to the new item
+        navigate(`/items/${response.data.data._id}`);
+      } else {
+        setErrorAlert('Error duplicating item: ' + response.data.message);
+      }
+    } catch (err) {
+      setErrorAlert('Error duplicating item: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    } finally {
+      setDuplicateDialogOpen(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -386,6 +428,15 @@ const ItemDetail = () => {
             sx={{ mr: 1 }}
           >
             Edit
+          </Button>
+          
+          <Button
+            variant="outlined"
+            startIcon={<DuplicateIcon />}
+            onClick={() => setDuplicateDialogOpen(true)}
+            sx={{ mr: 1 }}
+          >
+            Duplicate
           </Button>
           
           <Button
@@ -1062,6 +1113,25 @@ const ItemDetail = () => {
           <Button onClick={handleReminderDialogClose}>Cancel</Button>
           <Button onClick={handleCreateReminder} color="primary" autoFocus>
             Create Reminder
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Duplicate Confirmation Dialog */}
+      <Dialog
+        open={duplicateDialogOpen}
+        onClose={() => setDuplicateDialogOpen(false)}
+      >
+        <DialogTitle>Duplicate Item</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to duplicate "{item.name}"? This will create a copy of the item with the same details.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDuplicateDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDuplicateItem} color="primary" autoFocus>
+            Duplicate
           </Button>
         </DialogActions>
       </Dialog>

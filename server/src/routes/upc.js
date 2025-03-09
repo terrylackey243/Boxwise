@@ -6,7 +6,10 @@ const router = express.Router();
 // Import middleware
 const { protect } = require('../middleware/auth');
 
-// Define routes
-router.route('/:code').get(protect, lookupUPC);
+// Test route (no authentication required) - must be defined before the protected route
+router.get('/test/:code', lookupUPC);
+
+// Protected route
+router.get('/:code', protect, lookupUPC);
 
 module.exports = router;
