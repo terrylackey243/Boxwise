@@ -224,11 +224,13 @@ const EditUser = () => {
       const updateData = {
         name: formData.name,
         email: formData.email,
-        role: formData.role,
-        subscription: {
-          plan: formData.subscriptionPlan,
-          status: formData.subscriptionStatus
-        }
+        role: formData.role
+      };
+      
+      // Add subscription data with fallback values to prevent undefined errors
+      updateData.subscription = {
+        plan: formData.subscriptionPlan || 'free',
+        status: formData.subscriptionStatus || 'active'
       };
       
       // Log the update data for debugging

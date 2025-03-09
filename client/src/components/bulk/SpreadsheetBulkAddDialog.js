@@ -55,6 +55,7 @@ const SpreadsheetBulkAddDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   
   // State for dropdown options
   const [locations, setLocations] = useState([]);
@@ -178,9 +179,28 @@ const SpreadsheetBulkAddDialog = ({
 
   // Handle field change for a specific row
   const handleFieldChange = (id, field, value) => {
+    // Update the row with the new value
     setRows(rows.map(row => 
       row.id === id ? { ...row, [field]: value } : row
     ));
+    
+    // Validate field length for name and description
+    if (field === 'name' && value.length > 99) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [`${id}-${field}`]: 'Name cannot exceed 99 characters'
+      }));
+    } else if (field === 'description' && value.length > 999) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [`${id}-${field}`]: 'Description cannot exceed 999 characters'
+      }));
+    } else if (fieldErrors[`${id}-${field}`]) {
+      // Clear the error if it's fixed
+      const newErrors = { ...fieldErrors };
+      delete newErrors[`${id}-${field}`];
+      setFieldErrors(newErrors);
+    }
   };
 
   // Handle UPC lookup
@@ -250,6 +270,13 @@ const SpreadsheetBulkAddDialog = ({
       setIsSubmitting(true);
       setError(null);
       
+      // Check if there are any field errors
+      if (Object.keys(fieldErrors).length > 0) {
+        setError('Please fix the field errors before submitting');
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Filter out any rows with empty required fields
       const validRows = rows.filter(row => {
         // Check if all required fields have values
@@ -268,6 +295,18 @@ const SpreadsheetBulkAddDialog = ({
       
       if (validRows.length === 0) {
         setError('Please fill in at least one row with all required fields');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Check for name and description length limits
+      const invalidRows = validRows.filter(row => 
+        (row.name && row.name.length > 99) || 
+        (row.description && row.description.length > 999)
+      );
+      
+      if (invalidRows.length > 0) {
+        setError('Some rows have fields that exceed character limits. Please fix them before submitting.');
         setIsSubmitting(false);
         return;
       }
@@ -619,8 +658,35 @@ const SpreadsheetBulkAddDialog = ({
           variant="outlined"
           multiline={config.multiline}
           rows={config.rows}
-            sx={{ height: inputHeight }}
-            InputProps={{ sx: { height: inputHeight } }}
+          sx={{ height: inputHeight }}
+          error={
+            (field === 'name' && row[field]?.length > 99) || 
+            (field === 'description' && row[field]?.length > 999) ||
+            !!fieldErrors[`${row.id}-${field}`]
+          }
+          helperText={
+            fieldErrors[`${row.id}-${field}`] || 
+            (field === 'name' ? 
+              `${row[field]?.length || 0}/99 characters${row[field]?.length > 99 ? ' (limit exceeded)' : ''}` : 
+              field === 'description' ? 
+              `${row[field]?.length || 0}/999 characters${row[field]?.length > 999 ? ' (limit exceeded)' : ''}` : 
+              '')
+          }
+          InputProps={{ 
+            sx: { 
+              height: inputHeight,
+              ...(field === 'name' && row[field]?.length > 99 && {
+                '& fieldset': { borderColor: 'error.main' },
+                '&:hover fieldset': { borderColor: 'error.main' },
+                '&.Mui-focused fieldset': { borderColor: 'error.main' },
+              }),
+              ...(field === 'description' && row[field]?.length > 999 && {
+                '& fieldset': { borderColor: 'error.main' },
+                '&:hover fieldset': { borderColor: 'error.main' },
+                '&.Mui-focused fieldset': { borderColor: 'error.main' },
+              })
+            } 
+          }}
         />
       );
     }

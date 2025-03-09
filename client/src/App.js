@@ -175,63 +175,63 @@ const App = () => {
               <Alert />
               <Layout>
                 <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              {/* Register route removed - new users must be created by admins */}
-              <Route path="/test" element={<TestPage />} />
-              
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              
-              {/* Items */}
-              <Route path="/items" element={<PrivateRoute><Items /></PrivateRoute>} />
-              <Route path="/items/create" element={<PrivateRoute><CreateItem /></PrivateRoute>} />
-              <Route path="/items/create-by-upc" element={<PrivateRoute><CreateItemByUpc /></PrivateRoute>} />
-              <Route path="/items/create-by-url" element={<PrivateRoute><CreateItemByUrl /></PrivateRoute>} />
-              <Route path="/items/edit/:id" element={<PrivateRoute><EditItem /></PrivateRoute>} />
-              <Route path="/items/:id" element={<PrivateRoute><ItemDetail /></PrivateRoute>} />
-              
-              {/* Locations */}
-              <Route path="/locations" element={<PrivateRoute><Locations /></PrivateRoute>} />
-              <Route path="/locations/create" element={<PrivateRoute><CreateLocation /></PrivateRoute>} />
-              <Route path="/locations/edit/:id" element={<PrivateRoute><EditLocation /></PrivateRoute>} />
-              <Route path="/locations/:id" element={<PrivateRoute><LocationDetail /></PrivateRoute>} />
-              
-              {/* Labels */}
-              <Route path="/labels" element={<PrivateRoute><Labels /></PrivateRoute>} />
-              <Route path="/labels/create" element={<PrivateRoute><CreateLabel /></PrivateRoute>} />
-              <Route path="/labels/edit/:id" element={<PrivateRoute><EditLabel /></PrivateRoute>} />
-              
-              {/* Categories */}
-              <Route path="/categories" element={<PrivateRoute><Categories /></PrivateRoute>} />
-              <Route path="/categories/create" element={<PrivateRoute><CreateCategory /></PrivateRoute>} />
-              <Route path="/categories/edit/:id" element={<PrivateRoute><EditCategory /></PrivateRoute>} />
-              
-              {/* Tools */}
-              <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
-              <Route path="/tools/qr-generator" element={<PrivateRoute><QRGenerator /></PrivateRoute>} />
-              <Route path="/tools/label-generator" element={<PrivateRoute><LabelGenerator /></PrivateRoute>} />
-              <Route path="/mobile-app" element={<PrivateRoute><MobileApp /></PrivateRoute>} />
-              
-              {/* User */}
-              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              <Route path="/achievements" element={<PrivateRoute><Achievements /></PrivateRoute>} />
-              
-              {/* Reminders */}
-              <Route path="/reminders" element={<PrivateRoute><Reminders /></PrivateRoute>} />
-              <Route path="/reminders/create" element={<PrivateRoute><CreateReminder /></PrivateRoute>} />
-              <Route path="/reminders/edit/:id" element={<PrivateRoute><EditReminder /></PrivateRoute>} />
-              <Route path="/reminders/:id" element={<PrivateRoute><ReminderDetail /></PrivateRoute>} />
-              
-              {/* Admin */}
-              <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-              <Route path="/admin/users/create" element={<AdminRoute><CreateUser /></AdminRoute>} />
-              <Route path="/admin/users/edit/:id" element={<AdminRoute><EditUser /></AdminRoute>} />
-              <Route path="/admin/database" element={<AdminRoute><DatabaseAdmin /></AdminRoute>} />
-              
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<Login />} />
+                  {/* Register route removed - new users must be created by admins */}
+                  <Route path="/test" element={<TestPage />} />
+                  
+                  {/* Protected Routes */}
+                  <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                  
+                  {/* Items */}
+                  <Route path="/items" element={<PrivateRoute><Items /></PrivateRoute>} />
+                  <Route path="/items/create" element={<PrivateRoute><CreateItem /></PrivateRoute>} />
+                  <Route path="/items/create-by-upc" element={<PrivateRoute><CreateItemByUpc /></PrivateRoute>} />
+                  <Route path="/items/create-by-url" element={<PrivateRoute><CreateItemByUrl /></PrivateRoute>} />
+                  <Route path="/items/edit/:id" element={<PrivateRoute><EditItem /></PrivateRoute>} />
+                  <Route path="/items/:id" element={<PrivateRoute><ItemDetail /></PrivateRoute>} />
+                  
+                  {/* Locations */}
+                  <Route path="/locations" element={<PrivateRoute><Locations /></PrivateRoute>} />
+                  <Route path="/locations/create" element={<PrivateRoute><CreateLocation /></PrivateRoute>} />
+                  <Route path="/locations/edit/:id" element={<PrivateRoute><EditLocation /></PrivateRoute>} />
+                  <Route path="/locations/:id" element={<PrivateRoute><LocationDetail /></PrivateRoute>} />
+                  
+                  {/* Labels */}
+                  <Route path="/labels" element={<PrivateRoute><Labels /></PrivateRoute>} />
+                  <Route path="/labels/create" element={<PrivateRoute><CreateLabel /></PrivateRoute>} />
+                  <Route path="/labels/edit/:id" element={<PrivateRoute><EditLabel /></PrivateRoute>} />
+                  
+                  {/* Categories */}
+                  <Route path="/categories" element={<PrivateRoute><Categories /></PrivateRoute>} />
+                  <Route path="/categories/create" element={<PrivateRoute><CreateCategory /></PrivateRoute>} />
+                  <Route path="/categories/edit/:id" element={<PrivateRoute><EditCategory /></PrivateRoute>} />
+                  
+                  {/* Tools */}
+                  <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
+                  <Route path="/tools/qr-generator" element={<PrivateRoute><QRGenerator /></PrivateRoute>} />
+                  <Route path="/tools/label-generator" element={<PrivateRoute><LabelGenerator /></PrivateRoute>} />
+                  <Route path="/mobile-app" element={<PrivateRoute><MobileApp /></PrivateRoute>} />
+                  
+                  {/* User */}
+                  <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                  <Route path="/achievements" element={<PrivateRoute><Achievements /></PrivateRoute>} />
+                  
+                  {/* Reminders */}
+                  <Route path="/reminders" element={<PrivateRoute><Reminders /></PrivateRoute>} />
+                  <Route path="/reminders/create" element={<PrivateRoute><CreateReminder /></PrivateRoute>} />
+                  <Route path="/reminders/edit/:id" element={<PrivateRoute><EditReminder /></PrivateRoute>} />
+                  <Route path="/reminders/:id" element={<PrivateRoute><ReminderDetail /></PrivateRoute>} />
+                  
+                  {/* Admin */}
+                  <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                  <Route path="/admin/users/create" element={<AdminRoute><CreateUser /></AdminRoute>} />
+                  <Route path="/admin/users/edit/:id" element={<AdminRoute><EditUser /></AdminRoute>} />
+                  <Route path="/admin/database" element={<AdminRoute><DatabaseAdmin /></AdminRoute>} />
+                  
+                  {/* 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
               </Layout>
             </MobileAppWrapper>
           </Router>

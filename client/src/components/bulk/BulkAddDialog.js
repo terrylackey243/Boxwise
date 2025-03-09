@@ -51,6 +51,7 @@ const BulkAddDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Get the singular form of the entity type for display
   const entityName = {
@@ -72,9 +73,28 @@ const BulkAddDialog = ({
 
   // Handle field change for a specific entity
   const handleFieldChange = (id, field, value) => {
+    // Update the entity with the new value
     setEntities(entities.map(entity => 
       entity.id === id ? { ...entity, [field]: value } : entity
     ));
+    
+    // Validate field length for name and description
+    if (field === 'name' && value.length > 99) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [`${id}-${field}`]: 'Name cannot exceed 99 characters'
+      }));
+    } else if (field === 'description' && value.length > 999) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [`${id}-${field}`]: 'Description cannot exceed 999 characters'
+      }));
+    } else if (fieldErrors[`${id}-${field}`]) {
+      // Clear the error if it's fixed
+      const newErrors = { ...fieldErrors };
+      delete newErrors[`${id}-${field}`];
+      setFieldErrors(newErrors);
+    }
   };
 
   // Handle form submission
@@ -82,6 +102,13 @@ const BulkAddDialog = ({
     try {
       setIsSubmitting(true);
       setError(null);
+      
+      // Check if there are any field errors
+      if (Object.keys(fieldErrors).length > 0) {
+        setError('Please fix the field errors before submitting');
+        setIsSubmitting(false);
+        return;
+      }
       
       // Filter out any entities with empty required fields
       const validEntities = entities.filter(entity => {
@@ -93,6 +120,18 @@ const BulkAddDialog = ({
       
       if (validEntities.length === 0) {
         setError('Please fill in at least one entity with all required fields');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Check for name and description length limits
+      const invalidEntities = validEntities.filter(entity => 
+        (entity.name && entity.name.length > 99) || 
+        (entity.description && entity.description.length > 999)
+      );
+      
+      if (invalidEntities.length > 0) {
+        setError('Some entities have fields that exceed character limits. Please fix them before submitting.');
         setIsSubmitting(false);
         return;
       }
@@ -239,8 +278,32 @@ const BulkAddDialog = ({
                         type={config.type || 'text'}
                         multiline={config.multiline}
                         rows={config.rows}
-                        InputProps={config.InputProps}
-                        helperText={config.helperText}
+                        InputProps={{
+                          ...config.InputProps,
+                          // Add red border for name and description fields that exceed limits
+                          sx: {
+                            ...(config.InputProps?.sx || {}),
+                            ...(field === 'name' && entity[field]?.length > 99 && {
+                              '& fieldset': { borderColor: 'error.main' },
+                              '&:hover fieldset': { borderColor: 'error.main' },
+                              '&.Mui-focused fieldset': { borderColor: 'error.main' },
+                            }),
+                            ...(field === 'description' && entity[field]?.length > 999 && {
+                              '& fieldset': { borderColor: 'error.main' },
+                              '&:hover fieldset': { borderColor: 'error.main' },
+                              '&.Mui-focused fieldset': { borderColor: 'error.main' },
+                            })
+                          }
+                        }}
+                        error={!!fieldErrors[`${entity.id}-${field}`]}
+                        helperText={
+                          fieldErrors[`${entity.id}-${field}`] || 
+                          (field === 'name' ? 
+                            `${entity[field]?.length || 0}/99 characters${entity[field]?.length > 99 ? ' (limit exceeded)' : ''}` : 
+                            field === 'description' ? 
+                            `${entity[field]?.length || 0}/999 characters${entity[field]?.length > 999 ? ' (limit exceeded)' : ''}` : 
+                            config.helperText)
+                        }
                       />
                     )}
                   </React.Fragment>
