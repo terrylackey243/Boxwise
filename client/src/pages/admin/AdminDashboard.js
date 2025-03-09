@@ -675,11 +675,21 @@ const AdminDashboard = () => {
                           }
                           secondary={
                             <Typography variant="body2" component="div">
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <EmailIcon fontSize="small" sx={{ mr: 0.5, fontSize: 16 }} />
                                 {user.email}
                                 <Box component="span" sx={{ mx: 1 }}>•</Box>
                                 Joined {new Date(user.createdAt).toLocaleDateString()}
+                              </Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                                <GroupIcon fontSize="small" sx={{ mr: 0.5, fontSize: 16 }} />
+                                <Typography variant="body2" component="span">
+                                  Group: {(() => {
+                                    // Find the group name if available
+                                    const group = stats?.groups?.find(g => g._id === user.group);
+                                    return group ? group.name : user.group;
+                                  })()}
+                                </Typography>
                               </Box>
                             </Typography>
                           }

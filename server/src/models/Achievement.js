@@ -18,13 +18,13 @@ const AchievementSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['item_count', 'location_count', 'label_count', 'login_streak', 'custom'],
+    enum: ['item_count', 'location_count', 'label_count', 'login_streak', 'group_item_count', 'group_member_count', 'group_activity', 'custom'],
     required: true
   },
   threshold: {
     type: Number,
     required: function() {
-      return ['item_count', 'location_count', 'label_count', 'login_streak'].includes(this.type);
+      return ['item_count', 'location_count', 'label_count', 'login_streak', 'group_item_count', 'group_member_count', 'group_activity'].includes(this.type);
     }
   },
   points: {

@@ -5,6 +5,27 @@ const Label = require('../models/Label');
 const Item = require('../models/Item');
 const achievementService = require('../services/achievementService');
 
+// @route   GET api/labels/count
+// @desc    Get count of labels
+// @access  Private
+router.get('/count', protect, async (req, res) => {
+  try {
+    // Count labels for the user's group
+    const count = await Label.countDocuments({ group: req.user.group });
+    
+    res.status(200).json({
+      success: true,
+      count
+    });
+  } catch (err) {
+    console.error('Error counting labels:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error counting labels'
+    });
+  }
+});
+
 // @route   GET api/labels
 // @desc    Get all labels
 // @access  Private

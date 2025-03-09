@@ -5,6 +5,27 @@ const Location = require('../models/Location');
 const Item = require('../models/Item');
 const achievementService = require('../services/achievementService');
 
+// @route   GET api/locations/count
+// @desc    Get count of locations
+// @access  Private
+router.get('/count', protect, async (req, res) => {
+  try {
+    // Count locations for the user's group
+    const count = await Location.countDocuments({ group: req.user.group });
+    
+    res.status(200).json({
+      success: true,
+      count
+    });
+  } catch (err) {
+    console.error('Error counting locations:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error counting locations'
+    });
+  }
+});
+
 // @route   GET api/locations
 // @desc    Get all locations
 // @access  Private

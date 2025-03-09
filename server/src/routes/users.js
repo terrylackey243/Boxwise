@@ -8,13 +8,20 @@ const User = require('../models/User');
 // @access  Private/Admin
 router.get('/', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
-    // Get user's group ID from the authenticated user
-    const groupId = req.user.group;
+    let users;
     
-    // Find all users in the same group
-    const users = await User.find({ group: groupId })
-      .select('-password')
-      .sort({ createdAt: -1 });
+    // If user is owner, return all users
+    if (req.user.role === 'owner') {
+      users = await User.find()
+        .select('-password')
+        .sort({ createdAt: -1 });
+    } else {
+      // For admins, return users in the same group
+      const groupId = req.user.group;
+      users = await User.find({ group: groupId })
+        .select('-password')
+        .sort({ createdAt: -1 });
+    }
     
     res.status(200).json({
       success: true,
@@ -35,14 +42,19 @@ router.get('/', protect, authorize('admin', 'owner'), async (req, res) => {
 // @access  Private/Admin
 router.get('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
-    // Get user's group ID from the authenticated user
-    const groupId = req.user.group;
+    let user;
     
-    // Find user by ID and ensure they're in the same group
-    const user = await User.findOne({ 
-      _id: req.params.id,
-      group: groupId
-    }).select('-password');
+    // If user is owner, allow access to any user
+    if (req.user.role === 'owner') {
+      user = await User.findById(req.params.id).select('-password');
+    } else {
+      // For admins, only allow access to users in the same group
+      const groupId = req.user.group;
+      user = await User.findOne({ 
+        _id: req.params.id,
+        group: groupId
+      }).select('-password');
+    }
     
     if (!user) {
       return res.status(404).json({
@@ -69,7 +81,7 @@ router.get('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
 // @access  Private/Admin
 router.post('/', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
-    const { name, email, password, role, subscription } = req.body;
+    const { name, email, password, role, subscription, group, createNewGroup, newGroupName } = req.body;
     
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -80,8 +92,34 @@ router.post('/', protect, authorize('admin', 'owner'), async (req, res) => {
       });
     }
     
-    // Get user's group ID from the authenticated user
-    const groupId = req.user.group;
+    let groupId;
+    
+    // Handle group assignment for owner
+    if (req.user.role === 'owner') {
+      if (createNewGroup && newGroupName) {
+        // Create a new group for the user
+        const Group = require('../models/Group');
+        const newGroup = await Group.create({
+          name: newGroupName,
+          description: `Group for ${name}`,
+          owner: req.user._id,
+          subscription: {
+            plan: 'free',
+            maxMembers: 1
+          }
+        });
+        groupId = newGroup._id;
+      } else if (group) {
+        // Use the specified group
+        groupId = group;
+      } else {
+        // Default to the owner's group
+        groupId = req.user.group;
+      }
+    } else {
+      // For admins, use their own group
+      groupId = req.user.group;
+    }
     
     // Create new user
     const newUser = new User({
@@ -99,6 +137,12 @@ router.post('/', protect, authorize('admin', 'owner'), async (req, res) => {
     // Save user to database
     await newUser.save();
     
+    // If a new group was created and the user is assigned as owner of that group
+    if (createNewGroup && role === 'owner') {
+      const Group = require('../models/Group');
+      await Group.findByIdAndUpdate(groupId, { owner: newUser._id });
+    }
+    
     res.status(201).json({
       success: true,
       message: 'User created successfully',
@@ -106,7 +150,8 @@ router.post('/', protect, authorize('admin', 'owner'), async (req, res) => {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        role: newUser.role,
+        group: newUser.group
       }
     });
   } catch (err) {
@@ -123,16 +168,21 @@ router.post('/', protect, authorize('admin', 'owner'), async (req, res) => {
 // @access  Private/Admin
 router.put('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
-    const { name, email, role, subscription, preferences } = req.body;
+    const { name, email, role, subscription, preferences, group, createNewGroup, newGroupName } = req.body;
     
-    // Get user's group ID from the authenticated user
-    const groupId = req.user.group;
+    let user;
     
-    // Find user by ID and ensure they're in the same group
-    const user = await User.findOne({ 
-      _id: req.params.id,
-      group: groupId
-    });
+    // If user is owner, allow updating any user
+    if (req.user.role === 'owner') {
+      user = await User.findById(req.params.id);
+    } else {
+      // For admins, only allow updating users in the same group
+      const groupId = req.user.group;
+      user = await User.findOne({ 
+        _id: req.params.id,
+        group: groupId
+      });
+    }
     
     if (!user) {
       return res.status(404).json({
@@ -155,9 +205,32 @@ router.put('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
     if (role) user.role = role;
     if (preferences) user.preferences = { ...user.preferences, ...preferences };
     
+    // Handle group assignment for owner
+    if (req.user.role === 'owner') {
+      if (createNewGroup && newGroupName) {
+        // Create a new group for the user
+        const Group = require('../models/Group');
+        const newGroup = await Group.create({
+          name: newGroupName,
+          description: `Group for ${user.name}`,
+          owner: req.user._id,
+          subscription: {
+            plan: 'free',
+            maxMembers: 1
+          }
+        });
+        user.group = newGroup._id;
+      } else if (group) {
+        // Use the specified group
+        user.group = group;
+      }
+    }
+    
     // If subscription info was provided, update the group's subscription
     if (subscription && req.user.role === 'owner') {
       const Subscription = require('../models/Subscription');
+      const groupId = user.group; // Use the user's group (which may have been updated)
+      
       let groupSubscription = await Subscription.findOne({ group: groupId });
       
       if (!groupSubscription) {
@@ -189,6 +262,7 @@ router.put('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        group: user.group,
         preferences: user.preferences
       }
     });
@@ -206,14 +280,19 @@ router.put('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
 // @access  Private/Admin
 router.delete('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
-    // Get user's group ID from the authenticated user
-    const groupId = req.user.group;
+    let user;
     
-    // Find user by ID and ensure they're in the same group
-    const user = await User.findOne({ 
-      _id: req.params.id,
-      group: groupId
-    });
+    // If user is owner, allow deleting any user
+    if (req.user.role === 'owner') {
+      user = await User.findById(req.params.id);
+    } else {
+      // For admins, only allow deleting users in the same group
+      const groupId = req.user.group;
+      user = await User.findOne({ 
+        _id: req.params.id,
+        group: groupId
+      });
+    }
     
     if (!user) {
       return res.status(404).json({

@@ -20,7 +20,10 @@ import {
   Link,
   Alert,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Autocomplete
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -47,8 +50,15 @@ const EditUser = () => {
     subscriptionStatus: 'active',
     resetPassword: false,
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    groupOption: 'current', // 'current', 'new', or 'existing'
+    newGroupName: '',
+    selectedGroup: ''
   });
+  
+  // State for available groups
+  const [groups, setGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   
   const [errors, setErrors] = useState({});
   
@@ -58,6 +68,29 @@ const EditUser = () => {
   const canEditAdmin = user && user.role === 'owner';
   // Check if editing self
   const isEditingSelf = user && user._id === id;
+
+  // Fetch groups if user is owner
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (user && user.role === 'owner') {
+        setLoadingGroups(true);
+        try {
+          const response = await axios.get('/api/groups');
+          if (response.data.success) {
+            setGroups(response.data.data);
+          } else {
+            console.error('Error fetching groups:', response.data.message);
+          }
+        } catch (err) {
+          console.error('Error fetching groups:', err);
+        } finally {
+          setLoadingGroups(false);
+        }
+      }
+    };
+    
+    fetchGroups();
+  }, [user]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -77,11 +110,14 @@ const EditUser = () => {
             name: userData.name,
             email: userData.email,
             role: userData.role,
-            subscriptionPlan: userData.subscription.plan,
-            subscriptionStatus: userData.subscription.status,
+            subscriptionPlan: userData.subscription?.plan || 'free',
+            subscriptionStatus: userData.subscription?.status || 'active',
             resetPassword: false,
             newPassword: '',
-            confirmPassword: ''
+            confirmPassword: '',
+            groupOption: 'current',
+            newGroupName: '',
+            selectedGroup: userData.group || ''
           });
         } else {
           setErrorAlert('Error loading user data: ' + response.data.message);
@@ -161,6 +197,15 @@ const EditUser = () => {
       newErrors.role = 'Owner role cannot be assigned manually';
     }
     
+    // Group validation
+    if (canEditAdmin) {
+      if (formData.groupOption === 'new' && !formData.newGroupName.trim()) {
+        newErrors.newGroupName = 'Group name is required';
+      } else if (formData.groupOption === 'existing' && !formData.selectedGroup) {
+        newErrors.selectedGroup = 'Please select a group';
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -186,9 +231,22 @@ const EditUser = () => {
         }
       };
       
+      // Log the update data for debugging
+      console.log('Updating user with data:', updateData);
+      
       // Add password if resetting
       if (formData.resetPassword) {
         updateData.password = formData.newPassword;
+      }
+      
+      // Add group information if user is owner
+      if (canEditAdmin) {
+        if (formData.groupOption === 'new') {
+          updateData.createNewGroup = true;
+          updateData.newGroupName = formData.newGroupName;
+        } else if (formData.groupOption === 'existing') {
+          updateData.group = formData.selectedGroup;
+        }
       }
       
       // Make API call to update user
@@ -404,6 +462,110 @@ const EditUser = () => {
                 </Grid>
               </Grid>
             </Paper>
+            
+            {/* Group Assignment (Only for owners) */}
+            {canEditAdmin && (
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Group Assignment
+                </Typography>
+                
+                <FormControl component="fieldset" sx={{ mb: 2 }}>
+                  <RadioGroup
+                    name="groupOption"
+                    value={formData.groupOption}
+                    onChange={handleChange}
+                  >
+                    <FormControlLabel 
+                      value="current" 
+                      control={<Radio />} 
+                      label="Keep in current group" 
+                    />
+                    <FormControlLabel 
+                      value="new" 
+                      control={<Radio />} 
+                      label="Create a new group for this user" 
+                    />
+                    <FormControlLabel 
+                      value="existing" 
+                      control={<Radio />} 
+                      label="Assign to a different group" 
+                    />
+                  </RadioGroup>
+                </FormControl>
+                
+                {formData.groupOption === 'new' && (
+                  <TextField
+                    fullWidth
+                    label="New Group Name"
+                    name="newGroupName"
+                    value={formData.newGroupName}
+                    onChange={handleChange}
+                    error={!!errors.newGroupName}
+                    helperText={errors.newGroupName}
+                    sx={{ mb: 2 }}
+                  />
+                )}
+                
+                {formData.groupOption === 'existing' && (
+                  <Box>
+                    <Autocomplete
+                      options={groups}
+                      getOptionLabel={(option) => option.name}
+                      value={formData.selectedGroup ? groups.find(g => g._id === formData.selectedGroup) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          selectedGroup: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.selectedGroup) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            selectedGroup: null
+                          }));
+                        }
+                      }}
+                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Group"
+                          error={!!errors.selectedGroup}
+                          helperText={errors.selectedGroup}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {loadingGroups ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      disabled={loadingGroups}
+                      loading={loadingGroups}
+                      loadingText="Loading groups..."
+                      noOptionsText="No groups found"
+                      fullWidth
+                    />
+                  </Box>
+                )}
+                
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Group Assignment:</strong>
+                  </Typography>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>Users in the same group can see and manage each other's data.</li>
+                    <li>Each group has its own subscription plan and limits.</li>
+                    <li>Moving a user to a different group will restrict their access to data from their previous group.</li>
+                  </ul>
+                </Alert>
+              </Paper>
+            )}
             
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>

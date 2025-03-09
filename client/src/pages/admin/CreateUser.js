@@ -1,6 +1,7 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link as RouterLink, Navigate } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
+import Fuse from 'fuse.js';
 import {
   Container,
   Grid,
@@ -18,11 +19,17 @@ import {
   CircularProgress,
   Breadcrumbs,
   Link,
-  Alert
+  Alert,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  InputAdornment,
+  Autocomplete
 } from '@mui/material';
 import {
   Save as SaveIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { AlertContext } from '../../context/AlertContext';
@@ -40,8 +47,17 @@ const CreateUser = () => {
     password: '',
     confirmPassword: '',
     role: 'user',
-    subscriptionPlan: 'free'
+    subscriptionPlan: 'free',
+    groupOption: 'current', // 'current', 'new', or 'existing'
+    newGroupName: '',
+    selectedGroup: ''
   });
+  
+  // State for available groups
+  const [groups, setGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [searchGroupTerm, setSearchGroupTerm] = useState('');
+  const [filteredGroups, setFilteredGroups] = useState([]);
   
   const [errors, setErrors] = useState({});
   
@@ -49,6 +65,54 @@ const CreateUser = () => {
   const isAdminOrOwner = user && (user.role === 'admin' || user.role === 'owner');
   // Only owner can create admin users
   const canCreateAdmin = user && user.role === 'owner';
+
+  // Fetch groups if user is owner
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (user && user.role === 'owner') {
+        setLoadingGroups(true);
+        try {
+          const response = await axios.get('/api/groups');
+          if (response.data.success) {
+            setGroups(response.data.data);
+            setFilteredGroups(response.data.data);
+          } else {
+            console.error('Error fetching groups:', response.data.message);
+          }
+        } catch (err) {
+          console.error('Error fetching groups:', err);
+        } finally {
+          setLoadingGroups(false);
+        }
+      }
+    };
+    
+    fetchGroups();
+  }, [user]);
+
+  // Filter groups based on search term
+  useEffect(() => {
+    if (groups.length > 0) {
+      if (searchGroupTerm.trim() === '') {
+        setFilteredGroups(groups);
+      } else {
+        // Configure Fuse.js options
+        const fuseOptions = {
+          keys: ['name', 'description'],
+          threshold: 0.4, // Lower threshold means more strict matching
+          includeScore: true
+        };
+        
+        // Create a Fuse instance
+        const fuse = new Fuse(groups, fuseOptions);
+        const results = fuse.search(searchGroupTerm);
+        
+        // Extract the matched items
+        const matchedGroups = results.map(result => result.item);
+        setFilteredGroups(matchedGroups);
+      }
+    }
+  }, [groups, searchGroupTerm]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,6 +129,10 @@ const CreateUser = () => {
         [name]: null
       }));
     }
+  };
+
+  const handleSearchGroupChange = (e) => {
+    setSearchGroupTerm(e.target.value);
   };
 
   const validateForm = () => {
@@ -101,6 +169,15 @@ const CreateUser = () => {
       newErrors.role = 'Owner role cannot be assigned manually';
     }
     
+    // Group validation
+    if (canCreateAdmin) {
+      if (formData.groupOption === 'new' && !formData.newGroupName.trim()) {
+        newErrors.newGroupName = 'Group name is required';
+      } else if (formData.groupOption === 'existing' && !formData.selectedGroup) {
+        newErrors.selectedGroup = 'Please select a group';
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -126,6 +203,16 @@ const CreateUser = () => {
           status: 'active'
         }
       };
+      
+      // Add group information if user is owner
+      if (canCreateAdmin) {
+        if (formData.groupOption === 'new') {
+          userData.createNewGroup = true;
+          userData.newGroupName = formData.newGroupName;
+        } else if (formData.groupOption === 'existing') {
+          userData.group = formData.selectedGroup;
+        }
+      }
       
       // Make API call to create user
       const response = await axios.post('/api/users', userData);
@@ -245,7 +332,7 @@ const CreateUser = () => {
               </Grid>
             </Paper>
             
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Role & Subscription
               </Typography>
@@ -303,6 +390,110 @@ const CreateUser = () => {
                 </Grid>
               </Grid>
             </Paper>
+            
+            {/* Group Assignment (Only for owners) */}
+            {canCreateAdmin && (
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Group Assignment
+                </Typography>
+                
+                <FormControl component="fieldset" sx={{ mb: 2 }}>
+                  <RadioGroup
+                    name="groupOption"
+                    value={formData.groupOption}
+                    onChange={handleChange}
+                  >
+                    <FormControlLabel 
+                      value="current" 
+                      control={<Radio />} 
+                      label="Add to your current group" 
+                    />
+                    <FormControlLabel 
+                      value="new" 
+                      control={<Radio />} 
+                      label="Create a new group for this user" 
+                    />
+                    <FormControlLabel 
+                      value="existing" 
+                      control={<Radio />} 
+                      label="Assign to an existing group" 
+                    />
+                  </RadioGroup>
+                </FormControl>
+                
+                {formData.groupOption === 'new' && (
+                  <TextField
+                    fullWidth
+                    label="New Group Name"
+                    name="newGroupName"
+                    value={formData.newGroupName}
+                    onChange={handleChange}
+                    error={!!errors.newGroupName}
+                    helperText={errors.newGroupName}
+                    sx={{ mb: 2 }}
+                  />
+                )}
+                
+                {formData.groupOption === 'existing' && (
+                  <Box>
+                    <Autocomplete
+                      options={groups}
+                      getOptionLabel={(option) => option.name}
+                      value={formData.selectedGroup ? groups.find(g => g._id === formData.selectedGroup) || null : null}
+                      onChange={(event, newValue) => {
+                        setFormData(prevData => ({
+                          ...prevData,
+                          selectedGroup: newValue ? newValue._id : ''
+                        }));
+                        
+                        // Clear error for this field if it exists
+                        if (errors.selectedGroup) {
+                          setErrors(prevErrors => ({
+                            ...prevErrors,
+                            selectedGroup: null
+                          }));
+                        }
+                      }}
+                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Group"
+                          error={!!errors.selectedGroup}
+                          helperText={errors.selectedGroup}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {loadingGroups ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      disabled={loadingGroups}
+                      loading={loadingGroups}
+                      loadingText="Loading groups..."
+                      noOptionsText="No groups found"
+                      fullWidth
+                    />
+                  </Box>
+                )}
+                
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Group Assignment:</strong>
+                  </Typography>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>Users in the same group can see and manage each other's data.</li>
+                    <li>Each group has its own subscription plan and limits.</li>
+                    <li>As an owner, you can create and manage multiple groups.</li>
+                  </ul>
+                </Alert>
+              </Paper>
+            )}
           </Grid>
           
           {/* Sidebar */}
@@ -339,9 +530,11 @@ const CreateUser = () => {
                 Required fields are marked with an asterisk (*).
               </Typography>
               
-              <Typography variant="body2" color="text.secondary">
-                New users will be added to your group automatically.
-              </Typography>
+              {!canCreateAdmin && (
+                <Typography variant="body2" color="text.secondary">
+                  New users will be added to your group automatically.
+                </Typography>
+              )}
             </Paper>
           </Grid>
         </Grid>

@@ -5,6 +5,27 @@ const Category = require('../models/Category');
 const Item = require('../models/Item');
 const achievementService = require('../services/achievementService');
 
+// @route   GET api/categories/count
+// @desc    Get count of categories
+// @access  Private
+router.get('/count', protect, async (req, res) => {
+  try {
+    // Count categories for the user's group
+    const count = await Category.countDocuments({ group: req.user.group });
+    
+    res.status(200).json({
+      success: true,
+      count
+    });
+  } catch (err) {
+    console.error('Error counting categories:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error counting categories'
+    });
+  }
+});
+
 // @route   GET api/categories
 // @desc    Get all categories
 // @access  Private

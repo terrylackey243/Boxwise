@@ -133,6 +133,9 @@ exports.getStats = asyncHandler(async (req, res, next) => {
     // Get subscriptions
     const subscriptions = await db.collection('subscriptions').find().toArray();
     
+    // Get groups
+    const groups = await db.collection('groups').find().toArray();
+    
     res.status(200).json({
       success: true,
       data: {
@@ -146,6 +149,7 @@ exports.getStats = asyncHandler(async (req, res, next) => {
         totalCategories,
         recentActivity,
         subscriptions,
+        groups,
       },
     });
   } catch (error) {

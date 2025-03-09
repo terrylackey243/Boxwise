@@ -28,7 +28,9 @@ import {
   Security as SecurityIcon,
   CloudUpload as CloudUploadIcon,
   Add as AddIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  EmojiEvents as TrophyIcon,
+  Group as GroupIcon
 } from '@mui/icons-material';
 import { Link } from '@mui/material';
 
@@ -301,9 +303,16 @@ const LandingPage = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
             <FeatureCard
-              icon={<CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main' }} />}
-              title="Import & Export"
-              description="Easily import and export your inventory data. Bulk add items using spreadsheets or CSV files."
+              icon={<TrophyIcon sx={{ fontSize: 48, color: 'primary.main' }} />}
+              title="Achievements & Gamification"
+              description="Earn achievements as you organize your inventory. Track personal and group progress with levels, points, and unlockable rewards."
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FeatureCard
+              icon={<GroupIcon sx={{ fontSize: 48, color: 'primary.main' }} />}
+              title="Group Collaboration"
+              description="Work together with family members or teammates. Share inventory, track group achievements, and manage items collectively."
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
@@ -627,6 +636,9 @@ const LandingPage = () => {
                   <li>Mobile Support</li>
                   <li>Location Tracking</li>
                   <li>Categories & Labels</li>
+                  <li>Achievements & Gamification</li>
+                  <li>Group Collaboration</li>
+                  <li>Reports & Analytics</li>
                 </ul>
               </Typography>
             </Grid>
@@ -639,6 +651,7 @@ const LandingPage = () => {
                   <li><Link component={RouterLink} to="/login" color="inherit">Login</Link></li>
                   <li><Link component={RouterLink} to="/mobile-app" color="inherit">Mobile App</Link></li>
                   <li><Link component={RouterLink} to="/dashboard" color="inherit">Dashboard</Link></li>
+                  <li><Link component={RouterLink} to="/achievements" color="inherit">Achievements</Link></li>
                 </ul>
               </Typography>
             </Grid>

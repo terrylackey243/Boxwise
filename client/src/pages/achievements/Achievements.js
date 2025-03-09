@@ -14,7 +14,9 @@ import {
   Avatar,
   Tooltip,
   Button,
-  CircularProgress
+  CircularProgress,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   EmojiEvents as TrophyIcon,
@@ -24,7 +26,10 @@ import {
   Category as CategoryIcon,
   CalendarMonth as CalendarIcon,
   Star as StarIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Group as GroupIcon,
+  People as PeopleIcon,
+  Insights as InsightsIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { AlertContext } from '../../context/AlertContext';
@@ -34,11 +39,23 @@ const Achievements = () => {
   const { setErrorAlert } = useContext(AlertContext);
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tabValue, setTabValue] = useState(0); // 0: All, 1: Personal, 2: Group
   const [stats, setStats] = useState({
     totalPoints: 0,
     completedAchievements: 0,
     level: 1
   });
+  
+  const [groupStats, setGroupStats] = useState({
+    totalPoints: 0,
+    completedAchievements: 0,
+    level: 1
+  });
+  
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   const fetchAchievements = useCallback(async () => {
     try {
@@ -73,6 +90,15 @@ const Achievements = () => {
             case 'login_streak':
               icon = <CalendarIcon />;
               break;
+            case 'group_item_count':
+              icon = <GroupIcon />;
+              break;
+            case 'group_member_count':
+              icon = <PeopleIcon />;
+              break;
+            case 'group_activity':
+              icon = <InsightsIcon />;
+              break;
             default:
               icon = <StarIcon />;
           }
@@ -83,11 +109,27 @@ const Achievements = () => {
           };
         });
         
+        // Calculate group stats
+        const groupAchievements = achievementsWithIcons.filter(a => 
+          a.type.startsWith('group_')
+        );
+        const completedGroupAchievements = groupAchievements.filter(a => a.completed);
+        const groupPoints = completedGroupAchievements.reduce((sum, a) => sum + a.points, 0);
+        const groupLevel = Math.floor(groupPoints / 100) + 1;
+        
+        const groupStatsData = {
+          totalPoints: groupPoints,
+          completedAchievements: completedGroupAchievements.length,
+          level: groupLevel
+        };
+        
         // Update state with new data
         setAchievements(achievementsWithIcons);
         setStats(stats);
+        setGroupStats(groupStatsData);
         console.log('Updated achievements state:', achievementsWithIcons);
         console.log('Updated stats state:', stats);
+        console.log('Updated group stats state:', groupStatsData);
       } else {
         setErrorAlert('Error loading achievements');
       }
@@ -127,7 +169,7 @@ const Achievements = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Stats Overview */}
+      {/* Individual Stats Overview */}
       <Paper
         sx={{
           p: 3,
@@ -157,10 +199,10 @@ const Achievements = () => {
               Level {stats.level}
             </Typography>
             <Typography variant="body1">
-              {stats.completedAchievements} achievements completed
+              {stats.completedAchievements} personal achievements completed
             </Typography>
             <Typography variant="body1">
-              {stats.totalPoints} total points earned
+              {stats.totalPoints} personal points earned
             </Typography>
           </Box>
         </Box>
@@ -192,6 +234,71 @@ const Achievements = () => {
         </Box>
       </Paper>
 
+      {/* Group Stats Overview */}
+      <Paper
+        sx={{
+          p: 3,
+          mb: 4,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderRadius: 2,
+          background: 'linear-gradient(45deg, #2B6CB0 30%, #4299E1 90%)',
+          color: 'white',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              bgcolor: 'rgba(255, 255, 255, 0.2)',
+              mr: 3
+            }}
+          >
+            <GroupIcon sx={{ fontSize: 40 }} />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Group Level {groupStats.level}
+            </Typography>
+            <Typography variant="body1">
+              {groupStats.completedAchievements} group achievements completed
+            </Typography>
+            <Typography variant="body1">
+              {groupStats.totalPoints} group points earned
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Box sx={{ mt: { xs: 3, md: 0 }, width: { xs: '100%', md: '40%' } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="body2">
+              Level {groupStats.level}
+            </Typography>
+            <Typography variant="body2">
+              Level {groupStats.level + 1}
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={(groupStats.totalPoints % 100)}
+            sx={{
+              height: 10,
+              borderRadius: 5,
+              bgcolor: 'rgba(255, 255, 255, 0.2)',
+              '& .MuiLinearProgress-bar': {
+                bgcolor: 'white'
+              }
+            }}
+          />
+          <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+            {groupStats.totalPoints % 100} / 100 points to next group level
+          </Typography>
+        </Box>
+      </Paper>
+
       {/* Achievements Grid */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" component="h2">
@@ -206,10 +313,48 @@ const Achievements = () => {
           Refresh
         </Button>
       </Box>
-      <Divider sx={{ mb: 3 }} />
+      
+      {/* Achievement Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange} 
+          aria-label="achievement tabs"
+          centered
+        >
+          <Tab label="All Achievements" />
+          <Tab label="Personal Achievements" />
+          <Tab label="Group Achievements" />
+        </Tabs>
+      </Box>
       
       <Grid container spacing={3}>
-        {achievements.map((achievement) => (
+        {loading ? (
+          <Grid item xs={12} sx={{ textAlign: 'center', py: 5 }}>
+            <CircularProgress />
+          </Grid>
+        ) : achievements
+          .filter(achievement => {
+            if (tabValue === 0) return true; // All achievements
+            if (tabValue === 1) return !achievement.type.startsWith('group_'); // Personal achievements
+            if (tabValue === 2) return achievement.type.startsWith('group_'); // Group achievements
+            return true;
+          }).length === 0 ? (
+          <Grid item xs={12} sx={{ textAlign: 'center', py: 5 }}>
+            <Typography variant="h6" color="text.secondary">
+              {tabValue === 0 && "No achievements found"}
+              {tabValue === 1 && "No personal achievements found"}
+              {tabValue === 2 && "No group achievements found"}
+            </Typography>
+          </Grid>
+        ) : achievements
+          .filter(achievement => {
+            if (tabValue === 0) return true; // All achievements
+            if (tabValue === 1) return !achievement.type.startsWith('group_'); // Personal achievements
+            if (tabValue === 2) return achievement.type.startsWith('group_'); // Group achievements
+            return true;
+          })
+          .map((achievement) => (
           <Grid item xs={12} sm={6} md={4} key={achievement.id}>
             <Card
               sx={{
@@ -251,7 +396,8 @@ const Achievements = () => {
                   display: 'flex',
                   alignItems: 'center',
                   bgcolor: achievement.color,
-                  color: 'white'
+                  color: 'white',
+                  position: 'relative'
                 }}
               >
                 <Avatar
@@ -262,9 +408,24 @@ const Achievements = () => {
                 >
                   {achievement.icon}
                 </Avatar>
-                <Typography variant="h6" component="h3">
+                <Typography variant="h6" component="h3" sx={{ pr: 4 }}>
                   {achievement.name}
                 </Typography>
+                
+                {/* Badge to indicate personal or group achievement */}
+                <Chip
+                  label={achievement.type.startsWith('group_') ? 'Group' : 'Personal'}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    color: 'white',
+                    fontSize: '0.7rem',
+                    height: 20
+                  }}
+                />
               </Box>
               
               <CardContent sx={{ flexGrow: 1 }}>

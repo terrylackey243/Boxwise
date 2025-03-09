@@ -1,5 +1,6 @@
-import React, { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import axios from '../utils/axiosConfig';
 import {
   Container,
   Grid,
@@ -27,9 +28,42 @@ import {
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 
-// Simplified Dashboard component that doesn't rely on API calls
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const [counts, setCounts] = useState({
+    items: 0,
+    locations: 0,
+    labels: 0,
+    categories: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        setLoading(true);
+        const [itemsRes, locationsRes, labelsRes, categoriesRes] = await Promise.all([
+          axios.get('/api/items/count'),
+          axios.get('/api/locations/count'),
+          axios.get('/api/labels/count'),
+          axios.get('/api/categories/count')
+        ]);
+
+        setCounts({
+          items: itemsRes.data.count || 0,
+          locations: locationsRes.data.count || 0,
+          labels: labelsRes.data.count || 0,
+          categories: categoriesRes.data.count || 0
+        });
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -90,9 +124,14 @@ const Dashboard = () => {
                 <Avatar sx={{ bgcolor: 'primary.main', mr: 1 }}>
                   <InventoryIcon />
                 </Avatar>
-                <Typography variant="h6" component="div">
-                  Items
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="h6" component="div">
+                    Items
+                  </Typography>
+                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                    {loading ? '...' : counts.items}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Manage your inventory items
@@ -111,9 +150,14 @@ const Dashboard = () => {
                 <Avatar sx={{ bgcolor: 'primary.main', mr: 1 }}>
                   <LocationIcon />
                 </Avatar>
-                <Typography variant="h6" component="div">
-                  Locations
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="h6" component="div">
+                    Locations
+                  </Typography>
+                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                    {loading ? '...' : counts.locations}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Organize items by location
@@ -132,9 +176,14 @@ const Dashboard = () => {
                 <Avatar sx={{ bgcolor: 'primary.main', mr: 1 }}>
                   <LabelIcon />
                 </Avatar>
-                <Typography variant="h6" component="div">
-                  Labels
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="h6" component="div">
+                    Labels
+                  </Typography>
+                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                    {loading ? '...' : counts.labels}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Categorize with custom labels
@@ -153,9 +202,14 @@ const Dashboard = () => {
                 <Avatar sx={{ bgcolor: 'primary.main', mr: 1 }}>
                   <CategoryIcon />
                 </Avatar>
-                <Typography variant="h6" component="div">
-                  Categories
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="h6" component="div">
+                    Categories
+                  </Typography>
+                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                    {loading ? '...' : counts.categories}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Manage item categories
