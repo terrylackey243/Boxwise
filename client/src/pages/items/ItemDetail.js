@@ -319,24 +319,43 @@ const ItemDetail = () => {
 
   const handleDuplicateItem = async () => {
     try {
-      // Create a copy of the item without the _id field
-      const itemCopy = { ...item };
+      // Create a controlled copy with only the necessary fields
+      const itemCopy = {
+        name: `${item.name} (Copy)`,
+        description: item.description,
+        location: item.location._id,
+        category: item.category._id,
+        labels: item.labels.map(label => label._id),
+        assetId: item.assetId ? `${item.assetId}-copy` : '',
+        quantity: item.quantity,
+        serialNumber: item.serialNumber,
+        modelNumber: item.modelNumber,
+        manufacturer: item.manufacturer,
+        notes: item.notes,
+        isInsured: item.isInsured,
+        isArchived: false,
+        upcCode: item.upcCode,
+        itemUrl: item.itemUrl,
+        manualUrl: item.manualUrl,
+        customFields: item.customFields ? [...item.customFields] : []
+      };
       
-      // Remove fields that should not be duplicated
-      delete itemCopy._id;
-      delete itemCopy.createdAt;
-      delete itemCopy.updatedAt;
-      delete itemCopy.__v;
+      // Add purchase details if they exist
+      if (item.purchaseDetails) {
+        itemCopy.purchaseDetails = {
+          purchasedFrom: item.purchaseDetails.purchasedFrom,
+          purchasePrice: item.purchaseDetails.purchasePrice,
+          purchaseDate: item.purchaseDetails.purchaseDate
+        };
+      }
       
-      // Modify the name to indicate it's a copy
-      itemCopy.name = `${itemCopy.name} (Copy)`;
-      
-      // Reset loan details if any
-      if (itemCopy.loanDetails) {
-        itemCopy.loanDetails.isLoaned = false;
-        delete itemCopy.loanDetails.loanedTo;
-        delete itemCopy.loanDetails.loanDate;
-        delete itemCopy.loanDetails.notes;
+      // Add warranty details if they exist
+      if (item.warrantyDetails) {
+        itemCopy.warrantyDetails = {
+          hasLifetimeWarranty: item.warrantyDetails.hasLifetimeWarranty,
+          warrantyExpires: item.warrantyDetails.warrantyExpires,
+          warrantyNotes: item.warrantyDetails.warrantyNotes
+        };
       }
       
       // Make API call to create a new item with the copied data
