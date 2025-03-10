@@ -455,36 +455,47 @@ const EditItem = () => {
     setSubmitting(true);
     
     try {
-      // Prepare data for submission - include both nested and non-nested purchase details
-      // This ensures compatibility with both the database model and the frontend display
+      // Prepare data for submission - only include the structure expected by the database model
       const submissionData = {
-        ...formData,
-        // Include non-nested purchase details for frontend display
-        purchasedFrom: formData.purchasedFrom,
-        purchasePrice: formData.purchasePrice,
-        purchaseDate: formData.purchaseDate,
-        // Include nested purchase details for database model
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+        category: formData.category,
+        labels: formData.labels,
+        quantity: formData.quantity,
+        serialNumber: formData.serialNumber,
+        modelNumber: formData.modelNumber,
+        manufacturer: formData.manufacturer,
+        notes: formData.notes,
+        isInsured: formData.isInsured,
+        isArchived: formData.isArchived,
+        upcCode: formData.upcCode,
+        itemUrl: formData.itemUrl,
+        manualUrl: formData.manualUrl,
+        
+        // Include properly nested purchase details
         purchaseDetails: {
           purchasedFrom: formData.purchasedFrom,
-          purchasePrice: formData.purchasePrice,
-          purchaseDate: formData.purchaseDate
+          purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
+          purchaseDate: formData.purchaseDate || undefined
         },
-        // Include non-nested warranty details for frontend display
-        hasLifetimeWarranty: formData.hasLifetimeWarranty,
-        warrantyExpires: formData.warrantyExpires,
-        warrantyNotes: formData.warrantyNotes,
-        // Include nested warranty details for database model
+        
+        // Include properly nested warranty details
         warrantyDetails: {
           hasLifetimeWarranty: formData.hasLifetimeWarranty,
-          warrantyExpires: formData.warrantyExpires,
+          warrantyExpires: formData.warrantyExpires || undefined,
           warrantyNotes: formData.warrantyNotes
         },
+        
         // Map UI field types to database field types for custom fields
-        customFields: formData.customFields.map(field => ({
-          name: field.name,
-          value: field.value,
-          type: mapFieldTypeToDbType(field.type || detectFieldType(field.value))
-        }))
+        // Ensure each field has a name
+        customFields: formData.customFields
+          .filter(field => field.name.trim() !== '') // Only include fields with names
+          .map(field => ({
+            name: field.name,
+            value: field.value,
+            type: mapFieldTypeToDbType(field.type || detectFieldType(field.value))
+          }))
       };
       
       // Make API call to update the item

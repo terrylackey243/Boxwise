@@ -752,14 +752,15 @@ const ItemDetail = () => {
                   <TableBody>
                     {item.customFields.map((field, index) => {
                       // Format the display value based on field type
-                      let displayValue = field.value;
+                      // Handle case where field.value might be undefined
+                      let displayValue = field.value !== undefined ? field.value : '';
                       let linkUrl = '';
                       
                       // Handle different field types
-                      if (field.type === 'boolean') {
+                      if (field.type === 'boolean' && field.value !== undefined) {
                         // Convert boolean values to Yes/No
                         displayValue = field.value === 'true' || field.value === true ? 'Yes' : 'No';
-                      } else if (field.type === 'timestamp') {
+                      } else if (field.type === 'timestamp' && field.value !== undefined) {
                         // Format date for display
                         try {
                           const date = new Date(field.value);
@@ -770,7 +771,7 @@ const ItemDetail = () => {
                           // If date parsing fails, use the original value
                           console.error('Error parsing date:', e);
                         }
-                      } else if (field.type === 'integer') {
+                      } else if (field.type === 'integer' && field.value !== undefined) {
                         // Format number with commas for thousands
                         try {
                           const num = parseInt(field.value);
@@ -781,9 +782,9 @@ const ItemDetail = () => {
                           // If number parsing fails, use the original value
                           console.error('Error parsing integer:', e);
                         }
-                      } else {
+                      } else if (field.value !== undefined) {
                         // Handle text fields, including URLs and Markdown links
-                        const markdownLinkMatch = field.value.match(/\[(.+?)\]\((.+?)\)/);
+                        const markdownLinkMatch = field.value.toString().match(/\[(.+?)\]\((.+?)\)/);
                         
                         if (markdownLinkMatch) {
                           // Extract the text and URL from the Markdown syntax
