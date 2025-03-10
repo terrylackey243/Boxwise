@@ -199,6 +199,13 @@ const ItemSearchFilters = ({
             </MenuItem>
             
             <MenuItem 
+              onClick={() => handleSortSelect('quantity')}
+              selected={sortField === 'quantity'}
+            >
+              <ListItemText>Quantity {sortField === 'quantity' && (sortDirection === 'asc' ? '↑' : '↓')}</ListItemText>
+            </MenuItem>
+            
+            <MenuItem 
               onClick={() => handleSortSelect('updatedAt')}
               selected={sortField === 'updatedAt'}
             >

@@ -260,7 +260,7 @@ const CreateItemByUpc = () => {
   };
   
   const handleUpcLookup = async () => {
-    if (!upcCode.trim()) {
+    if (!upcCode || typeof upcCode !== 'string' || !upcCode.trim()) {
       setErrorAlert('Please enter a UPC code');
       return;
     }
@@ -448,12 +448,12 @@ const CreateItemByUpc = () => {
     const newErrors = {};
     
     // Required fields
-    if (!formData.name.trim()) {
+    if (!formData.name || (typeof formData.name === 'string' && !formData.name.trim())) {
       newErrors.name = 'Name is required';
     }
     
     // Check name length
-    if (formData.name && formData.name.length > 100) {
+    if (formData.name && typeof formData.name === 'string' && formData.name.length > 100) {
       newErrors.name = 'Name cannot exceed 100 characters';
     }
     

@@ -212,6 +212,36 @@ const Items = () => {
     );
   }
 
+  const handleUpdateQuantity = async (itemId, newQuantity) => {
+    try {
+      // Find the item to update
+      const itemToUpdate = items.find(item => item._id === itemId);
+      if (!itemToUpdate) return;
+      
+      // Ensure quantity is at least 0
+      const quantity = Math.max(0, newQuantity);
+      
+      // Make API call to update the item with new quantity
+      await axios.put(`/api/items/${itemId}`, {
+        ...itemToUpdate,
+        quantity
+      });
+      
+      // Show success message
+      setSuccessAlert('Quantity updated successfully');
+      
+      // Update the local state to avoid a full refresh
+      const updatedItems = items.map(item => 
+        item._id === itemId ? { ...item, quantity } : item
+      );
+      setItems(updatedItems);
+      setFilteredItems(updatedItems);
+    } catch (err) {
+      setErrorAlert('Error updating quantity: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Breadcrumbs */}
@@ -305,6 +335,7 @@ const Items = () => {
           <ItemsTable
             items={filteredItems}
             onActionClick={handleActionMenuOpen}
+            onUpdateQuantity={handleUpdateQuantity}
           />
         </Box>
 
@@ -313,6 +344,7 @@ const Items = () => {
           <ItemsCards
             items={filteredItems}
             onActionClick={handleActionMenuOpen}
+            onUpdateQuantity={handleUpdateQuantity}
           />
         </Box>
         

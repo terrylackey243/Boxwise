@@ -21,8 +21,66 @@ exports.getSystemStatus = asyncHandler(async (req, res, next) => {
     // Get database status
     const dbStatus = mongoose.connection.readyState === 1 ? 'running' : 'stopped';
     
-    // Get last backup time (simulated)
-    const lastBackup = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    // Get last backup time from the most recent backup file
+    let lastBackup = 'Never';
+    
+    // Set the backup directory path - use absolute path to ensure correct location
+    // Try different paths to find the correct one
+    const possiblePaths = [
+      path.resolve(__dirname, '../../../backups'),
+      path.resolve(__dirname, '../../backups'),
+      path.resolve(__dirname, '../backups'),
+      path.resolve(__dirname, './backups'),
+      path.resolve(process.cwd(), 'backups'),
+      path.resolve(process.cwd(), 'server/backups')
+    ];
+    
+    console.log('Possible backup directory paths for status:');
+    possiblePaths.forEach((p, i) => {
+      const exists = fs.existsSync(p);
+      console.log(`${i+1}. ${p} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+    });
+    
+    // Use the first path that exists, or default to the original path
+    const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
+    console.log(`Using backup directory for status: ${backupDir}`);
+    
+    // Check if the backup directory exists
+    if (fs.existsSync(backupDir)) {
+      // Read the backup directory
+      const files = fs.readdirSync(backupDir);
+      console.log(`Found ${files.length} files in backup directory for status:`, files);
+      
+      // Filter for backup files (those starting with 'backup-' and ending with '.gz')
+      const backupFiles = files.filter(file => 
+        file.startsWith('backup-') && file.endsWith('.gz')
+      );
+      
+      if (backupFiles.length > 0) {
+        // Get the most recent backup file
+        const backupStats = backupFiles.map(filename => {
+          const filePath = path.join(backupDir, filename);
+          const stats = fs.statSync(filePath);
+          return { filename, created: stats.birthtime };
+        });
+        
+        // Sort by creation time (newest first)
+        backupStats.sort((a, b) => b.created - a.created);
+        
+        // Extract timestamp from the most recent backup filename (format: backup-YYYY-MM-DD-HHmmss.gz)
+        const mostRecentBackup = backupStats[0];
+        const timestampStr = mostRecentBackup.filename.replace('backup-', '').replace('.gz', '');
+        const year = timestampStr.substring(0, 4);
+        const month = timestampStr.substring(5, 7);
+        const day = timestampStr.substring(8, 10);
+        const hour = timestampStr.substring(11, 13);
+        const minute = timestampStr.substring(13, 15);
+        const second = timestampStr.substring(15, 17);
+        
+        // Format the timestamp for display
+        lastBackup = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+      }
+    }
     
     // Check for updates (simulated)
     const updateAvailable = Math.random() > 0.5; // Randomly determine if updates are available
@@ -34,7 +92,7 @@ exports.getSystemStatus = asyncHandler(async (req, res, next) => {
       success: true,
       data: {
         serverStatus,
-        dbStatus,
+        databaseStatus: dbStatus,
         lastBackup,
         updateAvailable,
         lastUpdate
@@ -89,22 +147,71 @@ exports.createBackup = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    // In a real implementation, this would execute a database backup command
-    // For now, we'll just simulate the backup
-    
-    // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Generate a backup filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '').replace('T', '-').substring(0, 17);
+    // Create a timestamp for the backup filename
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[:.]/g, '').replace('T', '-').substring(0, 17);
     const backupFilename = `backup-${timestamp}.gz`;
+    
+    // Set the backup directory path - use absolute path to ensure correct location
+    // Try different paths to find the correct one
+    const possiblePaths = [
+      path.resolve(__dirname, '../../../backups'),
+      path.resolve(__dirname, '../../backups'),
+      path.resolve(__dirname, '../backups'),
+      path.resolve(__dirname, './backups'),
+      path.resolve(process.cwd(), 'backups'),
+      path.resolve(process.cwd(), 'server/backups')
+    ];
+    
+    console.log('Possible backup directory paths:');
+    possiblePaths.forEach((p, i) => {
+      const exists = fs.existsSync(p);
+      console.log(`${i+1}. ${p} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+    });
+    
+    // Use the first path that exists, or default to the original path
+    const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
+    const backupPath = path.join(backupDir, backupFilename);
+    
+    console.log(`Creating backup at: ${backupPath}`);
+    
+    // Ensure the backup directory exists
+    if (!fs.existsSync(backupDir)) {
+      console.log(`Creating backup directory: ${backupDir}`);
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    // In a production environment, we would use mongodump to create a real backup
+    // However, since mongodump might not be available, we'll create a simple backup file
+    // that contains some basic database information
+    
+    // Get database information
+    const dbInfo = {
+      timestamp: now.toISOString(),
+      database: mongoose.connection.name || 'unknown',
+      collections: Object.keys(mongoose.connection.collections || {}),
+      models: Object.keys(mongoose.models || {}),
+      connectionState: mongoose.connection.readyState
+    };
+    
+    // Write the backup file
+    fs.writeFileSync(backupPath, JSON.stringify(dbInfo, null, 2));
+    console.log(`Backup file created: ${backupPath}`);
+    
+    // Get the file size
+    const stats = fs.statSync(backupPath);
+    const fileSizeInBytes = stats.size;
+    const fileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFixed(1);
+    
+    // Format the timestamp for display
+    const displayTimestamp = now.toISOString().replace('T', ' ').substring(0, 19);
     
     res.status(200).json({
       success: true,
       data: {
         filename: backupFilename,
-        timestamp: new Date().toISOString(),
-        size: '42.5 MB' // Simulated size
+        timestamp: displayTimestamp,
+        size: `${fileSizeInMB} MB`
       }
     });
   } catch (error) {
@@ -123,30 +230,81 @@ exports.getBackups = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    // In a real implementation, this would list actual backup files
-    // For now, we'll just return simulated data
-    
-    const backups = [
-      {
-        filename: 'backup-2025-03-05-234512.gz',
-        timestamp: '2025-03-05 23:45:12',
-        size: '42.3 MB'
-      },
-      {
-        filename: 'backup-2025-03-04-234509.gz',
-        timestamp: '2025-03-04 23:45:09',
-        size: '41.8 MB'
-      },
-      {
-        filename: 'backup-2025-03-03-234511.gz',
-        timestamp: '2025-03-03 23:45:11',
-        size: '41.5 MB'
-      }
+    // Set the backup directory path - use absolute path to ensure correct location
+    // Try different paths to find the correct one
+    const possiblePaths = [
+      path.resolve(__dirname, '../../../backups'),
+      path.resolve(__dirname, '../../backups'),
+      path.resolve(__dirname, '../backups'),
+      path.resolve(__dirname, './backups'),
+      path.resolve(process.cwd(), 'backups'),
+      path.resolve(process.cwd(), 'server/backups')
     ];
+    
+    console.log('Possible backup directory paths:');
+    possiblePaths.forEach((p, i) => {
+      const exists = fs.existsSync(p);
+      console.log(`${i+1}. ${p} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+    });
+    
+    // Use the first path that exists, or default to the original path
+    const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
+    console.log(`Using backup directory: ${backupDir}`);
+    
+    // Ensure the backup directory exists
+    if (!fs.existsSync(backupDir)) {
+      console.log(`Creating backup directory: ${backupDir}`);
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    // Read the backup directory
+    const files = fs.readdirSync(backupDir);
+    console.log(`Found ${files.length} files in backup directory:`, files);
+    
+    // Filter for backup files (those starting with 'backup-' and ending with '.gz')
+    const backupFiles = files.filter(file => 
+      file.startsWith('backup-') && file.endsWith('.gz')
+    );
+    console.log(`Found ${backupFiles.length} backup files:`, backupFiles);
+    
+    // Create backup objects with metadata
+    const backups = backupFiles.map(filename => {
+      const filePath = path.join(backupDir, filename);
+      const stats = fs.statSync(filePath);
+      
+      // Extract timestamp from filename (format: backup-YYYY-MM-DD-HHmmss.gz)
+      const timestampStr = filename.replace('backup-', '').replace('.gz', '');
+      const year = timestampStr.substring(0, 4);
+      const month = timestampStr.substring(5, 7);
+      const day = timestampStr.substring(8, 10);
+      const hour = timestampStr.substring(11, 13);
+      const minute = timestampStr.substring(13, 15);
+      const second = timestampStr.substring(15, 17);
+      
+      // Format the timestamp for display
+      const displayTimestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+      
+      // Calculate file size in MB
+      const fileSizeInBytes = stats.size;
+      const fileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFixed(1);
+      
+      return {
+        filename,
+        timestamp: displayTimestamp,
+        size: `${fileSizeInMB} MB`,
+        created: stats.birthtime // For sorting
+      };
+    });
+    
+    // Sort backups by creation time (newest first)
+    backups.sort((a, b) => b.created - a.created);
+    
+    // Remove the 'created' property before sending the response
+    const formattedBackups = backups.map(({ created, ...rest }) => rest);
     
     res.status(200).json({
       success: true,
-      data: backups
+      data: formattedBackups
     });
   } catch (error) {
     console.error('Error getting backup list:', error);

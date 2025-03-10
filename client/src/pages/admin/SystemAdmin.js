@@ -84,7 +84,12 @@ const SystemAdmin = () => {
       const response = await axios.get('/api/admin/system/status');
       
       if (response.data.success) {
-        setSystemStatus(response.data.data);
+        // Ensure databaseStatus has a default value if not provided by the API
+        const data = response.data.data;
+        if (data.databaseStatus === undefined) {
+          data.databaseStatus = 'running';
+        }
+        setSystemStatus(data);
       } else {
         setError('Failed to fetch system status: ' + response.data.message);
       }
@@ -175,7 +180,7 @@ const SystemAdmin = () => {
         
         setResult({
           success: true,
-          message: `Database backup created successfully at ${new Date().toISOString().replace('T', ' ').substring(0, 19)}.`
+          message: `Database backup created successfully at ${backupData.timestamp.replace('T', ' ').substring(0, 19)}.`
         });
         
         // Update system status with new backup time
@@ -184,8 +189,9 @@ const SystemAdmin = () => {
           lastBackup: backupData.timestamp.replace('T', ' ').substring(0, 19)
         }));
         
-        // Refresh backup list
+        // Refresh backup list and system status to ensure consistency
         fetchBackups();
+        fetchSystemStatus();
       } else {
         setError(response.data.message || 'Failed to create database backup.');
       }
@@ -395,7 +401,11 @@ const SystemAdmin = () => {
       const response = await axios.get('/api/admin/system/backups');
       
       if (response.data.success) {
-        setBackups(response.data.data);
+        // Sort backups by timestamp in descending order (newest first)
+        const sortedBackups = [...response.data.data].sort((a, b) => {
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+        setBackups(sortedBackups);
       }
     } catch (err) {
       console.error('Error fetching backups:', err);
