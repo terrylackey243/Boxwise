@@ -317,8 +317,8 @@ const ItemDetail = () => {
       
       if (response.data.success) {
         setSuccessAlert('Item duplicated successfully');
-        // Navigate to the new item
-        navigate(`/items/${response.data.data._id}`);
+        // Navigate to the new item in edit mode
+        navigate(`/items/edit/${response.data.data._id}`);
       } else {
         setErrorAlert('Error duplicating item: ' + response.data.message);
       }

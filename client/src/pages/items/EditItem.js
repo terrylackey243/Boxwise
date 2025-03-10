@@ -859,17 +859,14 @@ const EditItem = () => {
                     value={formData.upcCode}
                     onChange={handleChange}
                     onKeyDown={(e) => {
-                      // Trigger lookup when Enter or Tab is pressed
-                      if (e.key === 'Enter' || e.key === 'Tab') {
-                        // Prevent default behavior for Enter to avoid form submission
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                        }
-                        
-                        // Only trigger lookup if there's a UPC code
-                        if (formData.upcCode.trim()) {
-                          handleUpcLookup();
-                        }
+                      // Prevent default behavior for Enter to avoid form submission
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                      }
+                      
+                      // Only trigger lookup when Tab is pressed, not Enter
+                      if (e.key === 'Tab' && formData.upcCode.trim()) {
+                        handleUpcLookup();
                       }
                     }}
                     InputProps={{
