@@ -91,7 +91,8 @@ const Categories = () => {
         // Update the local state
         const updatedCategories = categories.filter(category => category._id !== selectedCategory._id);
         setCategories(updatedCategories);
-        setSuccessAlert(response.data.message || `${selectedCategory.name} deleted successfully`);
+        // Set success alert with a delay
+        const alertId = setSuccessAlert(response.data.message || `${selectedCategory.name} deleted successfully`, 1500);
       } else {
         setErrorAlert(response.data.message || 'Error deleting category');
       }
@@ -269,13 +270,16 @@ const Categories = () => {
         onSubmit={async (categories) => {
           try {
             const result = await bulkService.bulkAdd('categories', categories);
-            setSuccessAlert(`Successfully added ${result.count} categories`);
+            // Set success alert with a delay
+            const alertId = setSuccessAlert(`Successfully added ${result.count} categories`, 1500);
             
-            // Refresh the categories list
-            const response = await axios.get('/api/categories');
-            if (response.data.success) {
-              setCategories(response.data.data || []);
-            }
+            // Refresh the categories list after a short delay
+            setTimeout(async () => {
+              const response = await axios.get('/api/categories');
+              if (response.data.success) {
+                setCategories(response.data.data || []);
+              }
+            }, 1500);
             
             return result;
           } catch (err) {

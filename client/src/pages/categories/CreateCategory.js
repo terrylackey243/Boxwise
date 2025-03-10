@@ -77,8 +77,13 @@ const CreateCategory = () => {
       const response = await axios.post('/api/categories', formData);
       
       if (response.data.success) {
-        setSuccessAlert(response.data.message || 'Category created successfully');
-        navigate('/categories');
+        // Set success alert with a delay before navigation
+        const alertId = setSuccessAlert(response.data.message || 'Category created successfully', 1500);
+        
+        // Navigate after a short delay to allow the alert to be shown
+        setTimeout(() => {
+          navigate('/categories');
+        }, 1500);
       } else {
         setErrorAlert(response.data.message || 'Error creating category');
       }

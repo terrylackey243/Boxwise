@@ -110,8 +110,8 @@ const LocationDetail = () => {
             setLocationHierarchy(hierarchyLocations);
           }
           
-          // Fetch items in this location
-          const itemsResponse = await axios.get(`/api/items?location=${id}`);
+          // Fetch items in this location with a higher limit to ensure all items are shown
+          const itemsResponse = await axios.get(`/api/items?location=${id}&limit=100&page=1`);
           
           if (itemsResponse.data.success) {
             setItems(itemsResponse.data.data || []);
@@ -373,13 +373,13 @@ const LocationDetail = () => {
       {/* Tabs for Sub-locations and Items */}
       <Box sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="location tabs">
-          <Tab label="Sub-locations" id="tab-0" />
           <Tab label="Items" id="tab-1" />
+          <Tab label="Sub-locations" id="tab-0" />
         </Tabs>
       </Box>
       
       {/* Sub-locations Tab */}
-      {tabValue === 0 && (
+      {tabValue === 1 && (
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
@@ -409,7 +409,7 @@ const LocationDetail = () => {
       )}
       
       {/* Items Tab */}
-      {tabValue === 1 && (
+      {tabValue === 0 && (
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">

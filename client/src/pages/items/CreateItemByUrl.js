@@ -485,8 +485,15 @@ const CreateItemByUrl = () => {
     try {
       // Prepare data for submission - include both nested and non-nested purchase details
       // This ensures compatibility with both the database model and the frontend display
+      
+      // Extract just the label IDs from the label objects
+      const labelIds = formData.labels.map(label => label._id);
+      console.log('Label IDs extracted:', labelIds);
+      
       const submissionData = {
         ...formData,
+        // Override the labels with just the IDs
+        labels: labelIds,
         // Include non-nested purchase details for frontend display
         purchasedFrom: formData.purchasedFrom,
         purchasePrice: formData.purchasePrice,
@@ -519,8 +526,13 @@ const CreateItemByUrl = () => {
       const response = await axios.post('/api/items', submissionData);
       
       if (response.data.success) {
-        setSuccessAlert('Item created successfully');
-        navigate('/items');
+        // Set success alert with a callback to navigate after the alert is shown
+        const alertId = setSuccessAlert('Item created successfully', 1500);
+        
+        // Navigate after a short delay to allow the alert to be shown
+        setTimeout(() => {
+          navigate('/items');
+        }, 1500);
       } else {
         setErrorAlert('Error creating item: ' + response.data.message);
       }

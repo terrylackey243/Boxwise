@@ -218,8 +218,13 @@ const CreateUser = () => {
       const response = await axios.post('/api/users', userData);
       
       if (response.data.success) {
-        setSuccessAlert(`User ${formData.name} created successfully`);
-        navigate('/admin/dashboard');
+        // Set success alert with a delay before navigation
+        const alertId = setSuccessAlert(`User ${formData.name} created successfully`, 1500);
+        
+        // Navigate after a short delay to allow the alert to be shown
+        setTimeout(() => {
+          navigate('/admin/dashboard');
+        }, 1500);
       } else {
         setErrorAlert('Error creating user: ' + response.data.message);
       }

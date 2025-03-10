@@ -108,13 +108,16 @@ const Locations = () => {
       const response = await axios.delete(`/api/locations/${selectedLocation._id}`);
       
       if (response.data.success) {
-        // Refresh the locations list
-        const locationsResponse = await axios.get('/api/locations');
-        if (locationsResponse.data.success) {
-          setLocations(locationsResponse.data.data || []);
-        }
+        // Set success alert with a delay
+        const alertId = setSuccessAlert(`${selectedLocation.name} deleted successfully`, 1500);
         
-        setSuccessAlert(`${selectedLocation.name} deleted successfully`);
+        // Refresh the locations list after a short delay
+        setTimeout(async () => {
+          const locationsResponse = await axios.get('/api/locations');
+          if (locationsResponse.data.success) {
+            setLocations(locationsResponse.data.data || []);
+          }
+        }, 1500);
       } else {
         setErrorAlert('Error deleting location: ' + response.data.message);
       }
@@ -435,13 +438,16 @@ const Locations = () => {
         onSubmit={async (locations) => {
           try {
             const result = await bulkService.bulkAdd('locations', locations);
-            setSuccessAlert(`Successfully added ${result.count} locations`);
+            // Set success alert with a delay
+            const alertId = setSuccessAlert(`Successfully added ${result.count} locations`, 1500);
             
-            // Refresh the locations list
-            const response = await axios.get('/api/locations');
-            if (response.data.success) {
-              setLocations(response.data.data || []);
-            }
+            // Refresh the locations list after a short delay
+            setTimeout(async () => {
+              const response = await axios.get('/api/locations');
+              if (response.data.success) {
+                setLocations(response.data.data || []);
+              }
+            }, 1500);
             
             return result;
           } catch (err) {

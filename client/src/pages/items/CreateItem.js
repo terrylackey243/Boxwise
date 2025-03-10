@@ -98,6 +98,13 @@ const CreateItem = () => {
   const [newCategoryDialog, setNewCategoryDialog] = useState(false);
   const [newLabelDialog, setNewLabelDialog] = useState(false);
   
+  // Track newly created entities to ensure they're properly saved
+  const [recentlyCreatedEntities, setRecentlyCreatedEntities] = useState({
+    location: null,
+    category: null,
+    labels: []
+  });
+  
   // State for new entities
   const [newLocation, setNewLocation] = useState({ name: '', description: '', parent: '' });
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
@@ -343,6 +350,45 @@ const CreateItem = () => {
       newErrors.category = 'Category is required';
     }
     
+    // Check if location was recently created and verify it exists in the locations array
+    if (recentlyCreatedEntities.location && formData.location === recentlyCreatedEntities.location._id) {
+      const locationExists = locations.some(loc => loc._id === recentlyCreatedEntities.location._id);
+      if (!locationExists) {
+        newErrors.location = 'The selected location was recently created and may not be fully saved yet. Please try again in a moment.';
+      }
+    }
+    
+    // Check if category was recently created and verify it exists in the categories array
+    if (recentlyCreatedEntities.category && formData.category === recentlyCreatedEntities.category._id) {
+      const categoryExists = categories.some(cat => cat._id === recentlyCreatedEntities.category._id);
+      if (!categoryExists) {
+        newErrors.category = 'The selected category was recently created and may not be fully saved yet. Please try again in a moment.';
+      }
+    }
+    
+    // Check if any selected labels were recently created and verify they exist in the labels array
+    // Temporarily disable this check as it's causing issues
+    /*
+    if (recentlyCreatedEntities.labels.length > 0) {
+      const recentLabelIds = recentlyCreatedEntities.labels.map(label => label._id);
+      const selectedRecentLabels = formData.labels.filter(label => recentLabelIds.includes(label._id));
+      
+      for (const selectedLabel of selectedRecentLabels) {
+        const labelExists = labels.some(label => label._id === selectedLabel._id);
+        if (!labelExists) {
+          newErrors.labels = 'One or more selected labels were recently created and may not be fully saved yet. Please try again in a moment.';
+          break;
+        }
+      }
+    }
+    */
+    
+    // Reset the recently created labels to avoid validation issues
+    setRecentlyCreatedEntities(prev => ({
+      ...prev,
+      labels: []
+    }));
+    
     // Check description length
     if (formData.description && formData.description.length > 1000) {
       newErrors.description = 'Description cannot exceed 1000 characters';
@@ -368,24 +414,65 @@ const CreateItem = () => {
       }
     }
     
+    // Log validation errors for debugging
+    console.log('Validation errors:', newErrors);
+    
+    // Update the errors state
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    // Return true if there are no errors
+    const isValid = Object.keys(newErrors).length === 0;
+    console.log('Form is valid:', isValid);
+    
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submission started');
     
-    if (!validateForm()) {
+    // Validate the form
+    const isValid = validateForm();
+    
+    // Log the current form data for debugging
+    console.log('Form data:', formData);
+    
+    // Check if required fields are filled
+    if (!formData.name.trim()) {
+      console.log('Name is required but empty');
       return;
     }
     
+    if (!formData.location) {
+      console.log('Location is required but empty');
+      return;
+    }
+    
+    if (!formData.category) {
+      console.log('Category is required but empty');
+      return;
+    }
+    
+    if (!isValid) {
+      console.log('Form validation failed, aborting submission');
+      return;
+    }
+    
+    console.log('Form validation passed, proceeding with submission');
     setSubmitting(true);
     
     try {
       // Prepare data for submission - include both nested and non-nested purchase details
       // This ensures compatibility with both the database model and the frontend display
+      
+      // Extract just the label IDs from the label objects
+      const labelIds = formData.labels.map(label => label._id);
+      console.log('Label IDs extracted:', labelIds);
+      
       const submissionData = {
         ...formData,
+        // Override the labels with just the IDs
+        labels: labelIds,
         // Include non-nested purchase details for frontend display
         purchasedFrom: formData.purchasedFrom,
         purchasePrice: formData.purchasePrice,
@@ -414,14 +501,40 @@ const CreateItem = () => {
         }))
       };
       
-      // Make API call to create the item
-      const response = await axios.post('/api/items', submissionData);
+      console.log('Submitting data to API:', submissionData);
       
+      try {
+        // Make API call to create the item
+        console.log('Making API call to /api/items');
+        const response = await axios.post('/api/items', submissionData);
+        console.log('API response received:', response);
+        
       if (response.data.success) {
-        setSuccessAlert('Item created successfully');
-        navigate('/items');
-      } else {
-        setErrorAlert('Error creating item: ' + response.data.message);
+        console.log('Item created successfully');
+        
+        // Set success alert with a callback to navigate after the alert is shown
+        const alertId = setSuccessAlert('Item created successfully', 1500);
+        
+        // Navigate after a short delay to allow the alert to be shown
+        setTimeout(() => {
+          navigate('/items');
+        }, 1500);
+        } else {
+          console.log('API returned error:', response.data.message);
+          setErrorAlert('Error creating item: ' + response.data.message);
+        }
+      } catch (apiError) {
+        console.error('API call error:', apiError);
+        if (apiError.response) {
+          console.error('API response error data:', apiError.response.data);
+          console.error('API response error status:', apiError.response.status);
+          console.error('API response error headers:', apiError.response.headers);
+        } else if (apiError.request) {
+          console.error('API request error (no response received):', apiError.request);
+        } else {
+          console.error('API error message:', apiError.message);
+        }
+        throw apiError; // Re-throw to be caught by the outer catch block
       }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
@@ -493,7 +606,7 @@ const CreateItem = () => {
         </Typography>
       </Box>
       
-      <form onSubmit={handleSubmit}>
+      <form id="createItemForm" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
           {/* Main Form */}
           <Grid item xs={12} md={8}>
@@ -565,7 +678,12 @@ const CreateItem = () => {
                           }));
                         }
                       }}
-                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      isOptionEqualToValue={(option, value) => {
+                        // Handle both _id and id properties for compatibility
+                        const optionId = option._id || option.id;
+                        const valueId = value._id || value.id;
+                        return optionId === valueId;
+                      }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -617,7 +735,12 @@ const CreateItem = () => {
                           }));
                         }
                       }}
-                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      isOptionEqualToValue={(option, value) => {
+                        // Handle both _id and id properties for compatibility
+                        const optionId = option._id || option.id;
+                        const valueId = value._id || value.id;
+                        return optionId === valueId;
+                      }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -650,7 +773,12 @@ const CreateItem = () => {
                       getOptionLabel={(option) => option.name}
                       value={formData.labels}
                       onChange={handleLabelChange}
-                      isOptionEqualToValue={(option, value) => option._id === value._id}
+                      isOptionEqualToValue={(option, value) => {
+                        // Handle both _id and id properties for compatibility
+                        const optionId = option._id || option.id;
+                        const valueId = value._id || value.id;
+                        return optionId === valueId;
+                      }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -1107,6 +1235,12 @@ const CreateItem = () => {
                     location: newLoc._id
                   }));
                   
+                  // Track the newly created location
+                  setRecentlyCreatedEntities(prev => ({
+                    ...prev,
+                    location: newLoc
+                  }));
+                  
                   // Reset the new location form
                   setNewLocation({ name: '', description: '', parent: '' });
                   
@@ -1177,6 +1311,12 @@ const CreateItem = () => {
                   setFormData(prevData => ({
                     ...prevData,
                     category: newCat._id
+                  }));
+                  
+                  // Track the newly created category
+                  setRecentlyCreatedEntities(prev => ({
+                    ...prev,
+                    category: newCat
                   }));
                   
                   // Reset the new category form
@@ -1273,6 +1413,10 @@ const CreateItem = () => {
                     ...prevData,
                     labels: [...prevData.labels, newLab]
                   }));
+                  
+                  // Don't track the newly created label to avoid validation issues
+                  // Instead, just add it to the labels array
+                  setLabels(prevLabels => [...prevLabels, newLab]);
                   
                   // Reset the new label form
                   setNewLabel({ name: '', description: '', color: '#3f51b5' });

@@ -15,7 +15,11 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInputValue, setSearchInputValue] = useState('');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Initialize rowsPerPage from localStorage or default to 10
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const savedRowsPerPage = localStorage.getItem('itemsRowsPerPage');
+    return savedRowsPerPage ? parseInt(savedRowsPerPage, 10) : 10;
+  });
   const [totalItems, setTotalItems] = useState(0);
   const [filters, setFilters] = useState({
     location: '',
@@ -266,8 +270,74 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    
+    // Save to localStorage for persistence across page reloads
+    localStorage.setItem('itemsRowsPerPage', newRowsPerPage.toString());
+    
+    setRowsPerPage(newRowsPerPage);
     setPage(0);
+    
+    // Trigger a refresh with the new rows per page value
+    const fetchItemsWithNewRowsPerPage = async () => {
+      try {
+        setLoading(true);
+        
+        // Make API call to fetch items with pagination and filters
+        const params = new URLSearchParams();
+        
+        // Pagination parameters with new rows per page
+        params.set('page', 1); // Reset to first page
+        params.set('limit', newRowsPerPage);
+        
+        // Filter parameters
+        if (filters.archived === true) {
+          params.set('archived', 'true');
+        }
+        
+        if (filters.location) {
+          params.set('location', filters.location);
+        }
+        
+        if (filters.category) {
+          params.set('category', filters.category);
+        }
+        
+        if (filters.label) {
+          params.set('label', filters.label);
+        }
+        
+        // Search parameter
+        if (searchTerm) {
+          params.set('search', searchTerm);
+        }
+        
+        // Sort parameters
+        if (sortField) {
+          params.set('sort', sortField);
+          params.set('order', sortDirection);
+        }
+        
+        console.log('Fetching items with new rows per page:', newRowsPerPage);
+        const response = await axios.get(`/api/items?${params.toString()}`);
+        
+        if (response.data.success) {
+          setItems(response.data.data);
+          setFilteredItems(response.data.data);
+          setTotalItems(response.data.total);
+        } else {
+          onError('Failed to load items');
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        onError('Error loading items: ' + (err.response?.data?.message || err.message));
+        setLoading(false);
+        console.error(err);
+      }
+    };
+    
+    fetchItemsWithNewRowsPerPage();
   };
 
   const handleFilterChange = (filterName, value) => {

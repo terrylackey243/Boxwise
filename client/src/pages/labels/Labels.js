@@ -111,7 +111,8 @@ const Labels = () => {
       const updatedLabels = labels.filter(label => label._id !== selectedLabel._id);
       setLabels(updatedLabels);
       
-      setSuccessAlert(`${selectedLabel.name} deleted successfully`);
+      // Set success alert with a delay
+      const alertId = setSuccessAlert(`${selectedLabel.name} deleted successfully`, 1500);
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message;
       setErrorAlert(`Error deleting label: ${errorMessage}`);
@@ -293,29 +294,32 @@ const Labels = () => {
         onSubmit={async (labels) => {
           try {
             const result = await bulkService.bulkAdd('labels', labels);
-            setSuccessAlert(`Successfully added ${result.count} labels`);
+            // Set success alert with a delay
+            const alertId = setSuccessAlert(`Successfully added ${result.count} labels`, 1500);
             
-            // Refresh the labels list
-            const [labelsResponse, countsResponse] = await Promise.all([
-              axios.get('/api/labels'),
-              axios.get('/api/labels/counts')
-            ]);
-            
-            if (labelsResponse.data?.data && countsResponse.data?.data) {
-              // Create a map of label IDs to item counts
-              const countMap = {};
-              countsResponse.data.data.forEach(item => {
-                countMap[item.labelId] = item.count;
-              });
+            // Refresh the labels list after a short delay
+            setTimeout(async () => {
+              const [labelsResponse, countsResponse] = await Promise.all([
+                axios.get('/api/labels'),
+                axios.get('/api/labels/counts')
+              ]);
               
-              // Process the labels from the API response with real item counts
-              const labelsWithItemCount = labelsResponse.data.data.map(label => ({
-                ...label,
-                itemCount: countMap[label._id] || 0
-              }));
-              
-              setLabels(labelsWithItemCount);
-            }
+              if (labelsResponse.data?.data && countsResponse.data?.data) {
+                // Create a map of label IDs to item counts
+                const countMap = {};
+                countsResponse.data.data.forEach(item => {
+                  countMap[item.labelId] = item.count;
+                });
+                
+                // Process the labels from the API response with real item counts
+                const labelsWithItemCount = labelsResponse.data.data.map(label => ({
+                  ...label,
+                  itemCount: countMap[label._id] || 0
+                }));
+                
+                setLabels(labelsWithItemCount);
+              }
+            }, 1500);
             
             return result;
           } catch (err) {

@@ -89,11 +89,13 @@ const Items = () => {
       // Close the action menu
       handleActionMenuClose();
       
-      // Show success message
-      setSuccessAlert('Item deleted successfully');
+      // Show success message with a delay before refreshing
+      const alertId = setSuccessAlert('Item deleted successfully', 1500);
       
-      // Refresh the items list from the server
-      refreshItems();
+      // Refresh the items list from the server after a short delay
+      setTimeout(() => {
+        refreshItems();
+      }, 1500);
     } catch (err) {
       setErrorAlert('Error deleting item: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -115,11 +117,13 @@ const Items = () => {
       // Close the action menu
       handleActionMenuClose();
       
-      // Show success message
-      setSuccessAlert('Item archived successfully');
+      // Show success message with a delay before refreshing
+      const alertId = setSuccessAlert('Item archived successfully', 1500);
       
-      // Refresh the items list from the server
-      refreshItems();
+      // Refresh the items list from the server after a short delay
+      setTimeout(() => {
+        refreshItems();
+      }, 1500);
     } catch (err) {
       setErrorAlert('Error archiving item: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -151,6 +155,11 @@ const Items = () => {
       
       if (filters.label) {
         params.set('label', filters.label);
+      }
+      
+      // Search parameter - include the search term if it exists
+      if (searchInputValue) {
+        params.set('search', searchInputValue);
       }
       
       // Sort parameters
@@ -218,15 +227,17 @@ const Items = () => {
         quantity
       });
       
-      // Show success message
-      setSuccessAlert('Quantity updated successfully');
+      // Show success message with a delay
+      const alertId = setSuccessAlert('Quantity updated successfully', 1500);
       
-      // Update the local state to avoid a full refresh
-      const updatedItems = items.map(item => 
-        item._id === itemId ? { ...item, quantity } : item
-      );
-      setItems(updatedItems);
-      setFilteredItems(updatedItems);
+      // Update the local state after a short delay to avoid a full refresh
+      setTimeout(() => {
+        const updatedItems = items.map(item => 
+          item._id === itemId ? { ...item, quantity } : item
+        );
+        setItems(updatedItems);
+        setFilteredItems(updatedItems);
+      }, 1500);
     } catch (err) {
       setErrorAlert('Error updating quantity: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -341,15 +352,15 @@ const Items = () => {
         
         {filteredItems.length > 0 && (
           <Paper sx={{ mt: 2 }}>
-            <TablePagination
-              component="div"
-              count={totalItems}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-            />
+          <TablePagination
+            component="div"
+            count={totalItems}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50, 100, 500, 1000]}
+          />
           </Paper>
         )}
       </Box>
@@ -376,10 +387,14 @@ const Items = () => {
         onSubmit={async (items) => {
           try {
             const result = await bulkService.bulkAdd('items', items);
-            setSuccessAlert(`Successfully added ${result.count} items`);
             
-            // Refresh the items list
-            refreshItems();
+            // Show success message with a delay before refreshing
+            const alertId = setSuccessAlert(`Successfully added ${result.count} items`, 1500);
+            
+            // Refresh the items list after a short delay
+            setTimeout(() => {
+              refreshItems();
+            }, 1500);
             
             return result;
           } catch (err) {

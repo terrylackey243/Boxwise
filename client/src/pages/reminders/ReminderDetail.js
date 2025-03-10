@@ -89,8 +89,13 @@ const ReminderDetail = () => {
       const response = await axios.delete(`/api/reminders/${id}`);
       
       if (response.data.success) {
-        setSuccessAlert('Reminder deleted successfully');
-        navigate('/reminders');
+        // Set success alert with a delay before navigation
+        const alertId = setSuccessAlert('Reminder deleted successfully', 1500);
+        
+        // Navigate after a short delay to allow the alert to be shown
+        setTimeout(() => {
+          navigate('/reminders');
+        }, 1500);
       } else {
         setErrorAlert('Error deleting reminder');
       }
@@ -109,9 +114,13 @@ const ReminderDetail = () => {
       });
       
       if (response.data.success) {
-        setSuccessAlert('Reminder marked as complete');
-        // Refresh the reminder data
-        setReminder(response.data.data);
+        // Set success alert with a delay
+        const alertId = setSuccessAlert('Reminder marked as complete', 1500);
+        
+        // Refresh the reminder data after a short delay
+        setTimeout(() => {
+          setReminder(response.data.data);
+        }, 1500);
       } else {
         setErrorAlert('Error updating reminder');
       }
