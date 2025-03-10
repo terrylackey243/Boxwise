@@ -44,6 +44,32 @@ import {
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 
+// Function to get the full location hierarchy path
+const getLocationHierarchy = (location, allLocations) => {
+  if (!location) return '';
+  
+  // Start with the current location name
+  let path = location.name;
+  let currentLocation = location;
+  
+  // Traverse up the parent hierarchy
+  while (currentLocation.parent) {
+    // Find the parent location
+    const parentLocation = allLocations.find(loc => loc._id === currentLocation.parent);
+    
+    // If parent not found, break the loop
+    if (!parentLocation) break;
+    
+    // Add parent name to the path
+    path = `${parentLocation.name} > ${path}`;
+    
+    // Move up to the parent
+    currentLocation = parentLocation;
+  }
+  
+  return path;
+};
+
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -85,7 +111,7 @@ const ItemDetail = () => {
               
               if (locationResponse.data.success) {
                 // Get all locations to build the hierarchy
-                const locationsResponse = await axios.get('/api/locations');
+                const locationsResponse = await axios.get('/api/locations?flat=true');
                 
                 if (locationsResponse.data.success) {
                   const allLocations = locationsResponse.data.data;
@@ -103,7 +129,7 @@ const ItemDetail = () => {
                   // Add the current location
                   hierarchyLocations.push(currentLocation);
                   
-                  // Add all parent locations by traversing up the tree
+                  // Build the complete hierarchy by traversing up the tree
                   let parentId = currentLocation.parent;
                   while (parentId) {
                     const parentLocation = locationMap[parentId];
@@ -115,6 +141,7 @@ const ItemDetail = () => {
                     }
                   }
                   
+                  console.log('Location hierarchy:', hierarchyLocations.map(loc => loc.name));
                   setLocationHierarchy(hierarchyLocations);
                 }
               }
@@ -488,6 +515,17 @@ const ItemDetail = () => {
                   <TableRow>
                     <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                       Location
+                    </TableCell>
+                    <TableCell>
+                      <Link component={RouterLink} to={`/locations/${item.location._id}`}>
+                        {item.location.name}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                      Full Path
                     </TableCell>
                     <TableCell>
                       {locationHierarchy.length > 0 ? (
