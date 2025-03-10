@@ -214,16 +214,11 @@ const Items = () => {
 
   const handleUpdateQuantity = async (itemId, newQuantity) => {
     try {
-      // Find the item to update
-      const itemToUpdate = items.find(item => item._id === itemId);
-      if (!itemToUpdate) return;
-      
       // Ensure quantity is at least 0
       const quantity = Math.max(0, newQuantity);
       
-      // Make API call to update the item with new quantity
+      // Make API call to update only the quantity field
       await axios.put(`/api/items/${itemId}`, {
-        ...itemToUpdate,
         quantity
       });
       
