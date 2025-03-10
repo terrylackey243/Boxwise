@@ -55,22 +55,21 @@ const Items = () => {
     rowsPerPage,
     totalItems,
     filters,
+    sortField,
+    sortDirection,
     handleSearchChange,
     handleClearSearch,
     handleChangePage,
     handleChangeRowsPerPage,
     handleFilterChange,
     handleClearFilters,
+    handleSort,
     setItems,
     setFilteredItems,
     setTotalItems
   } = useItemSearch({
     onError: setErrorAlert
   });
-
-  // Sort state
-  const [sortField, setSortField] = useState('name');
-  const [sortDirection, setSortDirection] = useState('asc');
 
   const handleActionMenuOpen = (event, itemId) => {
     setActionMenuAnchor(event.currentTarget);
@@ -80,15 +79,6 @@ const Items = () => {
   const handleActionMenuClose = () => {
     setActionMenuAnchor(null);
     setSelectedItemId(null);
-  };
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
   };
 
   const handleDeleteItem = async (itemId) => {
@@ -161,6 +151,12 @@ const Items = () => {
       
       if (filters.label) {
         params.set('label', filters.label);
+      }
+      
+      // Sort parameters
+      if (sortField) {
+        params.set('sort', sortField);
+        params.set('order', sortDirection);
       }
       
       const response = await axios.get(`/api/items?${params.toString()}`);

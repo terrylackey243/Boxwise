@@ -8,7 +8,7 @@ import axios from '../utils/axiosConfig';
  * @param {Function} options.onError - Function to call when an error occurs
  * @returns {Object} - Search state and functions
  */
-const useItemSearch = ({ onError }) => {
+const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirection = 'asc' }) => {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
@@ -23,6 +23,10 @@ const useItemSearch = ({ onError }) => {
     label: '',
     archived: false
   });
+  
+  // Sort state
+  const [sortField, setSortField] = useState(initialSortField);
+  const [sortDirection, setSortDirection] = useState(initialSortDirection);
 
   // Initialize filters from URL query parameters
   useEffect(() => {
@@ -50,7 +54,7 @@ const useItemSearch = ({ onError }) => {
     []
   );
 
-  // Fetch items based on search term, filters, and pagination
+  // Fetch items based on search term, filters, pagination, and sorting
   useEffect(() => {
     const fetchItems = async () => {
       try {
@@ -85,6 +89,12 @@ const useItemSearch = ({ onError }) => {
           params.set('search', searchTerm);
         }
         
+        // Sort parameters
+        if (sortField) {
+          params.set('sort', sortField);
+          params.set('order', sortDirection);
+        }
+        
         console.log('Fetching items with params:', params.toString());
         const response = await axios.get(`/api/items?${params.toString()}`);
         
@@ -106,7 +116,7 @@ const useItemSearch = ({ onError }) => {
     };
     
     fetchItems();
-  }, [page, rowsPerPage, searchTerm, filters, onError]);
+  }, [page, rowsPerPage, searchTerm, filters, sortField, sortDirection, onError]);
 
   const handleSearchChange = (e) => {
     // Update the input field immediately for a responsive UI
@@ -153,6 +163,15 @@ const useItemSearch = ({ onError }) => {
     
     setPage(0);
   };
+  
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   return {
     loading,
@@ -164,12 +183,15 @@ const useItemSearch = ({ onError }) => {
     rowsPerPage,
     totalItems,
     filters,
+    sortField,
+    sortDirection,
     handleSearchChange,
     handleClearSearch,
     handleChangePage,
     handleChangeRowsPerPage,
     handleFilterChange,
     handleClearFilters,
+    handleSort,
     setItems,
     setFilteredItems,
     setTotalItems

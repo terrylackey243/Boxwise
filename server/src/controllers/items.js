@@ -54,11 +54,28 @@ exports.getItems = asyncHandler(async (req, res, next) => {
   // Execute query with pagination
   const total = await Item.countDocuments(query);
   
+  // Determine sort field and order
+  let sortOptions = {};
+  const sortField = req.query.sort || 'updatedAt';
+  const sortOrder = req.query.order === 'desc' ? -1 : 1;
+  
+  // Handle special sort cases
+  if (sortField === 'location') {
+    // For location sorting, we'll need to do a lookup and sort by location name
+    sortOptions = { 'location.name': sortOrder };
+  } else if (sortField === 'category') {
+    // For category sorting, we'll need to do a lookup and sort by category name
+    sortOptions = { 'category.name': sortOrder };
+  } else {
+    // For regular fields, sort directly
+    sortOptions[sortField] = sortOrder;
+  }
+  
   const items = await Item.find(query)
     .populate('location', 'name')
     .populate('category', 'name')
     .populate('labels', 'name color')
-    .sort({ updatedAt: -1 })
+    .sort(sortOptions)
     .skip(startIndex)
     .limit(limit);
   
