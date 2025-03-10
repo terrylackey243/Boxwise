@@ -10,7 +10,7 @@ const {
   performServerAction,
   createBackup,
   getBackups,
-  installUpdates,
+  restoreBackup,
   getSystemConfig,
   updateSystemConfig
 } = require('../controllers/system');
@@ -24,9 +24,9 @@ router.post('/server/:action', protect, authorize('admin', 'owner'), performServ
 // Backup routes
 router.post('/backup', protect, authorize('admin', 'owner'), createBackup);
 router.get('/backups', protect, authorize('admin', 'owner'), getBackups);
+router.post('/restore', protect, authorize('admin', 'owner'), restoreBackup);
 
-// Update routes
-router.post('/update', protect, authorize('admin', 'owner'), installUpdates);
+// Update routes are removed as render.com applies changes automatically
 
 // Configuration routes
 router.get('/config', protect, authorize('admin', 'owner'), getSystemConfig);

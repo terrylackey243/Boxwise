@@ -32,13 +32,13 @@ import {
   Refresh as RefreshIcon,
   PlayArrow as StartIcon,
   Stop as StopIcon,
-  Update as UpdateIcon,
   Download as DownloadIcon,
   Settings as SettingsIcon,
   Info as InfoIcon,
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon
+  RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  Restore as RestoreIcon
 } from '@mui/icons-material';
 import axios from '../../utils/axiosConfig';
 
@@ -46,29 +46,20 @@ const SystemAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
-  const [updateProgress, setUpdateProgress] = useState({
-    inProgress: false,
-    percentage: 0,
-    status: '',
-    steps: [
-      { name: 'Pulling latest code from GitHub', completed: false },
-      { name: 'Installing dependencies', completed: false },
-      { name: 'Building application', completed: false },
-      { name: 'Restarting server', completed: false }
-    ]
-  });
   const [systemStatus, setSystemStatus] = useState({
     serverStatus: 'running',
     databaseStatus: 'running',
-    lastBackup: '2025-03-05 23:45:12',
-    lastUpdate: '2025-03-01 14:30:00',
-    updateAvailable: true
+    lastBackup: 'Never'
   });
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
     message: '',
     action: null
+  });
+  const [restoreDialog, setRestoreDialog] = useState({
+    open: false,
+    backupFile: null
   });
 
   // Fetch system status on component mount
@@ -207,188 +198,6 @@ const SystemAdmin = () => {
     }
   };
 
-  const handleSystemUpdate = () => {
-    // Show confirmation dialog
-    setConfirmDialog({
-      open: true,
-      title: 'Confirm System Update',
-      message: 'Are you sure you want to install the latest system updates? This process will:\n\n1. Pull the latest code from GitHub\n2. Install any new dependencies\n3. Build the application\n4. Restart the server\n\nThis operation may take several minutes and will temporarily disrupt service.',
-      action: executeSystemUpdate
-    });
-  };
-
-  const executeSystemUpdate = async () => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    
-    // Reset and start progress tracking
-    setUpdateProgress({
-      inProgress: true,
-      percentage: 0,
-      status: 'Starting update process...',
-      steps: [
-        { name: 'Pulling latest code from GitHub', completed: false },
-        { name: 'Installing dependencies', completed: false },
-        { name: 'Building application', completed: false },
-        { name: 'Restarting server', completed: false }
-      ]
-    });
-    
-    try {
-      // Simulate progress updates for each step
-      // In a real implementation, this would use server-sent events or WebSockets
-      // to get real-time progress updates from the server
-      
-      // Step 1: Pulling latest code from GitHub (25%)
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 5,
-        status: 'Connecting to GitHub repository...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 15,
-        status: 'Pulling latest changes...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 25,
-        status: 'GitHub pull complete',
-        steps: prev.steps.map((step, index) => 
-          index === 0 ? { ...step, completed: true } : step
-        )
-      }));
-      
-      // Step 2: Installing dependencies (50%)
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 30,
-        status: 'Checking for new dependencies...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 40,
-        status: 'Installing new packages...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 50,
-        status: 'Dependencies installed',
-        steps: prev.steps.map((step, index) => 
-          index === 1 ? { ...step, completed: true } : step
-        )
-      }));
-      
-      // Step 3: Building application (75%)
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 55,
-        status: 'Starting build process...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 65,
-        status: 'Compiling application...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 75,
-        status: 'Build complete',
-        steps: prev.steps.map((step, index) => 
-          index === 2 ? { ...step, completed: true } : step
-        )
-      }));
-      
-      // Step 4: Restarting server (100%)
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 80,
-        status: 'Stopping server...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 90,
-        status: 'Starting server with new version...'
-      }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setUpdateProgress(prev => ({
-        ...prev,
-        percentage: 100,
-        status: 'Update complete',
-        steps: prev.steps.map((step, index) => 
-          index === 3 ? { ...step, completed: true } : step
-        )
-      }));
-      
-      // Make the actual API call
-      const response = await axios.post('/api/admin/system/update');
-      
-      if (response.data.success) {
-        const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-        
-        setResult({
-          success: true,
-          message: response.data.message || `System updates installed successfully at ${now}. Server has been restarted.`
-        });
-        
-        // Update system status
-        setSystemStatus(prev => ({ 
-          ...prev, 
-          lastUpdate: now,
-          updateAvailable: false,
-          serverStatus: 'running'
-        }));
-        
-        // Refresh system status after a delay
-        setTimeout(() => {
-          fetchSystemStatus();
-        }, 3000);
-      } else {
-        setError(response.data.message || 'Failed to install system updates.');
-      }
-    } catch (err) {
-      console.error('Error installing system updates:', err);
-      setError(
-        err.response?.data?.message || 
-        err.message || 
-        'Failed to install system updates. Please try again.'
-      );
-    } finally {
-      // Reset progress after a delay to show the completed state
-      setTimeout(() => {
-        setUpdateProgress(prev => ({
-          ...prev,
-          inProgress: false
-        }));
-        setLoading(false);
-      }, 2000);
-    }
-  };
-
   // Fetch backup list
   const [backups, setBackups] = useState([]);
   
@@ -411,11 +220,55 @@ const SystemAdmin = () => {
       console.error('Error fetching backups:', err);
     }
   };
+
+  const handleRestoreBackup = (backup) => {
+    setRestoreDialog({
+      open: true,
+      backupFile: backup
+    });
+  };
+
+  const executeRestoreBackup = async () => {
+    if (!restoreDialog.backupFile) return;
+    
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setRestoreDialog({ ...restoreDialog, open: false });
+    
+    try {
+      const response = await axios.post('/api/admin/system/restore', {
+        filename: restoreDialog.backupFile.filename
+      });
+      
+      if (response.data.success) {
+        setResult({
+          success: true,
+          message: `Database restored successfully from backup ${restoreDialog.backupFile.timestamp}.`
+        });
+        
+        // Refresh system status after a delay
+        setTimeout(() => {
+          fetchSystemStatus();
+        }, 3000);
+      } else {
+        setError(response.data.message || 'Failed to restore database from backup.');
+      }
+    } catch (err) {
+      console.error('Error restoring database:', err);
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Failed to restore database from backup. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // System configuration
   const [config, setConfig] = useState({
     automaticBackups: true,
-    automaticUpdates: false,
     backupRetention: 7
   });
   
@@ -476,6 +329,10 @@ const SystemAdmin = () => {
     if (confirmDialog.action) {
       confirmDialog.action();
     }
+  };
+
+  const handleCloseRestoreDialog = () => {
+    setRestoreDialog({ ...restoreDialog, open: false });
   };
 
   return (
@@ -588,37 +445,6 @@ const SystemAdmin = () => {
                   </Button>
                 </ListItemSecondaryAction>
               </ListItem>
-              
-              <Divider />
-              
-              <ListItem>
-                <ListItemIcon>
-                  <UpdateIcon color={systemStatus.updateAvailable ? "warning" : "success"} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary="System Updates" 
-                  secondary={
-                    <React.Fragment>
-                      <Typography variant="body2" component="span">Last update: {systemStatus.lastUpdate}</Typography>
-                      <br />
-                      <Typography variant="caption" color="textSecondary">
-                        Updates include pulling latest code from GitHub, installing dependencies, and rebuilding the application.
-                      </Typography>
-                    </React.Fragment>
-                  }
-                />
-                <ListItemSecondaryAction>
-                  <Button 
-                    variant="outlined" 
-                    color={systemStatus.updateAvailable ? "warning" : "primary"}
-                    startIcon={<UpdateIcon />}
-                    onClick={handleSystemUpdate}
-                    disabled={loading || !systemStatus.updateAvailable}
-                  >
-                    {systemStatus.updateAvailable ? "Install Updates" : "No Updates Available"}
-                  </Button>
-                </ListItemSecondaryAction>
-              </ListItem>
             </List>
           )}
         </Paper>
@@ -655,7 +481,19 @@ const SystemAdmin = () => {
                       secondary={`Size: ${backup.size} • Created: ${backup.timestamp}`} 
                     />
                     <ListItemSecondaryAction>
-                      <IconButton color="primary" title="Download backup">
+                      <IconButton 
+                        color="primary" 
+                        title="Restore backup"
+                        onClick={() => handleRestoreBackup(backup)}
+                        disabled={loading}
+                      >
+                        <RestoreIcon />
+                      </IconButton>
+                      <IconButton 
+                        color="primary" 
+                        title="Download backup"
+                        disabled={loading}
+                      >
                         <DownloadIcon />
                       </IconButton>
                     </ListItemSecondaryAction>
@@ -696,24 +534,6 @@ const SystemAdmin = () => {
                 <Switch 
                   checked={config.automaticBackups} 
                   onChange={(e) => handleConfigChange('automaticBackups', e.target.checked)}
-                />
-              </ListItemSecondaryAction>
-            </ListItem>
-            
-            <Divider />
-            
-            <ListItem>
-              <ListItemIcon>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Automatic Updates" 
-                secondary="Automatically pull updates from GitHub and install them" 
-              />
-              <ListItemSecondaryAction>
-                <Switch 
-                  checked={config.automaticUpdates} 
-                  onChange={(e) => handleConfigChange('automaticUpdates', e.target.checked)}
                 />
               </ListItemSecondaryAction>
             </ListItem>
@@ -773,66 +593,25 @@ const SystemAdmin = () => {
           </DialogActions>
         </Dialog>
         
-        {/* Update Progress Dialog */}
+        {/* Restore Backup Dialog */}
         <Dialog
-          open={updateProgress.inProgress}
-          maxWidth="sm"
-          fullWidth
-          disableEscapeKeyDown
-          onClose={() => {}} // Prevent closing by clicking outside
+          open={restoreDialog.open}
+          onClose={handleCloseRestoreDialog}
         >
-          <DialogTitle>System Update in Progress</DialogTitle>
+          <DialogTitle>Confirm Database Restore</DialogTitle>
           <DialogContent>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {updateProgress.status}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ width: '100%', mr: 1 }}>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={updateProgress.percentage} 
-                    color="primary"
-                    sx={{ height: 10, borderRadius: 5 }}
-                  />
-                </Box>
-                <Box sx={{ minWidth: 35 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {`${Math.round(updateProgress.percentage)}%`}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-            
-            <List>
-              {updateProgress.steps.map((step, index) => (
-                <ListItem key={index}>
-                  <ListItemIcon>
-                    {step.completed ? (
-                      <CheckCircleIcon color="success" />
-                    ) : (
-                      index === updateProgress.steps.findIndex(s => !s.completed) ? (
-                        <CircularProgress size={24} />
-                      ) : (
-                        <RadioButtonUncheckedIcon color="disabled" />
-                      )
-                    )}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={step.name} 
-                    primaryTypographyProps={{
-                      color: step.completed ? 'text.primary' : 'text.secondary',
-                      fontWeight: index === updateProgress.steps.findIndex(s => !s.completed) ? 'bold' : 'normal'
-                    }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-            
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              Please do not close this window or navigate away during the update process.
-            </Typography>
+            <DialogContentText>
+              Are you sure you want to restore the database from backup {restoreDialog.backupFile?.timestamp}?
+              <br /><br />
+              <strong>Warning:</strong> This will replace all current data with the data from the backup. This action cannot be undone.
+            </DialogContentText>
           </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseRestoreDialog}>Cancel</Button>
+            <Button onClick={executeRestoreBackup} color="primary" autoFocus>
+              Restore Database
+            </Button>
+          </DialogActions>
         </Dialog>
       </Box>
     </Container>

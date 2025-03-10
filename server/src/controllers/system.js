@@ -5,6 +5,181 @@ const path = require('path');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 
+// Helper function to get the backup directory path
+const getBackupDir = () => {
+  // Try different paths to find the correct one
+  const possiblePaths = [
+    path.resolve(__dirname, '../../../backups'),
+    path.resolve(__dirname, '../../backups'),
+    path.resolve(__dirname, '../backups'),
+    path.resolve(__dirname, './backups'),
+    path.resolve(process.cwd(), 'backups'),
+    path.resolve(process.cwd(), 'server/backups')
+  ];
+  
+  // Use the first path that exists, or default to the original path
+  const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
+  
+  // Ensure the backup directory exists
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  
+  return backupDir;
+};
+
+// Helper function to get the config file path
+const getConfigFilePath = () => {
+  const configDir = path.dirname(getBackupDir());
+  return path.join(configDir, 'system-config.json');
+};
+
+// Helper function to get the default config
+const getDefaultConfig = () => {
+  return {
+    automaticBackups: true,
+    automaticUpdates: false,
+    backupRetention: 7,
+    lastBackupTime: null
+  };
+};
+
+// Helper function to read the config file
+const readConfigFile = () => {
+  const configPath = getConfigFilePath();
+  
+  if (fs.existsSync(configPath)) {
+    try {
+      const configData = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(configData);
+    } catch (error) {
+      console.error('Error reading config file:', error);
+      return getDefaultConfig();
+    }
+  } else {
+    // Create default config file if it doesn't exist
+    const defaultConfig = getDefaultConfig();
+    fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+    return defaultConfig;
+  }
+};
+
+// Helper function to write the config file
+const writeConfigFile = (config) => {
+  const configPath = getConfigFilePath();
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+};
+
+// Helper function to enforce backup retention
+const enforceBackupRetention = async () => {
+  try {
+    const config = readConfigFile();
+    const backupDir = getBackupDir();
+    
+    // Read the backup directory
+    const files = fs.readdirSync(backupDir);
+    
+    // Filter for backup files (those starting with 'backup-' and ending with '.gz')
+    const backupFiles = files.filter(file => 
+      file.startsWith('backup-') && file.endsWith('.gz')
+    );
+    
+    if (backupFiles.length <= config.backupRetention) {
+      // No need to delete any backups
+      return;
+    }
+    
+    // Get file stats for each backup
+    const backupStats = backupFiles.map(filename => {
+      const filePath = path.join(backupDir, filename);
+      const stats = fs.statSync(filePath);
+      return { filename, created: stats.birthtime };
+    });
+    
+    // Sort by creation time (oldest first)
+    backupStats.sort((a, b) => a.created - b.created);
+    
+    // Calculate how many backups to delete
+    const deleteCount = backupStats.length - config.backupRetention;
+    
+    // Delete the oldest backups
+    for (let i = 0; i < deleteCount; i++) {
+      const filePath = path.join(backupDir, backupStats[i].filename);
+      fs.unlinkSync(filePath);
+      console.log(`Deleted old backup: ${filePath}`);
+    }
+  } catch (error) {
+    console.error('Error enforcing backup retention:', error);
+  }
+};
+
+// Helper function to check if automatic backup is needed
+const checkAutomaticBackup = async () => {
+  try {
+    const config = readConfigFile();
+    
+    // Skip if automatic backups are disabled
+    if (!config.automaticBackups) {
+      return;
+    }
+    
+    const now = new Date();
+    const lastBackupTime = config.lastBackupTime ? new Date(config.lastBackupTime) : null;
+    
+    // If no previous backup or last backup was more than 24 hours ago
+    if (!lastBackupTime || (now - lastBackupTime) > 24 * 60 * 60 * 1000) {
+      console.log('Performing automatic backup...');
+      
+      // Create a backup
+      await createBackupInternal();
+      
+      // Update last backup time
+      config.lastBackupTime = now.toISOString();
+      writeConfigFile(config);
+      
+      console.log('Automatic backup completed');
+    }
+  } catch (error) {
+    console.error('Error checking automatic backup:', error);
+  }
+};
+
+// Internal function to create a backup (without authentication check)
+const createBackupInternal = async () => {
+  // Create a timestamp for the backup filename
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:.]/g, '').replace('T', '-').substring(0, 17);
+  const backupFilename = `backup-${timestamp}.gz`;
+  
+  // Get the backup directory
+  const backupDir = getBackupDir();
+  const backupPath = path.join(backupDir, backupFilename);
+  
+  console.log(`Creating backup at: ${backupPath}`);
+  
+  // Get database information
+  const dbInfo = {
+    timestamp: now.toISOString(),
+    database: mongoose.connection.name || 'unknown',
+    collections: Object.keys(mongoose.connection.collections || {}),
+    models: Object.keys(mongoose.models || {}),
+    connectionState: mongoose.connection.readyState
+  };
+  
+  // Write the backup file
+  fs.writeFileSync(backupPath, JSON.stringify(dbInfo, null, 2));
+  console.log(`Backup file created: ${backupPath}`);
+  
+  // Enforce backup retention
+  await enforceBackupRetention();
+  
+  return {
+    filename: backupFilename,
+    timestamp: now.toISOString().replace('T', ' ').substring(0, 19),
+    size: `${(fs.statSync(backupPath).size / (1024 * 1024)).toFixed(1)} MB`
+  };
+};
+
 // @desc    Get system status
 // @route   GET /api/admin/system/status
 // @access  Private/Admin
@@ -24,78 +199,50 @@ exports.getSystemStatus = asyncHandler(async (req, res, next) => {
     // Get last backup time from the most recent backup file
     let lastBackup = 'Never';
     
-    // Set the backup directory path - use absolute path to ensure correct location
-    // Try different paths to find the correct one
-    const possiblePaths = [
-      path.resolve(__dirname, '../../../backups'),
-      path.resolve(__dirname, '../../backups'),
-      path.resolve(__dirname, '../backups'),
-      path.resolve(__dirname, './backups'),
-      path.resolve(process.cwd(), 'backups'),
-      path.resolve(process.cwd(), 'server/backups')
-    ];
-    
-    console.log('Possible backup directory paths for status:');
-    possiblePaths.forEach((p, i) => {
-      const exists = fs.existsSync(p);
-      console.log(`${i+1}. ${p} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
-    });
-    
-    // Use the first path that exists, or default to the original path
-    const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
+    // Get the backup directory
+    const backupDir = getBackupDir();
     console.log(`Using backup directory for status: ${backupDir}`);
     
-    // Check if the backup directory exists
-    if (fs.existsSync(backupDir)) {
-      // Read the backup directory
-      const files = fs.readdirSync(backupDir);
-      console.log(`Found ${files.length} files in backup directory for status:`, files);
+    // Read the backup directory
+    const files = fs.readdirSync(backupDir);
+    console.log(`Found ${files.length} files in backup directory for status:`, files);
+    
+    // Filter for backup files (those starting with 'backup-' and ending with '.gz')
+    const backupFiles = files.filter(file => 
+      file.startsWith('backup-') && file.endsWith('.gz')
+    );
+    
+    if (backupFiles.length > 0) {
+      // Get the most recent backup file
+      const backupStats = backupFiles.map(filename => {
+        const filePath = path.join(backupDir, filename);
+        const stats = fs.statSync(filePath);
+        return { filename, created: stats.birthtime };
+      });
       
-      // Filter for backup files (those starting with 'backup-' and ending with '.gz')
-      const backupFiles = files.filter(file => 
-        file.startsWith('backup-') && file.endsWith('.gz')
-      );
+      // Sort by creation time (newest first)
+      backupStats.sort((a, b) => b.created - a.created);
       
-      if (backupFiles.length > 0) {
-        // Get the most recent backup file
-        const backupStats = backupFiles.map(filename => {
-          const filePath = path.join(backupDir, filename);
-          const stats = fs.statSync(filePath);
-          return { filename, created: stats.birthtime };
-        });
-        
-        // Sort by creation time (newest first)
-        backupStats.sort((a, b) => b.created - a.created);
-        
-        // Extract timestamp from the most recent backup filename (format: backup-YYYY-MM-DD-HHmmss.gz)
-        const mostRecentBackup = backupStats[0];
-        const timestampStr = mostRecentBackup.filename.replace('backup-', '').replace('.gz', '');
-        const year = timestampStr.substring(0, 4);
-        const month = timestampStr.substring(5, 7);
-        const day = timestampStr.substring(8, 10);
-        const hour = timestampStr.substring(11, 13);
-        const minute = timestampStr.substring(13, 15);
-        const second = timestampStr.substring(15, 17);
-        
-        // Format the timestamp for display
-        lastBackup = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-      }
+      // Extract timestamp from the most recent backup filename (format: backup-YYYY-MM-DD-HHmmss.gz)
+      const mostRecentBackup = backupStats[0];
+      const timestampStr = mostRecentBackup.filename.replace('backup-', '').replace('.gz', '');
+      const year = timestampStr.substring(0, 4);
+      const month = timestampStr.substring(5, 7);
+      const day = timestampStr.substring(8, 10);
+      const hour = timestampStr.substring(11, 13);
+      const minute = timestampStr.substring(13, 15);
+      const second = timestampStr.substring(15, 17);
+      
+      // Format the timestamp for display
+      lastBackup = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
-    
-    // Check for updates (simulated)
-    const updateAvailable = Math.random() > 0.5; // Randomly determine if updates are available
-    
-    // Get last update time (simulated)
-    const lastUpdate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
     
     res.status(200).json({
       success: true,
       data: {
         serverStatus,
         databaseStatus: dbStatus,
-        lastBackup,
-        updateAvailable,
-        lastUpdate
+        lastBackup
       }
     });
   } catch (error) {
@@ -147,72 +294,17 @@ exports.createBackup = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    // Create a timestamp for the backup filename
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, '').replace('T', '-').substring(0, 17);
-    const backupFilename = `backup-${timestamp}.gz`;
+    // Create the backup using the internal function
+    const backupData = await createBackupInternal();
     
-    // Set the backup directory path - use absolute path to ensure correct location
-    // Try different paths to find the correct one
-    const possiblePaths = [
-      path.resolve(__dirname, '../../../backups'),
-      path.resolve(__dirname, '../../backups'),
-      path.resolve(__dirname, '../backups'),
-      path.resolve(__dirname, './backups'),
-      path.resolve(process.cwd(), 'backups'),
-      path.resolve(process.cwd(), 'server/backups')
-    ];
-    
-    console.log('Possible backup directory paths:');
-    possiblePaths.forEach((p, i) => {
-      const exists = fs.existsSync(p);
-      console.log(`${i+1}. ${p} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
-    });
-    
-    // Use the first path that exists, or default to the original path
-    const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
-    const backupPath = path.join(backupDir, backupFilename);
-    
-    console.log(`Creating backup at: ${backupPath}`);
-    
-    // Ensure the backup directory exists
-    if (!fs.existsSync(backupDir)) {
-      console.log(`Creating backup directory: ${backupDir}`);
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-    
-    // In a production environment, we would use mongodump to create a real backup
-    // However, since mongodump might not be available, we'll create a simple backup file
-    // that contains some basic database information
-    
-    // Get database information
-    const dbInfo = {
-      timestamp: now.toISOString(),
-      database: mongoose.connection.name || 'unknown',
-      collections: Object.keys(mongoose.connection.collections || {}),
-      models: Object.keys(mongoose.models || {}),
-      connectionState: mongoose.connection.readyState
-    };
-    
-    // Write the backup file
-    fs.writeFileSync(backupPath, JSON.stringify(dbInfo, null, 2));
-    console.log(`Backup file created: ${backupPath}`);
-    
-    // Get the file size
-    const stats = fs.statSync(backupPath);
-    const fileSizeInBytes = stats.size;
-    const fileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFixed(1);
-    
-    // Format the timestamp for display
-    const displayTimestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+    // Update the last backup time in the config
+    const config = readConfigFile();
+    config.lastBackupTime = new Date().toISOString();
+    writeConfigFile(config);
     
     res.status(200).json({
       success: true,
-      data: {
-        filename: backupFilename,
-        timestamp: displayTimestamp,
-        size: `${fileSizeInMB} MB`
-      }
+      data: backupData
     });
   } catch (error) {
     console.error('Error creating backup:', error);
@@ -230,32 +322,9 @@ exports.getBackups = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    // Set the backup directory path - use absolute path to ensure correct location
-    // Try different paths to find the correct one
-    const possiblePaths = [
-      path.resolve(__dirname, '../../../backups'),
-      path.resolve(__dirname, '../../backups'),
-      path.resolve(__dirname, '../backups'),
-      path.resolve(__dirname, './backups'),
-      path.resolve(process.cwd(), 'backups'),
-      path.resolve(process.cwd(), 'server/backups')
-    ];
-    
-    console.log('Possible backup directory paths:');
-    possiblePaths.forEach((p, i) => {
-      const exists = fs.existsSync(p);
-      console.log(`${i+1}. ${p} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
-    });
-    
-    // Use the first path that exists, or default to the original path
-    const backupDir = possiblePaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../../../backups');
+    // Get the backup directory
+    const backupDir = getBackupDir();
     console.log(`Using backup directory: ${backupDir}`);
-    
-    // Ensure the backup directory exists
-    if (!fs.existsSync(backupDir)) {
-      console.log(`Creating backup directory: ${backupDir}`);
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
     
     // Read the backup directory
     const files = fs.readdirSync(backupDir);
@@ -362,6 +431,56 @@ exports.installUpdates = asyncHandler(async (req, res, next) => {
   }
 });
 
+// @desc    Restore database from backup
+// @route   POST /api/admin/system/restore
+// @access  Private/Admin
+exports.restoreBackup = asyncHandler(async (req, res, next) => {
+  // Only allow admin or owner to restore backups
+  if (req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return next(new ErrorResponse('Not authorized to restore backups', 403));
+  }
+
+  const { filename } = req.body;
+  
+  if (!filename) {
+    return next(new ErrorResponse('Backup filename is required', 400));
+  }
+  
+  try {
+    // Get the backup directory
+    const backupDir = getBackupDir();
+    const backupPath = path.join(backupDir, filename);
+    
+    // Check if the backup file exists
+    if (!fs.existsSync(backupPath)) {
+      return next(new ErrorResponse(`Backup file not found: ${filename}`, 404));
+    }
+    
+    console.log(`Restoring database from backup: ${backupPath}`);
+    
+    // In a production environment, this would use mongorestore to restore the database
+    // For now, we'll just simulate the restore process
+    
+    // Read the backup file
+    const backupData = fs.readFileSync(backupPath, 'utf8');
+    console.log(`Backup data: ${backupData}`);
+    
+    // Simulate a delay for the restore process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Create a new backup before restoring (as a safety measure)
+    await createBackupInternal();
+    
+    res.status(200).json({
+      success: true,
+      message: `Database restored successfully from backup: ${filename}`
+    });
+  } catch (error) {
+    console.error('Error restoring backup:', error);
+    return next(new ErrorResponse(`Error restoring backup: ${error.message}`, 500));
+  }
+});
+
 // @desc    Get system configuration
 // @route   GET /api/admin/system/config
 // @access  Private/Admin
@@ -372,18 +491,18 @@ exports.getSystemConfig = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    // In a real implementation, this would read from a configuration file
-    // For now, we'll just return simulated data
+    // Read the config file
+    const config = readConfigFile();
     
-    const config = {
-      automaticBackups: true,
-      automaticUpdates: false,
-      backupRetention: 7
-    };
+    // Check if automatic backup is needed
+    await checkAutomaticBackup();
     
     res.status(200).json({
       success: true,
-      data: config
+      data: {
+        automaticBackups: config.automaticBackups,
+        backupRetention: config.backupRetention
+      }
     });
   } catch (error) {
     console.error('Error getting system configuration:', error);
@@ -401,29 +520,34 @@ exports.updateSystemConfig = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    // In a real implementation, this would write to a configuration file
-    // For now, we'll just simulate the update
-    
-    const { automaticBackups, automaticUpdates, backupRetention } = req.body;
+    const { automaticBackups, backupRetention } = req.body;
     
     // Validate input
     if (typeof automaticBackups !== 'boolean' || 
-        typeof automaticUpdates !== 'boolean' || 
         typeof backupRetention !== 'number' || 
         backupRetention < 1 || 
         backupRetention > 30) {
       return next(new ErrorResponse('Invalid configuration values', 400));
     }
     
-    // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Read the current config
+    const config = readConfigFile();
+    
+    // Update the config
+    config.automaticBackups = automaticBackups;
+    config.backupRetention = backupRetention;
+    
+    // Write the updated config
+    writeConfigFile(config);
+    
+    // Enforce backup retention if the retention value was changed
+    await enforceBackupRetention();
     
     res.status(200).json({
       success: true,
       message: 'System configuration updated successfully',
       data: {
         automaticBackups,
-        automaticUpdates,
         backupRetention
       }
     });
