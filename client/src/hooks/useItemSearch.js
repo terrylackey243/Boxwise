@@ -98,27 +98,33 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       // Check if we're searching
       const isSearching = Boolean(options.searchTerm || searchTerm);
       
-      // Pagination parameters - if searching, use a large limit to get all items
-      params.set('page', (options.page !== undefined ? options.page : page) + 1); // API uses 1-based indexing
-      params.set('limit', isSearching ? 1000 : (options.limit || rowsPerPage)); // Use a large limit when searching
-      
-      // Only apply filters if we're not forcing a refresh and not searching
-      if (!options.forceRefresh && !isSearching) {
-        // Filter parameters
-        if (filters.archived === true) {
-          params.set('archived', 'true');
-        }
+      // When searching, always fetch all items without pagination or filters
+      if (isSearching) {
+        params.set('page', 1); // Start from first page
+        params.set('limit', 10000); // Use a very large limit to get all items
+      } else {
+        // Normal case: pagination with filters
+        params.set('page', (options.page !== undefined ? options.page : page) + 1); // API uses 1-based indexing
+        params.set('limit', options.limit || rowsPerPage);
         
-        if (filters.location) {
-          params.set('location', filters.location);
-        }
-        
-        if (filters.category) {
-          params.set('category', filters.category);
-        }
-        
-        if (filters.label) {
-          params.set('label', filters.label);
+        // Only apply filters if we're not forcing a refresh
+        if (!options.forceRefresh) {
+          // Filter parameters
+          if (filters.archived === true) {
+            params.set('archived', 'true');
+          }
+          
+          if (filters.location) {
+            params.set('location', filters.location);
+          }
+          
+          if (filters.category) {
+            params.set('category', filters.category);
+          }
+          
+          if (filters.label) {
+            params.set('label', filters.label);
+          }
         }
       }
       
@@ -254,12 +260,20 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     
     const searchLower = searchValue.toLowerCase();
     
-    // Determine which item set to use for searching
-    // If we have loaded the complete item set, use that for searching
-    // Otherwise, fall back to the currently loaded items
-    const itemsToSearch = hasLoadedCompleteItemSetRef.current ? completeItemSet : allItems;
+    // Always search across all items in the database, regardless of filters
+    // Force loading the complete item set if we don't have it yet
+    if (!hasLoadedCompleteItemSetRef.current) {
+      loadAllItemsForSearch();
+      // Fall back to current items until the complete set is loaded
+      const itemsToSearch = allItems;
+      performInitialSearch(searchLower, itemsToSearch);
+      return;
+    }
     
-    console.log(`Searching through ${itemsToSearch.length} items (using ${hasLoadedCompleteItemSetRef.current ? 'complete item set' : 'current items'})`);
+    // Use the complete item set for searching
+    const itemsToSearch = completeItemSet;
+    
+    console.log(`Searching through ${itemsToSearch.length} items (using complete item set)`);
     
     // Filter items based on the search value
     const filtered = itemsToSearch.filter(item => {
@@ -279,11 +293,32 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     setFilteredItems(filtered);
     setTotalItems(filtered.length); // Update total items count to match filtered results
     
-    // If we have enough matches client-side, prevent the server request
-    if (filtered.length > 0) {
-      preventServerRequestRef.current = true;
-    }
-  }, [allItems, completeItemSet]);
+    // Always prevent server request when we have the complete item set
+    preventServerRequestRef.current = true;
+  }, [allItems, completeItemSet, loadAllItemsForSearch]);
+  
+  // Helper function to perform initial search while complete set is loading
+  const performInitialSearch = (searchLower, itemsToSearch) => {
+    console.log(`Performing initial search through ${itemsToSearch.length} items`);
+    
+    // Filter items based on the search value
+    const filtered = itemsToSearch.filter(item => {
+      // Check if any of these fields contain the search term
+      return (
+        (item.name && item.name.toLowerCase().includes(searchLower)) ||
+        (item.description && item.description.toLowerCase().includes(searchLower)) ||
+        (item.assetId && item.assetId.toLowerCase().includes(searchLower)) ||
+        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchLower)) ||
+        (item.modelNumber && item.modelNumber.toLowerCase().includes(searchLower)) ||
+        (item.manufacturer && item.manufacturer.toLowerCase().includes(searchLower)) ||
+        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower))
+      );
+    });
+    
+    // Show all matching items without pagination
+    setFilteredItems(filtered);
+    setTotalItems(filtered.length); // Update total items count to match filtered results
+  };
 
   const handleSearchChange = (e) => {
     // Update the input field immediately for a responsive UI

@@ -98,13 +98,8 @@ const CreateLabel = () => {
       
       console.log('Label created:', response.data);
       
-      // Set success alert with a delay before navigation
-      const alertId = setSuccessAlert('Label created successfully', 1500);
-      
-      // Navigate after a short delay to allow the alert to be shown
-      setTimeout(() => {
-        navigate('/labels');
-      }, 1500);
+      // Navigate immediately without showing a success message
+      navigate('/labels');
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message;
       setErrorAlert(`Error creating label: ${errorMessage}`);

@@ -512,13 +512,8 @@ const CreateItem = () => {
       if (response.data.success) {
         console.log('Item created successfully');
         
-        // Set success alert with a callback to navigate after the alert is shown
-        const alertId = setSuccessAlert('Item created successfully', 1500);
-        
-        // Navigate after a short delay to allow the alert to be shown
-        setTimeout(() => {
-          navigate('/items');
-        }, 1500);
+        // Navigate immediately without showing a success message
+        navigate('/items');
         } else {
           console.log('API returned error:', response.data.message);
           setErrorAlert('Error creating item: ' + response.data.message);
@@ -1247,7 +1242,7 @@ const CreateItem = () => {
                   // Close the dialog
                   setNewLocationDialog(false);
                   
-                  setSuccessAlert('Location created successfully');
+                  // No success message needed - the UI update speaks for itself
                 } else {
                   setErrorAlert('Error creating location: ' + response.data.message);
                 }
@@ -1325,7 +1320,7 @@ const CreateItem = () => {
                   // Close the dialog
                   setNewCategoryDialog(false);
                   
-                  setSuccessAlert('Category created successfully');
+                  // No success message needed - the UI update speaks for itself
                 } else {
                   setErrorAlert('Error creating category: ' + response.data.message);
                 }
@@ -1424,7 +1419,7 @@ const CreateItem = () => {
                   // Close the dialog
                   setNewLabelDialog(false);
                   
-                  setSuccessAlert('Label created successfully');
+                  // No success message needed - the UI update speaks for itself
                 } else {
                   setErrorAlert('Error creating label: ' + response.data.message);
                 }

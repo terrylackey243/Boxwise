@@ -183,7 +183,7 @@ const EditLocation = () => {
       });
       
       if (response.data.success) {
-        setSuccessAlert('Location updated successfully');
+        // Navigate immediately without showing a success message
         navigate('/locations');
       } else {
         setErrorAlert('Error updating location: ' + response.data.message);

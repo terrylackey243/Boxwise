@@ -145,7 +145,7 @@ const EditLabel = () => {
       const response = await axios.put(`/api/labels/${id}`, formData);
       
       if (response.data.success) {
-        setSuccessAlert('Label updated successfully');
+        // Navigate immediately without showing a success message
         navigate('/labels');
       } else {
         setErrorAlert('Error updating label: ' + response.data.message);

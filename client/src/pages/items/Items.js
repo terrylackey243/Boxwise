@@ -90,13 +90,10 @@ const Items = () => {
       // Close the action menu
       handleActionMenuClose();
       
-      // Show success message with a delay before refreshing
-      const alertId = setSuccessAlert('Item deleted successfully', 1500);
+      // Refresh the items list immediately
+      await refreshItems();
       
-      // Refresh the items list from the server after a short delay
-      setTimeout(() => {
-        refreshItems();
-      }, 1500);
+      // No success message, just let the UI update speak for itself
     } catch (err) {
       setErrorAlert('Error deleting item: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -118,13 +115,10 @@ const Items = () => {
       // Close the action menu
       handleActionMenuClose();
       
-      // Show success message with a delay before refreshing
-      const alertId = setSuccessAlert('Item archived successfully', 1500);
+      // Refresh the items list immediately
+      await refreshItems();
       
-      // Refresh the items list from the server after a short delay
-      setTimeout(() => {
-        refreshItems();
-      }, 1500);
+      // No success message, just let the UI update speak for itself
     } catch (err) {
       setErrorAlert('Error archiving item: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -176,17 +170,14 @@ const Items = () => {
         quantity
       });
       
-      // Show success message with a delay
-      const alertId = setSuccessAlert('Quantity updated successfully', 1500);
+      // Update the local state immediately to avoid a full refresh
+      const updatedItems = items.map(item => 
+        item._id === itemId ? { ...item, quantity } : item
+      );
+      setItems(updatedItems);
+      setFilteredItems(updatedItems);
       
-      // Update the local state after a short delay to avoid a full refresh
-      setTimeout(() => {
-        const updatedItems = items.map(item => 
-          item._id === itemId ? { ...item, quantity } : item
-        );
-        setItems(updatedItems);
-        setFilteredItems(updatedItems);
-      }, 1500);
+      // No success message, just let the UI update speak for itself
     } catch (err) {
       setErrorAlert('Error updating quantity: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -347,16 +338,16 @@ const Items = () => {
         onClose={() => setBulkAddOpen(false)}
         onSubmit={async (items) => {
           try {
+            // Add items
             const result = await bulkService.bulkAdd('items', items);
             
-            // Show success message with a delay before refreshing
-            const alertId = setSuccessAlert(`Successfully added ${result.count} items`, 1500);
+            // Refresh the items list immediately
+            await refreshItems();
             
-            // Refresh the items list after a short delay
-            setTimeout(() => {
-              refreshItems();
-            }, 1500);
+            // Close the dialog
+            setBulkAddOpen(false);
             
+            // No success message, just let the UI update speak for itself
             return result;
           } catch (err) {
             setErrorAlert('Error adding items: ' + (err.message || 'Unknown error'));

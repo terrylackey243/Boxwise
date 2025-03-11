@@ -71,9 +71,22 @@ const LocationDetail = () => {
         if (response.data.success) {
           setLocation(response.data.data);
           
-          // Set child locations
+          // Get child locations
           if (response.data.data.children) {
-            setChildLocations(response.data.data.children);
+            const childrenWithCounts = await Promise.all(
+              response.data.data.children.map(async (child) => {
+                // Fetch item count for each child location
+                const itemsResponse = await axios.get(`/api/items?location=${child._id}&limit=1&page=1`);
+                
+                // Add itemCount property to child location
+                return {
+                  ...child,
+                  itemCount: itemsResponse.data.total || 0
+                };
+              })
+            );
+            
+            setChildLocations(childrenWithCounts);
           }
           
           // Get all locations to build the hierarchy
@@ -180,7 +193,7 @@ const LocationDetail = () => {
                 <Box component="span" sx={{ fontWeight: 'medium' }}>
                   {location.name}
                   <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                    ({location.itemCount} items)
+                    ({location.itemCount || 0} items)
                   </Typography>
                 </Box>
               }

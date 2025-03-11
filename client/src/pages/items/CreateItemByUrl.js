@@ -306,7 +306,7 @@ const CreateItemByUrl = () => {
           }
         }
         
-        setSuccessAlert('Product information retrieved successfully');
+        // No success message needed - the UI update speaks for itself
       } else {
         setErrorAlert('No product found for this URL');
       }
@@ -526,13 +526,8 @@ const CreateItemByUrl = () => {
       const response = await axios.post('/api/items', submissionData);
       
       if (response.data.success) {
-        // Set success alert with a callback to navigate after the alert is shown
-        const alertId = setSuccessAlert('Item created successfully', 1500);
-        
-        // Navigate after a short delay to allow the alert to be shown
-        setTimeout(() => {
-          navigate('/items');
-        }, 1500);
+        // Navigate immediately without showing a success message
+        navigate('/items');
       } else {
         setErrorAlert('Error creating item: ' + response.data.message);
       }
@@ -1269,7 +1264,7 @@ const CreateItemByUrl = () => {
                   // Close the dialog
                   setNewLocationDialog(false);
                   
-                  setSuccessAlert('Location created successfully');
+                  // No success message needed - the UI update speaks for itself
                 } else {
                   setErrorAlert('Error creating location: ' + response.data.message);
                 }
@@ -1341,7 +1336,7 @@ const CreateItemByUrl = () => {
                   // Close the dialog
                   setNewCategoryDialog(false);
                   
-                  setSuccessAlert('Category created successfully');
+                  // No success message needed - the UI update speaks for itself
                 } else {
                   setErrorAlert('Error creating category: ' + response.data.message);
                 }
@@ -1436,7 +1431,7 @@ const CreateItemByUrl = () => {
                   // Close the dialog
                   setNewLabelDialog(false);
                   
-                  setSuccessAlert('Label created successfully');
+                  // No success message needed - the UI update speaks for itself
                 } else {
                   setErrorAlert('Error creating label: ' + response.data.message);
                 }

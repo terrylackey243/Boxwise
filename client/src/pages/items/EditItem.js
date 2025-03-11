@@ -289,7 +289,7 @@ const EditItem = () => {
           }
         }
         
-        setSuccessAlert('Product information retrieved successfully');
+        // No success message needed - UI update is clear from the form
       } else {
         setErrorAlert('No product found for this UPC code');
       }
@@ -502,7 +502,7 @@ const EditItem = () => {
       const response = await axios.put(`/api/items/${id}`, submissionData);
       
       if (response.data.success) {
-        setSuccessAlert('Item updated successfully');
+        // Navigate directly to item detail page without showing a success message
         navigate(`/items/${id}`);
       } else {
         setErrorAlert('Error updating item: ' + response.data.message);
@@ -1272,8 +1272,6 @@ const EditItem = () => {
                 const response = await axios.post('/api/locations', newLocation);
                 
                 if (response.data.success) {
-                  setSuccessAlert('Location created successfully');
-                  
                   // Add the new location to the locations list
                   const createdLocation = response.data.data;
                   setLocations([...locations, createdLocation]);
@@ -1344,8 +1342,6 @@ const EditItem = () => {
                 const response = await axios.post('/api/categories', newCategory);
                 
                 if (response.data.success) {
-                  setSuccessAlert('Category created successfully');
-                  
                   // Add the new category to the categories list
                   const createdCategory = response.data.data;
                   setCategories([...categories, createdCategory]);
@@ -1426,8 +1422,6 @@ const EditItem = () => {
                 const response = await axios.post('/api/labels', newLabel);
                 
                 if (response.data.success) {
-                  setSuccessAlert('Label created successfully');
-                  
                   // Add the new label to the labels list
                   const createdLabel = response.data.data;
                   setLabels([...labels, createdLabel]);

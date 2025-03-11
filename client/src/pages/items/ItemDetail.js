@@ -282,7 +282,7 @@ const ItemDetail = () => {
       const response = await axios.delete(`/api/items/${id}`);
       
       if (response.data.success) {
-        setSuccessAlert('Item deleted successfully');
+        // Navigate immediately without showing a success message
         navigate('/items');
       } else {
         setErrorAlert('Error deleting item: ' + response.data.message);
@@ -304,8 +304,8 @@ const ItemDetail = () => {
       });
       
       if (response.data.success) {
+        // Update item state immediately without showing a success message
         setItem(response.data.data);
-        setSuccessAlert(`Item ${item.isArchived ? 'unarchived' : 'archived'} successfully`);
       } else {
         setErrorAlert(`Error ${item.isArchived ? 'unarchiving' : 'archiving'} item: ${response.data.message}`);
       }

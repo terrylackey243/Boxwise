@@ -108,16 +108,11 @@ const Locations = () => {
       const response = await axios.delete(`/api/locations/${selectedLocation._id}`);
       
       if (response.data.success) {
-        // Set success alert with a delay
-        const alertId = setSuccessAlert(`${selectedLocation.name} deleted successfully`, 1500);
-        
-        // Refresh the locations list after a short delay
-        setTimeout(async () => {
-          const locationsResponse = await axios.get('/api/locations');
-          if (locationsResponse.data.success) {
-            setLocations(locationsResponse.data.data || []);
-          }
-        }, 1500);
+        // Refresh the locations list immediately without showing a success message
+        const locationsResponse = await axios.get('/api/locations');
+        if (locationsResponse.data.success) {
+          setLocations(locationsResponse.data.data || []);
+        }
       } else {
         setErrorAlert('Error deleting location: ' + response.data.message);
       }
@@ -438,16 +433,12 @@ const Locations = () => {
         onSubmit={async (locations) => {
           try {
             const result = await bulkService.bulkAdd('locations', locations);
-            // Set success alert with a delay
-            const alertId = setSuccessAlert(`Successfully added ${result.count} locations`, 1500);
             
-            // Refresh the locations list after a short delay
-            setTimeout(async () => {
-              const response = await axios.get('/api/locations');
-              if (response.data.success) {
-                setLocations(response.data.data || []);
-              }
-            }, 1500);
+            // Refresh the locations list immediately without showing a success message
+            const response = await axios.get('/api/locations');
+            if (response.data.success) {
+              setLocations(response.data.data || []);
+            }
             
             return result;
           } catch (err) {

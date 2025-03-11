@@ -113,7 +113,7 @@ const EditCategory = () => {
       const response = await axios.put(`/api/categories/${id}`, formData);
       
       if (response.data.success) {
-        setSuccessAlert(response.data.message || 'Category updated successfully');
+        // Navigate immediately without showing a success message
         navigate('/categories');
       } else {
         setErrorAlert(response.data.message || 'Error updating category');
