@@ -1,118 +1,171 @@
-import React, { memo } from 'react';
-import { 
-  Paper, 
-  IconButton, 
-  Table, 
-  TableHead, 
-  TableRow, 
-  TableCell, 
+import React, { useState, useCallback, memo } from 'react';
+import { FixedSizeList as List } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
   TableBody,
+  Paper,
+  IconButton,
+  Box,
   TextField,
+  InputAdornment,
   Typography
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
   MoreVert as MoreVertIcon
 } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
-import { FixedSizeList as List } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { withMemoization, itemPropsAreEqual } from '../optimizations/MemoizedComponents';
 
-// Memoized row component for better performance
-const ItemRow = memo(({ item, onActionClick, onUpdateQuantity, style }) => {
+// Memoized row component to prevent unnecessary re-renders
+const Row = memo(({ data, index, style }) => {
+  const {
+    items,
+    onActionClick,
+    onUpdateQuantity,
+    canEdit = true
+  } = data;
+  
+  const item = items[index];
+  if (!item) return null;
+  
   const handleQuantityChange = (e) => {
-    onUpdateQuantity(item._id, parseInt(e.target.value, 10));
+    const value = parseInt(e.target.value);
+    if (!isNaN(value)) {
+      onUpdateQuantity(item._id, value);
+    }
   };
-
+  
+  const handleIncrement = () => {
+    onUpdateQuantity(item._id, (item.quantity || 0) + 1);
+  };
+  
+  const handleDecrement = () => {
+    if (item.quantity > 0) {
+      onUpdateQuantity(item._id, item.quantity - 1);
+    }
+  };
+  
   return (
-    <TableRow hover style={style}>
-      <TableCell>
-        <RouterLink to={`/items/${item._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-          {item.name}
-        </RouterLink>
-      </TableCell>
-      <TableCell>{item.description}</TableCell>
-      <TableCell>
-        <TextField
-          type="number"
-          value={item.quantity}
-          onChange={handleQuantityChange}
-          InputProps={{ inputProps: { min: 0 } }}
-          size="small"
-          variant="outlined"
-          style={{ width: '70px' }}
-        />
-      </TableCell>
-      <TableCell>{item.location?.name || ''}</TableCell>
-      <TableCell>{item.category?.name || ''}</TableCell>
-      <TableCell>
-        <IconButton 
-          component={RouterLink} 
-          to={`/items/edit/${item._id}`}
-          size="small"
-        >
-          <EditIcon fontSize="small" />
-        </IconButton>
-        <IconButton 
-          size="small"
-          onClick={(e) => onActionClick(e, item._id)}
-        >
-          <MoreVertIcon fontSize="small" />
-        </IconButton>
-      </TableCell>
-    </TableRow>
+    <div style={style}>
+      <TableRow 
+        hover
+        sx={{
+          height: 53,
+          '&:nth-of-type(odd)': {
+            backgroundColor: 'background.default',
+          },
+          ...(item.isArchived ? { opacity: 0.5 } : {})
+        }}
+      >
+        <TableCell>{item.name}</TableCell>
+        <TableCell>{item.category?.name || '-'}</TableCell>
+        <TableCell>{item.location?.name || '-'}</TableCell>
+        <TableCell>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {canEdit ? (
+              <>
+                <IconButton 
+                  size="small" 
+                  onClick={handleDecrement}
+                  disabled={item.quantity <= 0}
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                
+                <TextField
+                  variant="outlined"
+                  size="small"
+                  value={item.quantity || 0}
+                  onChange={handleQuantityChange}
+                  inputProps={{ min: 0, style: { textAlign: 'center' } }}
+                  sx={{ width: 60, mx: 1 }}
+                />
+                
+                <IconButton 
+                  size="small" 
+                  onClick={handleIncrement}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </>
+            ) : (
+              <Typography>{item.quantity || 0}</Typography>
+            )}
+          </Box>
+        </TableCell>
+        <TableCell>
+          {item.labels?.map(label => label.name).join(', ') || '-'}
+        </TableCell>
+        <TableCell align="right">
+          <IconButton onClick={(e) => onActionClick(e, item._id)}>
+            <MoreVertIcon />
+          </IconButton>
+        </TableCell>
+      </TableRow>
+    </div>
   );
-});
+}, itemPropsAreEqual);
 
-// Virtualized table for better performance with large lists
-const VirtualizedItemsTable = ({ items, onActionClick, onUpdateQuantity }) => {
-  if (!items.length) {
-    return (
-      <Paper sx={{ p: 2, mt: 2, textAlign: 'center' }}>
-        <Typography variant="body1">No items found</Typography>
-      </Paper>
-    );
-  }
-
+/**
+ * VirtualizedItemsTable - A virtualized table for displaying large item lists
+ * Only renders items that are visible in the viewport for better performance
+ */
+const VirtualizedItemsTable = ({
+  items = [],
+  onActionClick,
+  onUpdateQuantity,
+  canEdit = true,
+  isViewer = false
+}) => {
+  const [hoveredRow, setHoveredRow] = useState(null);
+  
+  const itemData = {
+    items,
+    onActionClick,
+    onUpdateQuantity,
+    hoveredRow,
+    setHoveredRow,
+    canEdit: canEdit && !isViewer
+  };
+  
   return (
-    <Paper sx={{ mb: 2, overflow: 'hidden' }}>
-      <Table aria-label="items table" size="small">
+    <Paper sx={{ width: '100%', height: 'calc(100vh - 300px)', minHeight: 400 }}>
+      <Table sx={{ tableLayout: 'fixed' }}>
         <TableHead>
           <TableRow>
-            <TableCell>Name</TableCell>
-            <TableCell>Description</TableCell>
-            <TableCell>Quantity</TableCell>
-            <TableCell>Location</TableCell>
-            <TableCell>Category</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell width="20%">Name</TableCell>
+            <TableCell width="15%">Category</TableCell>
+            <TableCell width="15%">Location</TableCell>
+            <TableCell width="20%">Quantity</TableCell>
+            <TableCell width="20%">Labels</TableCell>
+            <TableCell width="10%" align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
       </Table>
       
-      <div style={{ height: Math.min(500, items.length * 53) }}>
+      <Box sx={{ height: 'calc(100% - 57px)', width: '100%' }}>
         <AutoSizer>
           {({ height, width }) => (
             <List
               height={height}
               width={width}
               itemCount={items.length}
-              itemSize={53} // Approximate height of a TableRow
+              itemSize={53} // Match the TableRow height
+              itemData={itemData}
             >
-              {({ index, style }) => (
-                <ItemRow
-                  item={items[index]}
-                  onActionClick={onActionClick}
-                  onUpdateQuantity={onUpdateQuantity}
-                  style={style}
-                />
-              )}
+              {Row}
             </List>
           )}
         </AutoSizer>
-      </div>
+      </Box>
     </Paper>
   );
 };
 
-export default memo(VirtualizedItemsTable);
+// Export memoized component to prevent unnecessary re-renders
+export default withMemoization(VirtualizedItemsTable);

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { withMemoization } from '../optimizations/MemoizedComponents';
 import {
   Box,
   Button,
@@ -29,9 +30,17 @@ import {
  * @param {Array} props.items - Array of items to display
  * @param {Function} props.onActionClick - Function to call when action button is clicked
  * @param {Function} props.onUpdateQuantity - Function to call when quantity is updated
+ * @param {boolean} props.canEdit - Whether the user has edit permissions
+ * @param {boolean} props.isViewer - Whether the user is a viewer (read-only)
  * @returns {JSX.Element} - Rendered component
  */
-const ItemsTable = ({ items, onActionClick, onUpdateQuantity }) => {
+const ItemsTable = ({ 
+  items, 
+  onActionClick, 
+  onUpdateQuantity,
+  canEdit = true,
+  isViewer = false
+}) => {
   const [editingQuantity, setEditingQuantity] = useState({});
   const navigate = useNavigate();
 

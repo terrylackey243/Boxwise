@@ -404,6 +404,7 @@ const EditUser = () => {
                       label="Role"
                       disabled={userData.role === 'owner' || (userData.role === 'admin' && !canEditAdmin) || (!canEditAdmin && formData.role === 'admin')}
                     >
+                      <MenuItem value="viewer">Viewer (Read-only)</MenuItem>
                       <MenuItem value="user">User</MenuItem>
                       {canEditAdmin && (
                         <MenuItem value="admin">Admin</MenuItem>
@@ -461,6 +462,7 @@ const EditUser = () => {
                       <strong>Role Permissions:</strong>
                     </Typography>
                     <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                      <li><strong>Viewer:</strong> Can only view items, locations, labels, and categories. Cannot make any changes.</li>
                       <li><strong>User:</strong> Can manage their own items, locations, labels, and categories.</li>
                       <li><strong>Admin:</strong> Can manage all users, items, locations, labels, and categories. Cannot manage billing.</li>
                       <li><strong>Owner:</strong> Has full access to all features, including billing and subscription management.</li>

@@ -21,6 +21,8 @@ import {
  * @param {string} props.itemId - The ID of the item
  * @param {Function} props.onArchive - Function to call when the archive option is selected
  * @param {Function} props.onDelete - Function to call when the delete option is selected
+ * @param {boolean} props.canEdit - Whether the user has edit permissions
+ * @param {boolean} props.isViewer - Whether the user is a viewer (read-only)
  * @returns {JSX.Element} - Rendered component
  */
 const ItemActionMenu = ({ 
@@ -29,7 +31,9 @@ const ItemActionMenu = ({
   onClose, 
   itemId, 
   onArchive, 
-  onDelete 
+  onDelete,
+  canEdit = true,
+  isViewer = false
 }) => {
   return (
     <Menu
@@ -37,29 +41,47 @@ const ItemActionMenu = ({
       open={open}
       onClose={onClose}
     >
-      <MenuItem 
-        component={RouterLink} 
-        to={`/items/edit/${itemId}`}
-      >
-        <ListItemIcon>
-          <EditIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Edit</ListItemText>
-      </MenuItem>
+      {/* Only show edit option if user has edit permissions */}
+      {!isViewer && canEdit && (
+        <MenuItem 
+          component={RouterLink} 
+          to={`/items/edit/${itemId}`}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+      )}
       
-      <MenuItem onClick={() => onArchive(itemId)}>
-        <ListItemIcon>
-          <ArchiveIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Archive</ListItemText>
-      </MenuItem>
+      {/* Only show archive option if user has edit permissions */}
+      {!isViewer && canEdit && (
+        <MenuItem onClick={() => onArchive(itemId)}>
+          <ListItemIcon>
+            <ArchiveIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Archive</ListItemText>
+        </MenuItem>
+      )}
       
-      <MenuItem onClick={() => onDelete(itemId)}>
-        <ListItemIcon>
-          <DeleteIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Delete</ListItemText>
-      </MenuItem>
+      {/* Only show delete option if user has edit permissions */}
+      {!isViewer && canEdit && (
+        <MenuItem onClick={() => onDelete(itemId)}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      )}
+      
+      {/* Show message if user is viewer with no edit options */}
+      {isViewer && (
+        <MenuItem disabled>
+          <ListItemText style={{ textAlign: 'center' }}>
+            View-only mode
+          </ListItemText>
+        </MenuItem>
+      )}
     </Menu>
   );
 };

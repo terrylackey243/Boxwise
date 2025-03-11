@@ -20,15 +20,16 @@ const router = express.Router();
 
 // Import middleware
 const { protect, checkSubscriptionLimits } = require('../middleware/auth');
+const { restrictViewers } = require('../middleware/viewerRestriction');
 
 // Define routes
 router.route('/')
   .get(protect, getItems)
-  .post(protect, checkSubscriptionLimits, createItem);
+  .post(protect, restrictViewers, checkSubscriptionLimits, createItem);
 
 
 router.route('/quick-add')
-  .post(protect, checkSubscriptionLimits, quickAddItem);
+  .post(protect, restrictViewers, checkSubscriptionLimits, quickAddItem);
 
 router.route('/next-asset-id')
   .get(protect, getNextAssetId);
@@ -40,21 +41,21 @@ router.route('/upc/:upc')
   .get(protect, searchByUPC);
 
 router.route('/:id/attachments')
-  .post(protect, uploadItemAttachment);
+  .post(protect, restrictViewers, uploadItemAttachment);
 
 router.route('/:id/qrcode')
   .get(protect, generateQRCode);
 
 // Uncomment these routes to enable loan and return functionality
 router.route('/:id/loan')
-  .post(protect, loanItem);
+  .post(protect, restrictViewers, loanItem);
 
 router.route('/:id/return')
-  .post(protect, returnItem);
+  .post(protect, restrictViewers, returnItem);
 
 router.route('/:id')
   .get(protect, getItem)
-  .put(protect, updateItem)
-  .delete(protect, deleteItem);
+  .put(protect, restrictViewers, updateItem)
+  .delete(protect, restrictViewers, deleteItem);
 
 module.exports = router;

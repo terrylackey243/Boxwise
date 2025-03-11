@@ -3,6 +3,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
 import bulkService from '../../services/bulkService';
 import { useMobile } from '../../context/MobileContext';
+import useRolePermissions from '../../hooks/useRolePermissions';
 import {
   Container,
   Box,
@@ -33,6 +34,7 @@ import MobileActionButtons from '../../components/items/MobileActionButtons';
 const Items = () => {
   const { setErrorAlert, setSuccessAlert } = useContext(AlertContext);
   const navigate = useNavigate();
+  const { canCreate, canEdit, isViewer } = useRolePermissions();
   
   // Menu state
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
@@ -221,43 +223,45 @@ const Items = () => {
           )}
         </Box>
         
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => setBulkAddOpen(true)}
-          >
-            Bulk Add
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            component={RouterLink}
-            to="/items/create"
-          >
-            Create Manually
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            component={RouterLink}
-            to="/items/create-by-url"
-          >
-            Create by URL
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            component={RouterLink}
-            to="/items/create-by-upc"
-          >
-            Create by UPC
-          </Button>
-        </Box>
+        {canCreate && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => setBulkAddOpen(true)}
+            >
+              Bulk Add
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              component={RouterLink}
+              to="/items/create"
+            >
+              Create Manually
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              component={RouterLink}
+              to="/items/create-by-url"
+            >
+              Create by URL
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              component={RouterLink}
+              to="/items/create-by-upc"
+            >
+              Create by UPC
+            </Button>
+          </Box>
+        )}
       </Box>
       
       {/* Search and Filters */}
@@ -283,12 +287,16 @@ const Items = () => {
               items={filteredItems}
               onActionClick={handleActionMenuOpen}
               onUpdateQuantity={handleUpdateQuantity}
+              canEdit={canEdit}
+              isViewer={isViewer}
             />
           ) : (
             <ItemsTable
               items={filteredItems}
               onActionClick={handleActionMenuOpen}
               onUpdateQuantity={handleUpdateQuantity}
+              canEdit={canEdit}
+              isViewer={isViewer}
             />
           )}
         </Box>
@@ -468,6 +476,8 @@ const Items = () => {
         itemId={selectedItemId}
         onArchive={handleArchiveItem}
         onDelete={handleDeleteItem}
+        canEdit={canEdit}
+        isViewer={isViewer}
       />
     </Container>
   );
