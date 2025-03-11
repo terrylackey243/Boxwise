@@ -127,21 +127,74 @@ const QRGenerator = () => {
   const downloadQRCode = () => {
     if (!qrRef.current) return;
     
-    const canvas = document.createElement('canvas');
     const svg = qrRef.current.querySelector('svg');
     const svgData = new XMLSerializer().serializeToString(svg);
     const img = new Image();
     
     img.onload = () => {
-      canvas.width = qrSize;
-      canvas.height = qrSize;
+      // Get the name and location of the selected item/location/label
+      let name = '';
+      let locationName = '';
+      
+      if (qrType === 'item') {
+        const selectedItem = items.find(item => item._id === selectedId);
+        name = selectedItem?.name || '';
+        // Get location name if available
+        if (selectedItem?.location && typeof selectedItem.location === 'object') {
+          locationName = selectedItem.location.name || '';
+        }
+      } else if (qrType === 'location') {
+        const selectedLocation = locations.find(location => location._id === selectedId);
+        name = selectedLocation?.name || '';
+      } else if (qrType === 'label') {
+        const selectedLabel = labels.find(label => label._id === selectedId);
+        name = selectedLabel?.name || '';
+      }
+      
+      // Create a canvas with extra height to accommodate the text
+      const canvas = document.createElement('canvas');
+      const padding = 20; // Padding around the QR code
+      const textHeight = locationName ? 60 : 30; // Height for text area
+      
+      canvas.width = qrSize + (padding * 2);
+      canvas.height = qrSize + (padding * 2) + textHeight;
+      
       const ctx = canvas.getContext('2d');
+      
+      // Fill the background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, qrSize, qrSize);
       
+      // Draw the QR code
+      ctx.drawImage(img, padding, padding, qrSize, qrSize);
+      
+      // Add the item name (without the type prefix)
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        name, 
+        canvas.width / 2, 
+        qrSize + padding + 20
+      );
+      
+      // Add the location name if available (without the "Location:" prefix)
+      if (locationName) {
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#666666';
+        ctx.fillText(
+          locationName, 
+          canvas.width / 2, 
+          qrSize + padding + 45
+        );
+      }
+      
+      // Clean the name for use in a filename (remove special characters)
+      const cleanName = (locationName ? `${name}-${locationName}` : name).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      
+      // Create download link
       const link = document.createElement('a');
-      link.download = `boxwise-qr-${qrType}-${selectedId}.png`;
+      link.download = cleanName ? `boxwise-qr-${qrType}-${cleanName}.png` : `boxwise-qr-${qrType}-${selectedId}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       
@@ -157,6 +210,25 @@ const QRGenerator = () => {
     const printWindow = window.open('', '_blank');
     const svg = qrRef.current.querySelector('svg');
     const svgData = new XMLSerializer().serializeToString(svg);
+    
+    // Get item details for the print
+    let itemName = '';
+    let locationName = '';
+    
+    if (qrType === 'item') {
+      const selectedItem = items.find(item => item._id === selectedId);
+      itemName = selectedItem?.name || '';
+      // Get location name if available
+      if (selectedItem?.location && typeof selectedItem.location === 'object') {
+        locationName = selectedItem.location.name || '';
+      }
+    } else if (qrType === 'location') {
+      const selectedLocation = locations.find(location => location._id === selectedId);
+      itemName = selectedLocation?.name || '';
+    } else if (qrType === 'label') {
+      const selectedLabel = labels.find(label => label._id === selectedId);
+      itemName = selectedLabel?.name || '';
+    }
     
     printWindow.document.write(`
       <html>
@@ -188,9 +260,15 @@ const QRGenerator = () => {
               font-weight: bold;
             }
             .qr-subtitle {
+              margin-bottom: 5px;
+              font-size: 14px;
+              color: #666;
+            }
+            .qr-location {
               margin-bottom: 20px;
               font-size: 14px;
               color: #666;
+              font-weight: bold;
             }
             @media print {
               @page {
@@ -207,15 +285,9 @@ const QRGenerator = () => {
           <div class="qr-container">
             <div class="qr-title">Boxwise QR Code</div>
             <div class="qr-subtitle">
-              ${qrType.charAt(0).toUpperCase() + qrType.slice(1)}: 
-              ${
-                qrType === 'item' 
-                  ? items.find(item => item._id === selectedId)?.name
-                  : qrType === 'location'
-                    ? locations.find(location => location._id === selectedId)?.name
-                    : labels.find(label => label._id === selectedId)?.name
-              }
+              ${itemName}
             </div>
+            ${locationName ? `<div class="qr-location">${locationName}</div>` : ''}
             <div>
               ${svgData}
             </div>
@@ -249,18 +321,67 @@ const QRGenerator = () => {
   const copyQRCodeToClipboard = () => {
     if (!qrRef.current) return;
     
-    const canvas = document.createElement('canvas');
     const svg = qrRef.current.querySelector('svg');
     const svgData = new XMLSerializer().serializeToString(svg);
     const img = new Image();
     
     img.onload = () => {
-      canvas.width = qrSize;
-      canvas.height = qrSize;
+      // Get the name and location of the selected item/location/label
+      let name = '';
+      let locationName = '';
+      
+      if (qrType === 'item') {
+        const selectedItem = items.find(item => item._id === selectedId);
+        name = selectedItem?.name || '';
+        // Get location name if available
+        if (selectedItem?.location && typeof selectedItem.location === 'object') {
+          locationName = selectedItem.location.name || '';
+        }
+      } else if (qrType === 'location') {
+        const selectedLocation = locations.find(location => location._id === selectedId);
+        name = selectedLocation?.name || '';
+      } else if (qrType === 'label') {
+        const selectedLabel = labels.find(label => label._id === selectedId);
+        name = selectedLabel?.name || '';
+      }
+      
+      // Create a canvas with extra height to accommodate the text
+      const canvas = document.createElement('canvas');
+      const padding = 20; // Padding around the QR code
+      const textHeight = locationName ? 60 : 30; // Height for text area
+      
+      canvas.width = qrSize + (padding * 2);
+      canvas.height = qrSize + (padding * 2) + textHeight;
+      
       const ctx = canvas.getContext('2d');
+      
+      // Fill the background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, qrSize, qrSize);
+      
+      // Draw the QR code
+      ctx.drawImage(img, padding, padding, qrSize, qrSize);
+      
+      // Add the item name (without the type prefix)
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        name, 
+        canvas.width / 2, 
+        qrSize + padding + 20
+      );
+      
+      // Add the location name if available (without the "Location:" prefix)
+      if (locationName) {
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#666666';
+        ctx.fillText(
+          locationName, 
+          canvas.width / 2, 
+          qrSize + padding + 45
+        );
+      }
       
       // Convert canvas to blob
       canvas.toBlob((blob) => {
@@ -442,21 +563,37 @@ const QRGenerator = () => {
                   </Box>
                 </Tooltip>
                 
-                <Typography variant="body2" color="text.secondary" align="center">
+                <Box sx={{ textAlign: 'center' }}>
                   {qrValue ? (
                     <>
-                      {qrType.charAt(0).toUpperCase() + qrType.slice(1)}:{' '}
-                      {qrType === 'item' 
-                        ? items.find(item => item._id === selectedId)?.name
-                        : qrType === 'location'
-                          ? locations.find(location => location._id === selectedId)?.name
-                          : labels.find(label => label._id === selectedId)?.name
-                      }
+                      <Typography variant="body2" color="text.secondary">
+                        {qrType === 'item' 
+                          ? items.find(item => item._id === selectedId)?.name
+                          : qrType === 'location'
+                            ? locations.find(location => location._id === selectedId)?.name
+                            : labels.find(label => label._id === selectedId)?.name
+                        }
+                      </Typography>
+                      
+                      {/* Display location for items */}
+                      {qrType === 'item' && (() => {
+                        const selectedItem = items.find(item => item._id === selectedId);
+                        if (selectedItem?.location && typeof selectedItem.location === 'object') {
+                          return (
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
+                              {selectedItem.location.name}
+                            </Typography>
+                          );
+                        }
+                        return null;
+                      })()}
                     </>
                   ) : (
-                    'Select a type and item to generate a QR code'
+                    <Typography variant="body2" color="text.secondary">
+                      Select a type and item to generate a QR code
+                    </Typography>
                   )}
-                </Typography>
+                </Box>
               </CardContent>
               
               <CardActions>

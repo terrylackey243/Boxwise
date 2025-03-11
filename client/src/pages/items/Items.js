@@ -64,6 +64,7 @@ const Items = () => {
     handleFilterChange,
     handleClearFilters,
     handleSort,
+    refreshItems,
     setItems,
     setFilteredItems,
     setTotalItems
@@ -130,58 +131,6 @@ const Items = () => {
     }
   };
 
-  // Helper function to refresh items
-  const refreshItems = async () => {
-    try {
-      // Make API call to fetch items with current pagination and filters
-      const params = new URLSearchParams();
-      
-      // Pagination parameters
-      params.set('page', page + 1); // API uses 1-based indexing
-      params.set('limit', rowsPerPage);
-      
-      // Filter parameters
-      if (filters.archived === true) {
-        params.set('archived', 'true');
-      }
-      
-      if (filters.location) {
-        params.set('location', filters.location);
-      }
-      
-      if (filters.category) {
-        params.set('category', filters.category);
-      }
-      
-      if (filters.label) {
-        params.set('label', filters.label);
-      }
-      
-      // Search parameter - include the search term if it exists
-      if (searchInputValue) {
-        params.set('search', searchInputValue);
-      }
-      
-      // Sort parameters
-      if (sortField) {
-        params.set('sort', sortField);
-        params.set('order', sortDirection);
-      }
-      
-      const response = await axios.get(`/api/items?${params.toString()}`);
-      
-      if (response.data.success) {
-        setItems(response.data.data);
-        setFilteredItems(response.data.data);
-        setTotalItems(response.data.total);
-      } else {
-        setErrorAlert('Failed to refresh items');
-      }
-    } catch (err) {
-      setErrorAlert('Error refreshing items: ' + (err.response?.data?.message || err.message));
-      console.error(err);
-    }
-  };
 
   // Handle barcode scanner
   const handleOpenScanner = () => {
@@ -268,7 +217,10 @@ const Items = () => {
               {' '}
               <Button 
                 size="small" 
-                onClick={handleClearFilters}
+                onClick={() => {
+                  // Call handleClearFilters directly
+                  handleClearFilters();
+                }}
                 startIcon={<ClearIcon />}
               >
                 Clear Filter
@@ -359,7 +311,7 @@ const Items = () => {
             onPageChange={handleChangePage}
             rowsPerPage={rowsPerPage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50, 100, 500, 1000]}
+            rowsPerPageOptions={[5, 10, 25, 50, 100]}
           />
           </Paper>
         )}
