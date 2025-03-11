@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from '../../utils/axiosConfig';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -43,7 +43,8 @@ import {
   ExpandLess as ExpandLessIcon,
   Inventory as InventoryIcon,
   MoreVert as MoreVertIcon,
-  NavigateNext as NavigateNextIcon
+  NavigateNext as NavigateNextIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 
@@ -53,99 +54,107 @@ const LocationDetail = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
   
   const [loading, setLoading] = useState(true);
-  const [location, setLocation] = useState(null);
+  const [locationData, setLocationData] = useState(null);
   const [locationHierarchy, setLocationHierarchy] = useState([]);
   const [childLocations, setChildLocations] = useState([]);
   const [items, setItems] = useState([]);
   const [tabValue, setTabValue] = useState(0);
   const [expandedLocations, setExpandedLocations] = useState({});
+  const [lastRefreshed, setLastRefreshed] = useState(Date.now());
   
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      try {
-        setLoading(true);
+  // Memoize fetchLocationData to use it as a dependency in useEffect
+  const fetchLocationData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Make API call to fetch the location
+      const response = await axios.get(`/api/locations/${id}`);
+      
+      if (response.data.success) {
+        setLocationData(response.data.data);
         
-        // Make API call to fetch the location
-        const response = await axios.get(`/api/locations/${id}`);
-        
-        if (response.data.success) {
-          setLocation(response.data.data);
+        // Get child locations
+        if (response.data.data.children) {
+          const childrenWithCounts = await Promise.all(
+            response.data.data.children.map(async (child) => {
+              // Fetch item count for each child location
+              const itemsResponse = await axios.get(`/api/items?location=${child._id}&limit=1&page=1`);
+              
+              // Add itemCount property to child location
+              return {
+                ...child,
+                itemCount: itemsResponse.data.total || 0
+              };
+            })
+          );
           
-          // Get child locations
-          if (response.data.data.children) {
-            const childrenWithCounts = await Promise.all(
-              response.data.data.children.map(async (child) => {
-                // Fetch item count for each child location
-                const itemsResponse = await axios.get(`/api/items?location=${child._id}&limit=1&page=1`);
-                
-                // Add itemCount property to child location
-                return {
-                  ...child,
-                  itemCount: itemsResponse.data.total || 0
-                };
-              })
-            );
-            
-            setChildLocations(childrenWithCounts);
-          }
-          
-          // Get all locations to build the hierarchy
-          const locationsResponse = await axios.get('/api/locations?flat=true');
-          
-          if (locationsResponse.data.success) {
-            const allLocations = locationsResponse.data.data;
-            const locationMap = {};
-            
-            // Create a map of all locations by ID
-            allLocations.forEach(loc => {
-              locationMap[loc._id] = loc;
-            });
-            
-            // Build the hierarchy starting from the current location
-            const currentLocation = response.data.data;
-            const hierarchyLocations = [];
-            
-            // Add the current location
-            hierarchyLocations.push(currentLocation);
-            
-            // Add all parent locations by traversing up the tree
-            let parentId = currentLocation.parent;
-            while (parentId) {
-              const parentLocation = locationMap[parentId];
-              if (parentLocation) {
-                hierarchyLocations.unshift(parentLocation); // Add to the beginning
-                parentId = parentLocation.parent;
-              } else {
-                break;
-              }
-            }
-            
-            setLocationHierarchy(hierarchyLocations);
-          }
-          
-          // Fetch items in this location with a higher limit to ensure all items are shown
-          const itemsResponse = await axios.get(`/api/items?location=${id}&limit=100&page=1`);
-          
-          if (itemsResponse.data.success) {
-            setItems(itemsResponse.data.data || []);
-          }
-        } else {
-          setErrorAlert('Error loading location: ' + response.data.message);
+          setChildLocations(childrenWithCounts);
         }
         
-        setLoading(false);
-      } catch (err) {
-        setErrorAlert('Error loading location data');
-        setLoading(false);
-        console.error(err);
+        // Get all locations to build the hierarchy
+        const locationsResponse = await axios.get('/api/locations?flat=true');
+        
+        if (locationsResponse.data.success) {
+          const allLocations = locationsResponse.data.data;
+          const locationMap = {};
+          
+          // Create a map of all locations by ID
+          allLocations.forEach(loc => {
+            locationMap[loc._id] = loc;
+          });
+          
+          // Build the hierarchy starting from the current location
+          const currentLocation = response.data.data;
+          const hierarchyLocations = [];
+          
+          // Add the current location
+          hierarchyLocations.push(currentLocation);
+          
+          // Add all parent locations by traversing up the tree
+          let parentId = currentLocation.parent;
+          while (parentId) {
+            const parentLocation = locationMap[parentId];
+            if (parentLocation) {
+              hierarchyLocations.unshift(parentLocation); // Add to the beginning
+              parentId = parentLocation.parent;
+            } else {
+              break;
+            }
+          }
+          
+          setLocationHierarchy(hierarchyLocations);
+        }
+        
+        // Fetch items in this location with a higher limit to ensure all items are shown
+        const itemsResponse = await axios.get(`/api/items?location=${id}&limit=100&page=1`);
+        
+        if (itemsResponse.data.success) {
+          setItems(itemsResponse.data.data || []);
+        }
+      } else {
+        setErrorAlert('Error loading location: ' + response.data.message);
       }
-    };
-    
-    fetchLocationData();
+      
+      setLoading(false);
+      setLastRefreshed(Date.now());
+    } catch (err) {
+      setErrorAlert('Error loading location data');
+      setLoading(false);
+      console.error(err);
+    }
   }, [id, setErrorAlert]);
+  
+  // Load data when component mounts or the location ID changes
+  useEffect(() => {
+    fetchLocationData();
+  }, [fetchLocationData]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleRefresh = () => {
+    fetchLocationData();
   };
 
   const handleToggleExpand = (locationId) => {
@@ -234,7 +243,7 @@ const LocationDetail = () => {
     );
   }
 
-  if (!location) {
+  if (!locationData) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -269,7 +278,7 @@ const LocationDetail = () => {
             {loc.name}
           </Link>
         ))}
-        <Typography color="text.primary">{location.name}</Typography>
+        <Typography color="text.primary">{locationData.name}</Typography>
       </Breadcrumbs>
       
       {/* Header */}
@@ -285,16 +294,24 @@ const LocationDetail = () => {
           </Button>
           
           <Typography variant="h4" component="h1">
-            {location.name}
+            {locationData.name}
           </Typography>
         </Box>
         
         <Box>
           <Button
             variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
+            sx={{ mr: 1 }}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="outlined"
             startIcon={<EditIcon />}
             component={RouterLink}
-            to={`/locations/edit/${location._id}`}
+            to={`/locations/edit/${locationData._id}`}
             sx={{ mr: 1 }}
           >
             Edit
@@ -304,7 +321,7 @@ const LocationDetail = () => {
             variant="contained"
             startIcon={<AddIcon />}
             component={RouterLink}
-            to={`/locations/create?parent=${location._id}`}
+            to={`/locations/create?parent=${locationData._id}`}
           >
             Add Sub-location
           </Button>
@@ -324,15 +341,15 @@ const LocationDetail = () => {
                 <TableCell component="th" scope="row" sx={{ width: '30%', fontWeight: 'bold' }}>
                   Name
                 </TableCell>
-                <TableCell>{location.name}</TableCell>
+                <TableCell>{locationData.name}</TableCell>
               </TableRow>
               
-              {location.description && (
+              {locationData.description && (
                 <TableRow>
                   <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                     Description
                   </TableCell>
-                  <TableCell>{location.description}</TableCell>
+                  <TableCell>{locationData.description}</TableCell>
                 </TableRow>
               )}
               
@@ -360,24 +377,31 @@ const LocationDetail = () => {
                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                   Item Count
                 </TableCell>
-                <TableCell>{location.itemCount || 0}</TableCell>
+                <TableCell>{locationData.itemCount || 0}</TableCell>
               </TableRow>
               
               <TableRow>
                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                   Created
                 </TableCell>
-                <TableCell>{new Date(location.createdAt).toLocaleString()}</TableCell>
+                <TableCell>{new Date(locationData.createdAt).toLocaleString()}</TableCell>
               </TableRow>
               
-              {location.updatedAt && (
+              {locationData.updatedAt && (
                 <TableRow>
                   <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                     Last Updated
                   </TableCell>
-                  <TableCell>{new Date(location.updatedAt).toLocaleString()}</TableCell>
+                  <TableCell>{new Date(locationData.updatedAt).toLocaleString()}</TableCell>
                 </TableRow>
               )}
+              
+              <TableRow>
+                <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                  Last Refreshed
+                </TableCell>
+                <TableCell>{new Date(lastRefreshed).toLocaleString()}</TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
@@ -386,8 +410,8 @@ const LocationDetail = () => {
       {/* Tabs for Sub-locations and Items */}
       <Box sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="location tabs">
-          <Tab label="Items" id="tab-1" />
-          <Tab label="Sub-locations" id="tab-0" />
+          <Tab label="Items" id="tab-0" />
+          <Tab label="Sub-locations" id="tab-1" />
         </Tabs>
       </Box>
       
@@ -403,7 +427,7 @@ const LocationDetail = () => {
               variant="outlined"
               startIcon={<AddIcon />}
               component={RouterLink}
-              to={`/locations/create?parent=${location._id}`}
+              to={`/locations/create?parent=${locationData._id}`}
             >
               Add Sub-location
             </Button>
@@ -426,14 +450,14 @@ const LocationDetail = () => {
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
-              Items in this Location
+              Items in this Location ({items.length})
             </Typography>
             
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
               component={RouterLink}
-              to={`/items/create?location=${location._id}`}
+              to={`/items/create?location=${locationData._id}`}
             >
               Add Item
             </Button>
@@ -454,7 +478,7 @@ const LocationDetail = () => {
                       </Typography>
                       
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {item.category.name}
+                        {item.category && item.category.name}
                       </Typography>
                       
                       {item.description && (

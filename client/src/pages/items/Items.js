@@ -128,7 +128,6 @@ const Items = () => {
     }
   };
 
-
   // Handle barcode scanner
   const handleOpenScanner = () => {
     setScannerOpen(true);
