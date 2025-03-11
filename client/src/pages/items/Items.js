@@ -302,7 +302,7 @@ const Items = () => {
           />
         </Box>
         
-        {filteredItems.length > 0 && (
+        {filteredItems.length > 0 && !searchInputValue && (
           <Paper sx={{ mt: 2 }}>
           <TablePagination
             component="div"
@@ -313,6 +313,15 @@ const Items = () => {
             onRowsPerPageChange={handleChangeRowsPerPage}
             rowsPerPageOptions={[5, 10, 25, 50, 100]}
           />
+          </Paper>
+        )}
+        
+        {/* When searching, show a message about the number of results instead of pagination */}
+        {searchInputValue && filteredItems.length > 0 && (
+          <Paper sx={{ mt: 2, p: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Showing all {filteredItems.length} matching items
+            </Typography>
           </Paper>
         )}
       </Box>

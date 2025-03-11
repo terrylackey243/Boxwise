@@ -38,11 +38,54 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
   // Store all items for client-side filtering
   const [allItems, setAllItems] = useState([]);
   
+  // Store the complete set of items for searching (all items in the database)
+  const [completeItemSet, setCompleteItemSet] = useState([]);
+  
+  // Flag to track if we've loaded the complete item set
+  const hasLoadedCompleteItemSetRef = useRef(false);
+  
   // Flag to prevent unnecessary server requests
   const preventServerRequestRef = useRef(false);
   
   // Flag to track if we've loaded data from URL parameters
   const hasLoadedFromUrlRef = useRef(false);
+  
+  // Function to load all items for searching
+  const loadAllItemsForSearch = useCallback(async () => {
+    try {
+      console.log('Loading all items for search...');
+      setLoading(true);
+      
+      // Make API call to fetch all items without pagination or filters
+      // Use a very large limit to get as many items as possible
+      const params = new URLSearchParams();
+      params.set('page', 1);
+      params.set('limit', 10000); // Very large limit to get all items
+      
+      // Sort by name for consistency
+      params.set('sort', 'name');
+      params.set('order', 'asc');
+      
+      const response = await axios.get(`/api/items?${params.toString()}`);
+      
+      if (response.data.success) {
+        const allItems = response.data.data;
+        setCompleteItemSet(allItems);
+        console.log('Loaded all items for search:', allItems.length);
+        hasLoadedCompleteItemSetRef.current = true;
+        return allItems;
+      } else {
+        onError('Failed to load all items for search');
+        return [];
+      }
+    } catch (err) {
+      onError('Error loading all items for search: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [onError]);
 
   // Function to load items from the server
   const loadItems = useCallback(async (options = {}) => {
@@ -52,12 +95,15 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       // Make API call to fetch items with pagination and filters
       const params = new URLSearchParams();
       
-      // Pagination parameters
-      params.set('page', (options.page !== undefined ? options.page : page) + 1); // API uses 1-based indexing
-      params.set('limit', options.limit || rowsPerPage);
+      // Check if we're searching
+      const isSearching = Boolean(options.searchTerm || searchTerm);
       
-      // Only apply filters if we're not forcing a refresh
-      if (!options.forceRefresh) {
+      // Pagination parameters - if searching, use a large limit to get all items
+      params.set('page', (options.page !== undefined ? options.page : page) + 1); // API uses 1-based indexing
+      params.set('limit', isSearching ? 1000 : (options.limit || rowsPerPage)); // Use a large limit when searching
+      
+      // Only apply filters if we're not forcing a refresh and not searching
+      if (!options.forceRefresh && !isSearching) {
         // Filter parameters
         if (filters.archived === true) {
           params.set('archived', 'true');
@@ -74,11 +120,11 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
         if (filters.label) {
           params.set('label', filters.label);
         }
-        
-        // Search parameter
-        if (options.searchTerm || searchTerm) {
-          params.set('search', options.searchTerm || searchTerm);
-        }
+      }
+      
+      // Search parameter - always apply if present
+      if (isSearching) {
+        params.set('search', options.searchTerm || searchTerm);
       }
       
       // Sort parameters - use options if provided, otherwise use state
@@ -154,10 +200,12 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
           // Load data with these filters (using a reasonable limit)
           await loadItems({ page: 0, limit: 50 });
         } else {
-          // No URL parameters, load items with a very small initial batch
-          // Using a minimal load size to prevent timeouts
-          await loadItems({ page: 0, limit: 5 });
+          // No URL parameters, load items with the user's preferred page size
+          await loadItems({ page: 0, limit: rowsPerPage });
         }
+        
+        // Also load all items for search in the background
+        loadAllItemsForSearch();
         
         hasLoadedFromUrlRef.current = true;
       } catch (error) {
@@ -173,7 +221,7 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     setTimeout(() => {
       loadInitialData();
     }, 500);
-  }, [location.search, loadItems, onError]);
+  }, [location.search, loadItems, loadAllItemsForSearch, onError]);
 
   // Create a debounced version of the search function
   const debouncedSearch = useCallback(
@@ -186,7 +234,9 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       
       console.log('Performing server-side search for:', value);
       setSearchTerm(value);
-      loadItems({ searchTerm: value, page: 0, limit: rowsPerPage });
+      
+      // Use a large limit to get all matching items
+      loadItems({ searchTerm: value, page: 0, limit: 1000 });
     }, 800),
     [loadItems]
   );
@@ -204,8 +254,15 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     
     const searchLower = searchValue.toLowerCase();
     
+    // Determine which item set to use for searching
+    // If we have loaded the complete item set, use that for searching
+    // Otherwise, fall back to the currently loaded items
+    const itemsToSearch = hasLoadedCompleteItemSetRef.current ? completeItemSet : allItems;
+    
+    console.log(`Searching through ${itemsToSearch.length} items (using ${hasLoadedCompleteItemSetRef.current ? 'complete item set' : 'current items'})`);
+    
     // Filter items based on the search value
-    const filtered = allItems.filter(item => {
+    const filtered = itemsToSearch.filter(item => {
       // Check if any of these fields contain the search term
       return (
         (item.name && item.name.toLowerCase().includes(searchLower)) ||
@@ -218,24 +275,42 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       );
     });
     
+    // Show all matching items without pagination
     setFilteredItems(filtered);
+    setTotalItems(filtered.length); // Update total items count to match filtered results
     
     // If we have enough matches client-side, prevent the server request
     if (filtered.length > 0) {
       preventServerRequestRef.current = true;
     }
-  }, [allItems]);
+  }, [allItems, completeItemSet]);
 
   const handleSearchChange = (e) => {
     // Update the input field immediately for a responsive UI
     const value = e.target.value;
     setSearchInputValue(value);
     
-    // Perform client-side filtering for immediate feedback
-    performClientSideFiltering(value);
+    // Reset to page 0 when searching
+    if (page !== 0) {
+      setPage(0);
+    }
     
-    // Debounce the server-side search for when client-side filtering isn't enough
-    debouncedSearch(value);
+    // If we don't have the complete item set yet and this is a search operation, load it now
+    if (!hasLoadedCompleteItemSetRef.current && value.trim()) {
+      loadAllItemsForSearch().then(allItems => {
+        // After loading all items, perform the search on the complete set
+        performClientSideFiltering(value);
+      });
+    } else {
+      // Perform client-side filtering for immediate feedback
+      performClientSideFiltering(value);
+    }
+    
+    // Only use server-side search as a fallback if client-side filtering doesn't yield enough results
+    // and we don't have the complete item set
+    if (!hasLoadedCompleteItemSetRef.current) {
+      debouncedSearch(value);
+    }
     
     // Keep focus on the search input
     e.target.focus();
@@ -244,6 +319,11 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
   const handleClearSearch = () => {
     setSearchInputValue('');
     setSearchTerm('');
+    
+    // Reset to page 0 and use normal pagination when clearing search
+    setPage(0);
+    
+    // Load items with normal pagination (no search term)
     loadItems({ searchTerm: '', page: 0, limit: rowsPerPage });
   };
 
@@ -360,6 +440,8 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     filters,
     sortField,
     sortDirection,
+    completeItemSet,
+    hasLoadedAllItems: hasLoadedCompleteItemSetRef.current,
     handleSearchChange,
     handleClearSearch,
     handleChangePage,
@@ -368,6 +450,7 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     handleClearFilters,
     handleSort,
     refreshItems,
+    loadAllItemsForSearch,
     setItems,
     setFilteredItems,
     setTotalItems
