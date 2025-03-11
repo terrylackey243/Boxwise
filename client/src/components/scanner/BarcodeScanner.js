@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -22,237 +22,182 @@ import {
   QrCode as QrCodeIcon,
   Send as SendIcon
 } from '@mui/icons-material';
+import useCamera from '../../hooks/useCamera'; // Import the useCamera hook
 
 const BarcodeScanner = ({ open, onClose, onDetected }) => {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [stream, setStream] = useState(null);
-  const [cameras, setCameras] = useState([]);
-  const [activeCamera, setActiveCamera] = useState(0);
-  const [isReady, setIsReady] = useState(false);
-  const [manualMode, setManualMode] = useState(false);
+  // State for the barcode scanner
+  const [manualMode, setManualMode] = useState(true); // Start with manual mode by default
   const [manualUpc, setManualUpc] = useState('');
-
-  // Initialize camera when dialog opens
-  useEffect(() => {
-    let mounted = true;
-    let timeoutId = null;
-    
-    const initializeCamera = async () => {
-      if (!open) return;
-      
-      setLoading(true);
-      setError(null);
-      setIsReady(false);
-      
-      // Set a timeout to prevent infinite loading
-      timeoutId = setTimeout(() => {
-        if (mounted && loading) {
-          console.error('Camera initialization timed out');
-          setError('Camera initialization timed out. Please try manual entry instead.');
-          setLoading(false);
-          
-          // Clean up any partial initialization
-          if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-          }
-        }
-      }, 10000); // 10 second timeout
-      
-      try {
-        // Check if browser supports getUserMedia
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Your browser does not support camera access. This may be because you are not using HTTPS or your browser has restricted camera access.');
-        }
-        
-        // Request camera permission
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        });
-        
-        if (!mounted) {
-          mediaStream.getTracks().forEach(track => track.stop());
-          return;
-        }
-        
-        setStream(mediaStream);
-        
-        // Get list of cameras
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        
-        if (!mounted) return;
-        
-        setCameras(videoDevices);
-        
-        // Wait for the next render cycle to ensure videoRef is available
-        setTimeout(() => {
-          if (!mounted || !videoRef.current) return;
-          
-          // Set up video element
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
-            if (!mounted) return;
-            
-            videoRef.current.play()
-              .then(() => {
-                if (!mounted) return;
-                setIsReady(true);
-                setLoading(false);
-                
-                // Clear the timeout since we've successfully initialized
-                if (timeoutId) {
-                  clearTimeout(timeoutId);
-                  timeoutId = null;
-                }
-              })
-              .catch(err => {
-                if (!mounted) return;
-                console.error('Error playing video:', err);
-                setError('Could not start video stream. Try manual entry instead.');
-                setLoading(false);
-              });
-          };
-        }, 500);
-      } catch (err) {
-        if (!mounted) return;
-        
-        console.error('Camera initialization error:', err);
-        setError(err.message || 'Failed to initialize camera');
-        setLoading(false);
-      }
-    };
-    
-    initializeCamera();
-    
-    return () => {
-      mounted = false;
-      
-      // Clear any pending timeouts
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      // Clean up camera resources
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, [open, activeCamera, loading, stream]);
+  const [loading, setLoading] = useState(false);
+  const [cameras, setCameras] = useState([]);
+  const [error, setError] = useState(null); // Add local error state
+  const [localStream, setLocalStream] = useState(null); // Renamed to avoid conflicts
+  const [cameraActive, setCameraActive] = useState(false); // Renamed to avoid conflicts
   
-  // Clean up when dialog closes
-  useEffect(() => {
-    if (!open && stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-      setIsReady(false);
-    }
-  }, [open, stream]);
+  // Use the camera hook with environment (back) camera as default
+  const { 
+    videoRef, 
+    canvasRef, // Get canvasRef from the hook
+    stream, 
+    error: cameraError, 
+    isActive,
+    startCamera, 
+    stopCamera, 
+    switchCamera: switchCameraFacing, 
+    takePhoto 
+  } = useCamera({
+    facingMode: 'environment', // Use back camera by default
+    resolution: { width: 1280, height: 720 }
+  });
 
-  // Switch camera
-  const switchCamera = () => {
-    if (cameras.length <= 1) return;
-    
-    // Stop current stream
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
+  // Function to enumerate available cameras
+  const detectCameras = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        console.log('enumerateDevices() not supported.');
+        return;
+      }
+      
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      console.log(`Found ${videoDevices.length} camera devices`, videoDevices);
+      setCameras(videoDevices);
+    } catch (err) {
+      console.error('Error enumerating devices:', err);
+    }
+  }, []);
+
+  // Initialize when dialog opens
+  useEffect(() => {
+    if (open) {
+      detectCameras();
     }
     
-    // Switch to next camera
-    setActiveCamera((prev) => (prev + 1) % cameras.length);
-    setIsReady(false);
+    // Clean up function
+    return () => {
+      // Clean up both hook's camera resources and local stream
+      if (isActive) {
+        stopCamera();
+      }
+      
+      // Also cleanup our local stream if it exists
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+        setCameraActive(false);
+      }
+    };
+  }, [open, detectCameras, isActive, stopCamera, localStream]);
+
+  // Function to switch to camera mode - simplified to match the working approach
+  const switchToCameraMode = () => {
+    setLoading(true);
+    setManualMode(false);
+    setError(null);
+    
+    // Use a more direct approach similar to the working component
+    try {
+      // Check if mediaDevices API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera access is not supported in your browser");
+      }
+      
+      // Stop any existing camera stream
+      stopCamera();
+      
+      // Start the camera with environment facing mode (back camera)
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      })
+      .then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          setLocalStream(stream);
+          setCameraActive(true);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error accessing camera:", err);
+        setManualMode(true);
+        setLoading(false);
+        
+        // Provide user-friendly error message
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setError("Camera access denied. Please grant permission to use your camera.");
+        } else if (err.name === "NotFoundError") {
+          setError("No camera found on your device or camera is in use by another application.");
+        } else {
+          setError(`Failed to access camera: ${err.message || "Unknown error"}`);
+        }
+      });
+    } catch (err) {
+      console.error("Error setting up camera:", err);
+      setManualMode(true);
+      setLoading(false);
+      setError(err.message || "Failed to set up camera");
+    }
   };
 
-  // Manual capture for barcode scanning
+  // Create helper function to stop all cameras (both from hook and local)
+  const stopAllCameras = () => {
+    // Stop camera from hook
+    stopCamera();
+    
+    // Stop local camera stream if exists
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+      setCameraActive(false);
+    }
+  };
+
+  // Manual capture for barcode scanning - using a simplified approach
   const captureBarcode = () => {
-    if (!videoRef.current || !isReady || !canvasRef.current) return;
+    if (!cameraActive || !videoRef.current) return;
     
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // For demonstration purposes, we'll just use a mock barcode
-    // In a real implementation, you would use a barcode detection library here
-    const mockBarcode = Math.floor(Math.random() * 1000000000000).toString().padStart(12, '0');
-    onDetected(mockBarcode);
+    try {
+      // Create a canvas element dynamically (like in the working example)
+      const canvas = document.createElement("canvas");
+      const video = videoRef.current;
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw video frame to canvas
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Get data URL from canvas
+      const imageDataUrl = canvas.toDataURL("image/jpeg");
+      
+      // For demonstration purposes, we'll just use a mock barcode
+      // In a real implementation, you would use a barcode detection library here
+      const mockBarcode = Math.floor(Math.random() * 1000000000000).toString().padStart(12, '0');
+      
+      // Stop all cameras before calling the detection callback
+      stopAllCameras();
+      onDetected(mockBarcode);
+    } catch (err) {
+      console.error("Error capturing barcode:", err);
+      setManualMode(true);
+      setCameraActive(false);
+    }
   };
 
   // Try again button handler
   const handleTryAgain = () => {
-    setError(null);
-    
-    // Stop current stream if any
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    
-    // Reset state
-    setIsReady(false);
-    setLoading(true);
-    
-    // Request camera access again
-    navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    })
-      .then(mediaStream => {
-        setStream(mediaStream);
-        
-        // Set up video element
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play()
-              .then(() => {
-                setIsReady(true);
-                setLoading(false);
-              })
-              .catch(err => {
-                console.error('Error playing video:', err);
-                setError('Could not start video stream. Try tapping the screen.');
-                setLoading(false);
-              });
-          };
-        } else {
-          setError('Video element not available');
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        console.error('Error accessing camera:', err);
-        setError('Could not access camera. Please check your camera permissions.');
-        setLoading(false);
-      });
+    switchToCameraMode();
   };
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        stopAllCameras();
+        onClose();
+      }}
       maxWidth="sm"
       fullWidth
       PaperProps={{
@@ -275,15 +220,23 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
       >
         {/* Use span instead of Typography to avoid nesting heading elements */}
         <span style={{ fontSize: '1.25rem', fontWeight: 500 }}>Scan Barcode</span>
-        <IconButton edge="end" color="inherit" onClick={onClose} aria-label="close">
+        <IconButton 
+          edge="end" 
+          color="inherit" 
+          onClick={() => {
+            stopAllCameras();
+            onClose();
+          }} 
+          aria-label="close"
+        >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       
       <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
-        {error ? (
+        {(cameraError || error) ? (
           <Box sx={{ p: 3 }}>
-            <Typography color="error" gutterBottom>{error}</Typography>
+            <Typography color="error" gutterBottom>{error || cameraError}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               To use the barcode scanner, you need a device with a camera and must grant camera permissions.
             </Typography>
@@ -299,7 +252,10 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
               </Button>
               <Button 
                 variant="outlined" 
-                onClick={onClose}
+                onClick={() => {
+                  stopAllCameras();
+                  onClose();
+                }}
               >
                 Cancel
               </Button>
@@ -326,6 +282,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   sx={{ mr: 1 }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && manualUpc.trim()) {
+                      stopAllCameras(); // Stop all cameras before detection callback
                       onDetected(manualUpc.trim());
                     }
                   }}
@@ -337,6 +294,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   disabled={!manualUpc.trim()}
                   onClick={() => {
                     if (manualUpc.trim()) {
+                      stopAllCameras(); // Stop all cameras before detection callback
                       onDetected(manualUpc.trim());
                     }
                   }}
@@ -365,11 +323,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                 variant="outlined"
                 color="primary"
                 onClick={() => {
-                  // Clean up camera resources
-                  if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    setStream(null);
-                  }
+                  stopAllCameras();
                   setLoading(false);
                   setManualMode(true);
                 }}
@@ -400,6 +354,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   sx={{ mr: 1 }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && manualUpc.trim()) {
+                      stopAllCameras(); // Ensure all cameras are stopped
                       onDetected(manualUpc.trim());
                     }
                   }}
@@ -411,6 +366,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   disabled={!manualUpc.trim()}
                   onClick={() => {
                     if (manualUpc.trim()) {
+                      stopAllCameras(); // Ensure all cameras are stopped
                       onDetected(manualUpc.trim());
                     }
                   }}
@@ -443,6 +399,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   autoFocus
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && manualUpc.trim()) {
+                      stopAllCameras(); // Ensure all cameras are stopped
                       onDetected(manualUpc.trim());
                     }
                   }}
@@ -454,6 +411,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   disabled={!manualUpc.trim()}
                   onClick={() => {
                     if (manualUpc.trim()) {
+                      stopAllCameras(); // Ensure all cameras are stopped
                       onDetected(manualUpc.trim());
                     }
                   }}
@@ -467,7 +425,7 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
               fullWidth
               variant="outlined"
               startIcon={<CameraIcon />}
-              onClick={() => setManualMode(false)}
+              onClick={switchToCameraMode}
             >
               Switch to Camera Mode
             </Button>
@@ -542,18 +500,46 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
                   color="primary"
                   startIcon={<PhotoCameraIcon />}
                   onClick={captureBarcode}
-                  disabled={!isReady}
+                  disabled={!cameraActive}
                 >
                   Capture Barcode
                 </Button>
               </Box>
               
-              {/* Camera switch button */}
+              {/* Camera switch button with direct implementation */}
               {cameras.length > 1 && (
                 <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
                   <IconButton 
                     color="primary" 
-                    onClick={switchCamera}
+                    onClick={() => {
+                      // Direct camera switch implementation
+                      try {
+                        const newFacingMode = videoRef.current?.srcObject?.getVideoTracks()[0]?.getSettings()?.facingMode === 'environment' ? 'user' : 'environment';
+                        
+                        // Stop current stream
+                        if (videoRef.current && videoRef.current.srcObject) {
+                          const tracks = videoRef.current.srcObject.getTracks();
+                          tracks.forEach(track => track.stop());
+                        }
+                        
+                        // Start camera with new facing mode
+                        navigator.mediaDevices.getUserMedia({
+                          video: { facingMode: newFacingMode }
+                        })
+                        .then(newStream => {
+                          if (videoRef.current) {
+                            videoRef.current.srcObject = newStream;
+                            setLocalStream(newStream);
+                            setCameraActive(true);
+                          }
+                        })
+                        .catch(err => {
+                          console.error("Error switching camera:", err);
+                        });
+                      } catch (err) {
+                        console.error("Error in camera switch:", err);
+                      }
+                    }}
                     sx={{ 
                       bgcolor: 'background.paper',
                       '&:hover': { bgcolor: 'background.paper' }
@@ -568,7 +554,10 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
               <Box sx={{ position: 'absolute', bottom: 16, left: 16 }}>
                 <IconButton 
                   color="primary" 
-                  onClick={() => setManualMode(true)}
+                  onClick={() => {
+                    stopAllCameras();
+                    setManualMode(true);
+                  }}
                   sx={{ 
                     bgcolor: 'background.paper',
                     '&:hover': { bgcolor: 'background.paper' }
@@ -598,12 +587,18 @@ const BarcodeScanner = ({ open, onClose, onDetected }) => {
       
       <DialogActions sx={{ p: 2 }}>
         <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-          {error ? 'Enter UPC code manually or try again' : 
+          {cameraError || error ? 'Enter UPC code manually or try again' : 
            loading ? 'Waiting for camera access...' :
            manualMode ? 'Enter UPC code manually' :
            'Position the barcode within the frame'}
         </Typography>
-        <Button onClick={onClose} color="primary">
+        <Button 
+          onClick={() => {
+            stopAllCameras();
+            onClose();
+          }} 
+          color="primary"
+        >
           Cancel
         </Button>
       </DialogActions>

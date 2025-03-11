@@ -5,8 +5,8 @@ import axios from 'axios';
 // In production, use relative path which will be handled by the rewrite rules in render.yaml
 axios.defaults.baseURL = process.env.NODE_ENV === 'production' ? '/api' : '';
 
-// Set default timeout (15 seconds)
-axios.defaults.timeout = 15000;
+// Set default timeout (10 seconds) - reduce from 15 seconds to improve responsiveness
+axios.defaults.timeout = 10000;
 
 // Set default headers for all axios requests
 axios.defaults.headers.common['Content-Type'] = 'application/json';

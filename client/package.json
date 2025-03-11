@@ -27,6 +27,8 @@
     "react-qr-code": "^2.0.11",
     "react-router-dom": "^6.10.0",
     "react-scripts": "^5.0.1",
+    "react-virtualized-auto-sizer": "^1.0.25",
+    "react-window": "^1.8.11",
     "web-vitals": "^3.3.1",
     "xlsx": "^0.18.5",
     "yup": "^1.1.1"

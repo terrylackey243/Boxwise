@@ -50,36 +50,73 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
   // Flag to track if we've loaded data from URL parameters
   const hasLoadedFromUrlRef = useRef(false);
   
-  // Function to load all items for searching
+  // Function to load items for searching - using a more optimized approach
   const loadAllItemsForSearch = useCallback(async () => {
     try {
-      console.log('Loading all items for search...');
+      console.log('Loading items for search using optimized approach...');
       setLoading(true);
       
-      // Make API call to fetch all items without pagination or filters
-      // Use a very large limit to get as many items as possible
-      const params = new URLSearchParams();
-      params.set('page', 1);
-      params.set('limit', 10000); // Very large limit to get all items
+      // Get the current count of items to determine if we should fetch all or use a more efficient approach
+      const countResponse = await axios.get('/api/items/count');
+      const totalItemCount = countResponse.data.count || 0;
       
-      // Sort by name for consistency
-      params.set('sort', 'name');
-      params.set('order', 'asc');
+      // If total count is small enough, fetch all items
+      // Otherwise, rely on server-side search
+      const shouldFetchAll = totalItemCount <= 500;
       
-      const response = await axios.get(`/api/items?${params.toString()}`);
-      
-      if (response.data.success) {
-        const allItems = response.data.data;
-        setCompleteItemSet(allItems);
-        console.log('Loaded all items for search:', allItems.length);
-        hasLoadedCompleteItemSetRef.current = true;
-        return allItems;
+      if (shouldFetchAll) {
+        // Only fetch all items if the total count is reasonable
+        const params = new URLSearchParams();
+        params.set('page', 1);
+        params.set('limit', 1000); // Reduced from 10000 to 1000 to improve performance
+        
+        // Sort by name for consistency
+        params.set('sort', 'name');
+        params.set('order', 'asc');
+        
+        const response = await axios.get(`/api/items?${params.toString()}`);
+        
+        if (response.data.success) {
+          const allItems = response.data.data;
+          setCompleteItemSet(allItems);
+          console.log('Loaded all items for search:', allItems.length);
+          hasLoadedCompleteItemSetRef.current = true;
+          return allItems;
+        } else {
+          onError('Failed to load items for search');
+          return [];
+        }
       } else {
-        onError('Failed to load all items for search');
+        // For large datasets, don't try to load all items
+        // Instead, we'll rely on server-side searching
+        console.log('Dataset too large, will use server-side search instead');
+        hasLoadedCompleteItemSetRef.current = false;
         return [];
       }
     } catch (err) {
-      onError('Error loading all items for search: ' + (err.response?.data?.message || err.message));
+      // If count endpoint doesn't exist, fall back to loading with a reasonable limit
+      if (err.response && err.response.status === 404) {
+        try {
+          const params = new URLSearchParams();
+          params.set('page', 1);
+          params.set('limit', 500); // Use a more modest limit
+          params.set('sort', 'name');
+          params.set('order', 'asc');
+          
+          const response = await axios.get(`/api/items?${params.toString()}`);
+          
+          if (response.data.success) {
+            const allItems = response.data.data;
+            setCompleteItemSet(allItems);
+            hasLoadedCompleteItemSetRef.current = response.data.total <= 500;
+            return allItems;
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback error:', fallbackErr);
+        }
+      }
+      
+      onError('Error loading items for search: ' + (err.response?.data?.message || err.message));
       console.error(err);
       return [];
     } finally {
@@ -229,7 +266,8 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
     }, 500);
   }, [location.search, loadItems, loadAllItemsForSearch, onError]);
 
-  // Create a debounced version of the search function
+  // Create a debounced version of the search function with a shorter delay (500ms instead of 800ms)
+  // for more responsive search while still preventing excessive API calls
   const debouncedSearch = useCallback(
     debounce((value) => {
       // Only do a server search if we need to
@@ -243,7 +281,7 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       
       // Use a large limit to get all matching items
       loadItems({ searchTerm: value, page: 0, limit: 1000 });
-    }, 800),
+    }, 500), // Reduced from 800ms to 500ms for more responsive search
     [loadItems]
   );
   

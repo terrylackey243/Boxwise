@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const fileUpload = require('express-fileupload');
+const compression = require('compression');
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
+app.use(compression()); // Add compression middleware to reduce payload size
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload({
@@ -74,6 +76,12 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
     bufferCommands: false, // Disable buffering to prevent timeout
+    maxPoolSize: 50, // Increase from default 5
+    socketTimeoutMS: 45000, // Increase socket timeout
+    family: 4, // Use IPv4, skip trying IPv6
+    serverSelectionTimeoutMS: 30000, // Timeout after 30 seconds instead of 30s
+    heartbeatFrequencyMS: 10000, // Check server health more frequently
+    autoIndex: process.env.NODE_ENV !== 'production' // Don't auto-build indexes in production
   })
   .then(() => {
     console.log('Connected to MongoDB');

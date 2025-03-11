@@ -24,6 +24,7 @@ import SpreadsheetBulkAddDialog from '../../components/bulk/SpreadsheetBulkAddDi
 import useIsMobile from '../../hooks/useIsMobile';
 import useItemSearch from '../../hooks/useItemSearch';
 import ItemsTable from '../../components/items/ItemsTable';
+import VirtualizedItemsTable from '../../components/items/VirtualizedItemsTable';
 import ItemsCards from '../../components/items/ItemsCards';
 import ItemActionMenu from '../../components/items/ItemActionMenu';
 import ItemSearchFilters from '../../components/items/ItemSearchFilters';
@@ -275,13 +276,21 @@ const Items = () => {
       
       {/* Items List - Responsive Layout */}
       <Box>
-        {/* Desktop View - Table */}
+        {/* Desktop View - Table with virtualization for large datasets */}
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-          <ItemsTable
-            items={filteredItems}
-            onActionClick={handleActionMenuOpen}
-            onUpdateQuantity={handleUpdateQuantity}
-          />
+          {filteredItems.length > 100 ? (
+            <VirtualizedItemsTable
+              items={filteredItems}
+              onActionClick={handleActionMenuOpen}
+              onUpdateQuantity={handleUpdateQuantity}
+            />
+          ) : (
+            <ItemsTable
+              items={filteredItems}
+              onActionClick={handleActionMenuOpen}
+              onUpdateQuantity={handleUpdateQuantity}
+            />
+          )}
         </Box>
 
         {/* Mobile View - Cards */}

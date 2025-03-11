@@ -205,7 +205,23 @@ ItemSchema.pre('save', function(next) {
   next();
 });
 
-// Create index for faster searching
-ItemSchema.index({ name: 'text', description: 'text', assetId: 'text' });
+// Create indexes for faster searching and filtering
+// Text index for search functionality
+ItemSchema.index({ 
+  name: 'text', 
+  description: 'text', 
+  assetId: 'text',
+  serialNumber: 'text',
+  modelNumber: 'text',
+  manufacturer: 'text',
+  upcCode: 'text'
+});
+
+// Compound indexes for common query patterns
+ItemSchema.index({ group: 1, isArchived: 1 });
+ItemSchema.index({ group: 1, location: 1 });
+ItemSchema.index({ group: 1, category: 1 });
+ItemSchema.index({ group: 1, labels: 1 });
+ItemSchema.index({ group: 1, updatedAt: -1 });
 
 module.exports = mongoose.model('Item', ItemSchema);

@@ -11,7 +11,8 @@ const {
   returnItem,
   uploadItemAttachment,
   quickAddItem,
-  getNextAssetId
+  getNextAssetId,
+  getItemCount
 } = require('../controllers/items');
 const Item = require('../models/Item');
 
@@ -33,26 +34,7 @@ router.route('/next-asset-id')
   .get(protect, getNextAssetId);
 
 router.route('/count')
-  .get(protect, async (req, res) => {
-    try {
-      // Get the user's group
-      const groupId = req.user.group;
-      
-      // Count items for the user's group
-      const count = await Item.countDocuments({ group: groupId });
-      
-      res.status(200).json({
-        success: true,
-        count
-      });
-    } catch (err) {
-      console.error('Error counting items:', err);
-      res.status(500).json({
-        success: false,
-        message: 'Error counting items'
-      });
-    }
-  });
+  .get(protect, getItemCount);
 
 router.route('/upc/:upc')
   .get(protect, searchByUPC);

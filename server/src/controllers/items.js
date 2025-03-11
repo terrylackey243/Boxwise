@@ -71,13 +71,20 @@ exports.getItems = asyncHandler(async (req, res, next) => {
     sortOptions[sortField] = sortOrder;
   }
   
+  // Use projection to limit returned fields for better performance
+  // Only select fields that are needed for the items list view
   const items = await Item.find(query)
+    .select('name description quantity assetId location category labels isArchived updatedAt createdAt')
     .populate('location', 'name')
     .populate('category', 'name')
     .populate('labels', 'name color')
     .sort(sortOptions)
     .skip(startIndex)
     .limit(limit);
+  
+  // Add cache headers for better performance
+  // Cache for 5 minutes
+  res.set('Cache-Control', 'public, max-age=300');
   
   res.status(200).json({
     success: true,
@@ -105,6 +112,9 @@ exports.getItem = asyncHandler(async (req, res, next) => {
   if (item.group.toString() !== req.user.group.toString()) {
     return next(new ErrorResponse(`Not authorized to access this item`, 403));
   }
+  
+  // Cache individual item responses for 10 minutes
+  res.set('Cache-Control', 'public, max-age=600');
   
   res.status(200).json({
     success: true,
@@ -157,6 +167,41 @@ exports.updateItem = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: item
+  });
+});
+
+// @desc    Get count of all items (for optimization)
+// @route   GET /api/items/count
+// @access  Private
+exports.getItemCount = asyncHandler(async (req, res, next) => {
+  // Build query
+  const query = { group: req.user.group };
+  
+  // Add filters if provided
+  if (req.query.archived === 'true') {
+    query.isArchived = true;
+  } else {
+    query.isArchived = { $ne: true };
+  }
+  
+  if (req.query.location) {
+    query.location = req.query.location;
+  }
+  
+  if (req.query.category) {
+    query.category = req.query.category;
+  }
+  
+  if (req.query.label) {
+    query.labels = req.query.label;
+  }
+  
+  // Get count without retrieving documents
+  const count = await Item.countDocuments(query);
+  
+  res.status(200).json({
+    success: true,
+    count
   });
 });
 
