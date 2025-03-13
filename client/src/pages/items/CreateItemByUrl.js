@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
 import urlService from '../../services/urlService';
+import { validateItemForm, submitItemForm } from '../../utils/itemFormUtils';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useMobile } from '../../context/MobileContext';
 import MobilePhotoSection from './MobilePhotoSection';
@@ -423,56 +424,12 @@ const CreateItemByUrl = () => {
     }));
   };
 
+  // Use the shared form validation function
   const validateForm = () => {
-    const newErrors = {};
-    
-    // Required fields
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    
-    // Check name length
-    if (formData.name && formData.name.length > 100) {
-      newErrors.name = 'Name cannot exceed 100 characters';
-    }
-    
-    if (!formData.location) {
-      newErrors.location = 'Location is required';
-    }
-    
-    if (!formData.category) {
-      newErrors.category = 'Category is required';
-    }
-    
-    // Check description length
-    if (formData.description && formData.description.length > 1000) {
-      newErrors.description = 'Description cannot exceed 1000 characters';
-    }
-    
-    // Quantity must be a positive number
-    if (formData.quantity <= 0) {
-      newErrors.quantity = 'Quantity must be greater than 0';
-    }
-    
-    // Purchase price must be a valid number if provided
-    if (formData.purchasePrice && isNaN(parseFloat(formData.purchasePrice))) {
-      newErrors.purchasePrice = 'Purchase price must be a valid number';
-    }
-    
-    // Warranty expiration date must be in the future if provided and not lifetime warranty
-    if (!formData.hasLifetimeWarranty && formData.warrantyExpires) {
-      const warrantyDate = new Date(formData.warrantyExpires);
-      const today = new Date();
-      
-      if (warrantyDate <= today) {
-        newErrors.warrantyExpires = 'Warranty expiration date must be in the future';
-      }
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return validateItemForm(formData, setErrors, locations, categories);
   };
 
+  // Use the shared form submission function
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -480,81 +437,7 @@ const CreateItemByUrl = () => {
       return;
     }
     
-    setSubmitting(true);
-    
-    try {
-      // Prepare data for submission - include both nested and non-nested purchase details
-      // This ensures compatibility with both the database model and the frontend display
-      
-      // Extract just the label IDs from the label objects
-      const labelIds = formData.labels.map(label => label._id);
-      console.log('Label IDs extracted:', labelIds);
-      
-      const submissionData = {
-        ...formData,
-        // Override the labels with just the IDs
-        labels: labelIds,
-        // Include non-nested purchase details for frontend display
-        purchasedFrom: formData.purchasedFrom,
-        purchasePrice: formData.purchasePrice,
-        purchaseDate: formData.purchaseDate,
-        // Include nested purchase details for database model
-        purchaseDetails: {
-          purchasedFrom: formData.purchasedFrom,
-          purchasePrice: formData.purchasePrice,
-          purchaseDate: formData.purchaseDate
-        },
-        // Include non-nested warranty details for frontend display
-        hasLifetimeWarranty: formData.hasLifetimeWarranty,
-        warrantyExpires: formData.warrantyExpires,
-        warrantyNotes: formData.warrantyNotes,
-        // Include nested warranty details for database model
-        warrantyDetails: {
-          hasLifetimeWarranty: formData.hasLifetimeWarranty,
-          warrantyExpires: formData.warrantyExpires,
-          warrantyNotes: formData.warrantyNotes
-        },
-        // Map UI field types to database field types for custom fields
-        customFields: formData.customFields.map(field => ({
-          name: field.name,
-          value: field.value,
-          type: mapFieldTypeToDbType(field.type || detectFieldType(field.value))
-        }))
-      };
-      
-      // Make API call to create the item
-      const response = await axios.post('/api/items', submissionData);
-      
-      if (response.data.success) {
-        // Navigate immediately without showing a success message
-        navigate('/items');
-      } else {
-        setErrorAlert('Error creating item: ' + response.data.message);
-      }
-    } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        if (err.response.data.message.includes('description')) {
-          setErrors(prev => ({
-            ...prev,
-            description: 'Description cannot exceed 1000 characters'
-          }));
-          setErrorAlert('Error creating item: Description is too long');
-        } else if (err.response.data.message.includes('name')) {
-          setErrors(prev => ({
-            ...prev,
-            name: 'Name cannot exceed 100 characters'
-          }));
-          setErrorAlert('Error creating item: Name is too long');
-        } else {
-          setErrorAlert('Error creating item: ' + err.response.data.message);
-        }
-      } else {
-        setErrorAlert('Error creating item: ' + (err.message || 'Unknown error'));
-      }
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
+    await submitItemForm(formData, setSubmitting, setErrorAlert, setErrors, navigate);
   };
 
   if (loading) {

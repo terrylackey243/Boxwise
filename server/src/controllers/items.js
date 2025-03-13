@@ -143,48 +143,121 @@ exports.getItem = asyncHandler(async (req, res, next) => {
 // @route   POST /api/items
 // @access  Private
 exports.createItem = asyncHandler(async (req, res, next) => {
-  // Add user and group to request body
-  req.body.createdBy = req.user.id;
-  req.body.group = req.user.group;
-  
-  // Create item
-  const item = await Item.create(req.body);
-  
-  res.status(201).json({
-    success: true,
-    data: item
-  });
+  try {
+    // Add user and group to request body
+    req.body.createdBy = req.user.id;
+    req.body.group = req.user.group;
+    
+    // Validate and sanitize the request body data
+    // Ensure required fields are present
+    if (!req.body.name || !req.body.name.trim()) {
+      return next(new ErrorResponse('Please add a name', 400));
+    }
+    
+    if (!req.body.location) {
+      return next(new ErrorResponse('Please specify a location', 400));
+    }
+    
+    // Ensure nested objects have proper structure
+    // Purchase details validation
+    if (req.body.purchaseDetails) {
+      if (req.body.purchaseDetails.purchasePrice === '') {
+        req.body.purchaseDetails.purchasePrice = null;
+      } else if (req.body.purchaseDetails.purchasePrice !== null && req.body.purchaseDetails.purchasePrice !== undefined) {
+        const parsedPrice = parseFloat(req.body.purchaseDetails.purchasePrice);
+        req.body.purchaseDetails.purchasePrice = !isNaN(parsedPrice) ? parsedPrice : null;
+      }
+    }
+    
+    // Validate custom fields
+    if (Array.isArray(req.body.customFields)) {
+      req.body.customFields = req.body.customFields.filter(field => 
+        field && typeof field.name === 'string' && field.name.trim()
+      );
+    }
+    
+    // Log the data being sent to the database
+    console.log('Creating item with data:', JSON.stringify(req.body));
+    
+    // Create item
+    const item = await Item.create(req.body);
+    
+    res.status(201).json({
+      success: true,
+      data: item
+    });
+  } catch (error) {
+    console.error('Error creating item:', error);
+    console.error(error.stack);
+    
+    // Check for validation errors from Mongoose
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return next(new ErrorResponse(messages.join('. '), 400));
+    }
+    
+    // Check for duplicate key error
+    if (error.code === 11000) {
+      return next(new ErrorResponse('Duplicate field value entered', 400));
+    }
+    
+    return next(new ErrorResponse(`Error creating item: ${error.message}`, 500));
+  }
 });
 
 // @desc    Update item
 // @route   PUT /api/items/:id
 // @access  Private
 exports.updateItem = asyncHandler(async (req, res, next) => {
-  let item = await Item.findById(req.params.id);
-  
-  if (!item) {
-    return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+  try {
+    let item = await Item.findById(req.params.id);
+    
+    if (!item) {
+      return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+    }
+    
+    // Check if item belongs to user's group
+    if (item.group.toString() !== req.user.group.toString()) {
+      return next(new ErrorResponse(`Not authorized to update this item`, 403));
+    }
+    
+    // Add updatedBy field
+    req.body.updatedBy = req.user.id;
+    req.body.updatedAt = Date.now();
+    
+    // Ensure nested objects have proper structure
+    // Purchase details validation
+    if (req.body.purchaseDetails) {
+      if (req.body.purchaseDetails.purchasePrice === '') {
+        req.body.purchaseDetails.purchasePrice = null;
+      } else if (req.body.purchaseDetails.purchasePrice !== null && req.body.purchaseDetails.purchasePrice !== undefined) {
+        const parsedPrice = parseFloat(req.body.purchaseDetails.purchasePrice);
+        req.body.purchaseDetails.purchasePrice = !isNaN(parsedPrice) ? parsedPrice : null;
+      }
+    }
+    
+    // Validate custom fields
+    if (Array.isArray(req.body.customFields)) {
+      req.body.customFields = req.body.customFields.filter(field => 
+        field && typeof field.name === 'string' && field.name.trim()
+      );
+    }
+    
+    // Update item with safe data
+    item = await Item.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: item
+    });
+  } catch (error) {
+    console.error('Error updating item:', error);
+    console.error(error.stack);
+    return next(new ErrorResponse(`Error updating item: ${error.message}`, 500));
   }
-  
-  // Check if item belongs to user's group
-  if (item.group.toString() !== req.user.group.toString()) {
-    return next(new ErrorResponse(`Not authorized to update this item`, 403));
-  }
-  
-  // Add updatedBy field
-  req.body.updatedBy = req.user.id;
-  req.body.updatedAt = Date.now();
-  
-  // Update item
-  item = await Item.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true
-  });
-  
-  res.status(200).json({
-    success: true,
-    data: item
-  });
 });
 
 // @desc    Get count of all items (for optimization)

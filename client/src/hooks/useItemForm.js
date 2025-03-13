@@ -241,6 +241,27 @@ const useItemForm = ({ initialData = {}, mode = 'create', itemId = null, onSucce
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Perform essential validations here - especially for required fields
+    // Check if name is a non-empty string
+    const nameIsValid = typeof formData.name === 'string' && formData.name.trim() !== '';
+    if (!nameIsValid) {
+      setErrors(prev => ({
+        ...prev,
+        name: 'Item name is required'
+      }));
+      setErrorAlert('Item name is required');
+      return;
+    }
+    
+    if (!formData.location) {
+      setErrors(prev => ({
+        ...prev,
+        location: 'Location is required'
+      }));
+      setErrorAlert('Location is required');
+      return;
+    }
+    
     const { errors, isValid } = validateItemForm(formData);
     
     if (!isValid) {
@@ -269,22 +290,22 @@ const useItemForm = ({ initialData = {}, mode = 'create', itemId = null, onSucce
       // Create a clean submission data object that matches the expected server-side schema
       const submissionData = {
         // Basic fields
-        name: typeof formData.name === 'string' ? formData.name : '',
-        description: typeof formData.description === 'string' ? formData.description : '',
+        name: typeof formData.name === 'string' ? formData.name.trim() : '',
+        description: typeof formData.description === 'string' ? formData.description.trim() : '',
         location: formData.location || '',
         category: formData.category || '',
         quantity: Number(formData.quantity) || 1,
-        serialNumber: typeof formData.serialNumber === 'string' ? formData.serialNumber : '',
-        modelNumber: typeof formData.modelNumber === 'string' ? formData.modelNumber : '',
-        manufacturer: typeof formData.manufacturer === 'string' ? formData.manufacturer : '',
-        notes: typeof formData.notes === 'string' ? formData.notes : '',
+        serialNumber: typeof formData.serialNumber === 'string' ? formData.serialNumber.trim() : '',
+        modelNumber: typeof formData.modelNumber === 'string' ? formData.modelNumber.trim() : '',
+        manufacturer: typeof formData.manufacturer === 'string' ? formData.manufacturer.trim() : '',
+        notes: typeof formData.notes === 'string' ? formData.notes.trim() : '',
         isInsured: Boolean(formData.isInsured),
         isArchived: Boolean(formData.isArchived),
         
         // URLs
-        upcCode: typeof formData.upcCode === 'string' ? formData.upcCode : '',
-        itemUrl: typeof formData.itemUrl === 'string' ? formData.itemUrl : '',
-        manualUrl: typeof formData.manualUrl === 'string' ? formData.manualUrl : '',
+        upcCode: typeof formData.upcCode === 'string' ? formData.upcCode.trim() : '',
+        itemUrl: typeof formData.itemUrl === 'string' ? formData.itemUrl.trim() : '',
+        manualUrl: typeof formData.manualUrl === 'string' ? formData.manualUrl.trim() : '',
         
         // Labels
         labels: labelIds,
@@ -292,19 +313,67 @@ const useItemForm = ({ initialData = {}, mode = 'create', itemId = null, onSucce
         // Asset ID if it exists
         ...(formData.assetId ? { assetId: formData.assetId } : {}),
         
-        // Nested objects that follow the exact schema structure expected by the server
+        // Handle purchase details with careful type checking and validation
         purchaseDetails: {
-          purchasedFrom: typeof formData.purchasedFrom === 'string' ? formData.purchasedFrom : '',
-          purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
+          purchasedFrom: typeof formData.purchasedFrom === 'string' ? formData.purchasedFrom.trim() : '',
           purchaseDate: formData.purchaseDate || null
         },
         
         warrantyDetails: {
           hasLifetimeWarranty: Boolean(formData.hasLifetimeWarranty),
           warrantyExpires: formData.warrantyExpires || null,
-          warrantyNotes: typeof formData.warrantyNotes === 'string' ? formData.warrantyNotes : ''
+          warrantyNotes: typeof formData.warrantyNotes === 'string' ? formData.warrantyNotes.trim() : ''
         }
       };
+      
+      // Handle purchase price separately with extra validation
+      let purchasePrice = null;
+      if (formData.purchasePrice) {
+        const parsedPrice = parseFloat(formData.purchasePrice);
+        if (!isNaN(parsedPrice) && parsedPrice >= 0) {
+          purchasePrice = parsedPrice;
+        }
+      }
+      submissionData.purchaseDetails.purchasePrice = purchasePrice;
+      
+      // Ensure dates are properly formatted or set to null
+      // Handle purchase date safely
+      if (formData.purchaseDate) {
+        try {
+          // Check if it's a valid date
+          const dateObj = new Date(formData.purchaseDate);
+          if (!isNaN(dateObj.getTime())) {
+            // Format as ISO string for MongoDB
+            submissionData.purchaseDetails.purchaseDate = dateObj.toISOString();
+          } else {
+            submissionData.purchaseDetails.purchaseDate = null;
+          }
+        } catch (e) {
+          console.warn('Invalid purchase date:', formData.purchaseDate);
+          submissionData.purchaseDetails.purchaseDate = null;
+        }
+      } else {
+        submissionData.purchaseDetails.purchaseDate = null;
+      }
+      
+      // Handle warranty date safely
+      if (formData.warrantyExpires) {
+        try {
+          // Check if it's a valid date
+          const dateObj = new Date(formData.warrantyExpires);
+          if (!isNaN(dateObj.getTime())) {
+            // Format as ISO string for MongoDB
+            submissionData.warrantyDetails.warrantyExpires = dateObj.toISOString();
+          } else {
+            submissionData.warrantyDetails.warrantyExpires = null;
+          }
+        } catch (e) {
+          console.warn('Invalid warranty date:', formData.warrantyExpires);
+          submissionData.warrantyDetails.warrantyExpires = null;
+        }
+      } else {
+        submissionData.warrantyDetails.warrantyExpires = null;
+      }
       
       // Process custom fields if they exist - make sure we follow the schema structure
       submissionData.customFields = Array.isArray(formData.customFields) 
@@ -328,13 +397,6 @@ const useItemForm = ({ initialData = {}, mode = 'create', itemId = null, onSucce
               };
             })
         : [];
-      
-      // Ensure purchase price is properly converted to a number or null
-      if (submissionData.purchaseDetails.purchasePrice === '') {
-        submissionData.purchaseDetails.purchasePrice = null;
-      } else if (submissionData.purchaseDetails.purchasePrice !== null) {
-        submissionData.purchaseDetails.purchasePrice = Number(submissionData.purchaseDetails.purchasePrice);
-      }
       
       // Log the submission data to help with debugging
       console.log('Submitting item data:', JSON.stringify(submissionData));

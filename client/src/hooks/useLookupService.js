@@ -66,7 +66,7 @@ const useLookupService = ({ type = 'upc', onDataFound }) => {
           onDataFound(productData);
         }
         
-        setSuccessAlert(`Product information retrieved successfully from ${source === 'rapid-api' ? 'RapidAPI' : 'UPC database'}`);
+        // Success is indicated by the form auto-populating, no need for explicit alert
       } else {
         setErrorAlert('No product found for this UPC code');
       }
@@ -83,10 +83,10 @@ const useLookupService = ({ type = 'upc', onDataFound }) => {
           
           // Call the callback with the product data
           if (onDataFound) {
-            onDataFound(productData);
-          }
-          
-          setSuccessAlert(`Product information retrieved successfully from ${source === 'rapid-api' ? 'RapidAPI' : 'UPC database'}`);
+          onDataFound(productData);
+        }
+        
+        // Success is indicated by the form auto-populating, no need for explicit alert
         } else {
           setErrorAlert('No product found for this UPC code');
         }

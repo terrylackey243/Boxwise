@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../utils/axiosConfig';
+import { validateItemForm, submitItemForm } from '../../utils/itemFormUtils';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useMobile } from '../../context/MobileContext';
 import MobilePhotoSection from './MobilePhotoSection';
@@ -329,232 +330,29 @@ const CreateItem = () => {
     }));
   };
 
+  // Use the shared form validation function with recently created entities
   const validateForm = () => {
-    const newErrors = {};
-    
-    // Required fields
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    
-    // Check name length
-    if (formData.name && formData.name.length > 100) {
-      newErrors.name = 'Name cannot exceed 100 characters';
-    }
-    
-    if (!formData.location) {
-      newErrors.location = 'Location is required';
-    }
-    
-    if (!formData.category) {
-      newErrors.category = 'Category is required';
-    }
-    
-    // Check if location was recently created and verify it exists in the locations array
-    if (recentlyCreatedEntities.location && formData.location === recentlyCreatedEntities.location._id) {
-      const locationExists = locations.some(loc => loc._id === recentlyCreatedEntities.location._id);
-      if (!locationExists) {
-        newErrors.location = 'The selected location was recently created and may not be fully saved yet. Please try again in a moment.';
-      }
-    }
-    
-    // Check if category was recently created and verify it exists in the categories array
-    if (recentlyCreatedEntities.category && formData.category === recentlyCreatedEntities.category._id) {
-      const categoryExists = categories.some(cat => cat._id === recentlyCreatedEntities.category._id);
-      if (!categoryExists) {
-        newErrors.category = 'The selected category was recently created and may not be fully saved yet. Please try again in a moment.';
-      }
-    }
-    
-    // Check if any selected labels were recently created and verify they exist in the labels array
-    // Temporarily disable this check as it's causing issues
-    /*
-    if (recentlyCreatedEntities.labels.length > 0) {
-      const recentLabelIds = recentlyCreatedEntities.labels.map(label => label._id);
-      const selectedRecentLabels = formData.labels.filter(label => recentLabelIds.includes(label._id));
-      
-      for (const selectedLabel of selectedRecentLabels) {
-        const labelExists = labels.some(label => label._id === selectedLabel._id);
-        if (!labelExists) {
-          newErrors.labels = 'One or more selected labels were recently created and may not be fully saved yet. Please try again in a moment.';
-          break;
-        }
-      }
-    }
-    */
-    
-    // Reset the recently created labels to avoid validation issues
+    // Reset recently created labels to avoid validation issues
     setRecentlyCreatedEntities(prev => ({
       ...prev,
       labels: []
     }));
     
-    // Check description length
-    if (formData.description && formData.description.length > 1000) {
-      newErrors.description = 'Description cannot exceed 1000 characters';
-    }
-    
-    // Quantity must be a positive number
-    if (formData.quantity <= 0) {
-      newErrors.quantity = 'Quantity must be greater than 0';
-    }
-    
-    // Purchase price must be a valid number if provided
-    if (formData.purchasePrice && isNaN(parseFloat(formData.purchasePrice))) {
-      newErrors.purchasePrice = 'Purchase price must be a valid number';
-    }
-    
-    // Warranty expiration date must be in the future if provided and not lifetime warranty
-    if (!formData.hasLifetimeWarranty && formData.warrantyExpires) {
-      const warrantyDate = new Date(formData.warrantyExpires);
-      const today = new Date();
-      
-      if (warrantyDate <= today) {
-        newErrors.warrantyExpires = 'Warranty expiration date must be in the future';
-      }
-    }
-    
-    // Log validation errors for debugging
-    console.log('Validation errors:', newErrors);
-    
-    // Update the errors state
-    setErrors(newErrors);
-    
-    // Return true if there are no errors
-    const isValid = Object.keys(newErrors).length === 0;
-    console.log('Form is valid:', isValid);
-    
-    return isValid;
+    return validateItemForm(formData, setErrors, locations, categories, recentlyCreatedEntities);
   };
-
+  
+  // Use the shared form submission function
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('Form submission started');
     
-    // Validate the form
-    const isValid = validateForm();
-    
-    // Log the current form data for debugging
-    console.log('Form data:', formData);
-    
-    // Check if required fields are filled
-    if (!formData.name.trim()) {
-      console.log('Name is required but empty');
-      return;
-    }
-    
-    if (!formData.location) {
-      console.log('Location is required but empty');
-      return;
-    }
-    
-    if (!formData.category) {
-      console.log('Category is required but empty');
-      return;
-    }
-    
-    if (!isValid) {
+    if (!validateForm()) {
       console.log('Form validation failed, aborting submission');
       return;
     }
     
     console.log('Form validation passed, proceeding with submission');
-    setSubmitting(true);
-    
-    try {
-      // Prepare data for submission - include both nested and non-nested purchase details
-      // This ensures compatibility with both the database model and the frontend display
-      
-      // Extract just the label IDs from the label objects
-      const labelIds = formData.labels.map(label => label._id);
-      console.log('Label IDs extracted:', labelIds);
-      
-      const submissionData = {
-        ...formData,
-        // Override the labels with just the IDs
-        labels: labelIds,
-        // Include non-nested purchase details for frontend display
-        purchasedFrom: formData.purchasedFrom,
-        purchasePrice: formData.purchasePrice,
-        purchaseDate: formData.purchaseDate,
-        // Include nested purchase details for database model
-        purchaseDetails: {
-          purchasedFrom: formData.purchasedFrom,
-          purchasePrice: formData.purchasePrice,
-          purchaseDate: formData.purchaseDate
-        },
-        // Include non-nested warranty details for frontend display
-        hasLifetimeWarranty: formData.hasLifetimeWarranty,
-        warrantyExpires: formData.warrantyExpires,
-        warrantyNotes: formData.warrantyNotes,
-        // Include nested warranty details for database model
-        warrantyDetails: {
-          hasLifetimeWarranty: formData.hasLifetimeWarranty,
-          warrantyExpires: formData.warrantyExpires,
-          warrantyNotes: formData.warrantyNotes
-        },
-        // Map UI field types to database field types for custom fields
-        customFields: formData.customFields.map(field => ({
-          name: field.name,
-          value: field.value,
-          type: mapFieldTypeToDbType(field.type || detectFieldType(field.value))
-        }))
-      };
-      
-      console.log('Submitting data to API:', submissionData);
-      
-      try {
-        // Make API call to create the item
-        console.log('Making API call to /api/items');
-        const response = await axios.post('/api/items', submissionData);
-        console.log('API response received:', response);
-        
-      if (response.data.success) {
-        console.log('Item created successfully');
-        
-        // Navigate immediately without showing a success message
-        navigate('/items');
-        } else {
-          console.log('API returned error:', response.data.message);
-          setErrorAlert('Error creating item: ' + response.data.message);
-        }
-      } catch (apiError) {
-        console.error('API call error:', apiError);
-        if (apiError.response) {
-          console.error('API response error data:', apiError.response.data);
-          console.error('API response error status:', apiError.response.status);
-          console.error('API response error headers:', apiError.response.headers);
-        } else if (apiError.request) {
-          console.error('API request error (no response received):', apiError.request);
-        } else {
-          console.error('API error message:', apiError.message);
-        }
-        throw apiError; // Re-throw to be caught by the outer catch block
-      }
-    } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        if (err.response.data.message.includes('description')) {
-          setErrors(prev => ({
-            ...prev,
-            description: 'Description cannot exceed 1000 characters'
-          }));
-          setErrorAlert('Error creating item: Description is too long');
-        } else if (err.response.data.message.includes('name')) {
-          setErrors(prev => ({
-            ...prev,
-            name: 'Name cannot exceed 100 characters'
-          }));
-          setErrorAlert('Error creating item: Name is too long');
-        } else {
-          setErrorAlert('Error creating item: ' + err.response.data.message);
-        }
-      } else {
-        setErrorAlert('Error creating item: ' + (err.message || 'Unknown error'));
-      }
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
+    await submitItemForm(formData, setSubmitting, setErrorAlert, setErrors, navigate);
   };
 
   if (loading) {

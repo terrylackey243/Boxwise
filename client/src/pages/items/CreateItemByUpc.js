@@ -1,20 +1,50 @@
-import React, { useContext, useMemo, useCallback, useState } from 'react';
-import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import axios from '../../utils/axiosConfig';
+import { submitItemForm } from '../../utils/itemFormUtils';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useMobile } from '../../context/MobileContext';
 import MobilePhotoSection from './MobilePhotoSection';
 import {
-  Container, Grid, Paper, Typography, Box, Button, TextField, 
-  FormControlLabel, Checkbox, CircularProgress, Breadcrumbs, Link,
-  Autocomplete, Chip, Dialog, DialogTitle, DialogContent, DialogActions
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Checkbox,
+  Divider,
+  CircularProgress,
+  Breadcrumbs,
+  Link,
+  Autocomplete,
+  Chip,
+  InputAdornment,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Search as SearchIcon,
+  QrCode as QrCodeIcon,
+  QrCodeScanner as QrCodeScannerIcon,
+  Delete as DeleteIcon,
+  OpenInNew as OpenInNewIcon
 } from '@mui/icons-material';
-import BarcodeScanner from '../../components/scanner/BarcodeScanner';
 import { AlertContext } from '../../context/AlertContext';
+import BarcodeScanner from '../../components/scanner/BarcodeScanner';
+import useHasCamera from '../../hooks/useHasCamera';
 import useItemForm from '../../hooks/useItemForm';
 import useLookupService from '../../hooks/useLookupService';
 import LookupSection from '../../components/items/LookupSection';
@@ -23,8 +53,12 @@ import { getLocationHierarchy } from '../../utils/locationUtils';
 const CreateItemByUpc = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setErrorAlert } = useContext(AlertContext);
+  const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
   const { isMobile, clearCapturedPhotos } = useMobile();
+  const hasCamera = useHasCamera();
+  
+  // State for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Get location ID from URL query parameters if it exists
   const queryParams = new URLSearchParams(location.search);
@@ -39,10 +73,23 @@ const CreateItemByUpc = () => {
     description: prefillData.description || '',
     location: locationId || '',
     category: '',
-    quantity: 1, // Ensure quantity has a default value
+    quantity: 1,
+    serialNumber: '',
     modelNumber: prefillData.modelNumber || '',
     manufacturer: prefillData.manufacturer || '',
+    notes: '',
+    isInsured: false,
+    isArchived: false,
+    purchasedFrom: '',
+    purchasePrice: '',
+    purchaseDate: new Date().toISOString().split('T')[0], // Default to today
+    hasLifetimeWarranty: false,
+    warrantyExpires: '',
+    warrantyNotes: '',
+    customFields: [],
     upcCode: prefillData.upcCode || '',
+    itemUrl: '',
+    manualUrl: '',
     labels: [] // Ensure labels array is initialized
   }), [prefillData.name, prefillData.description, locationId, prefillData.modelNumber, prefillData.manufacturer, prefillData.upcCode]);
   
@@ -55,9 +102,6 @@ const CreateItemByUpc = () => {
     navigate('/items');
   }, [navigate, clearCapturedPhotos]);
   
-  // Local state for form submission
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
   // Initialize form
   const {
     formData, 
@@ -65,6 +109,7 @@ const CreateItemByUpc = () => {
     loading, 
     submitting,
     errors,
+    setErrors,
     locations,
     categories,
     labels,
@@ -86,12 +131,62 @@ const CreateItemByUpc = () => {
     newCategory,
     setNewCategory,
     newLabel,
-    setNewLabel
+    setNewLabel,
+    handleAddCustomField,
+    handleRemoveCustomField,
+    handleCustomFieldChange
   } = useItemForm({
     initialData: initialFormData,
     mode: 'create',
     onSuccess: handleSuccess
   });
+  
+  // Function to detect the type of input based on its value
+  const detectFieldType = (value) => {
+    // Check if it's a URL or email
+    if (/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value)) {
+      return 'url';
+    }
+    
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      return 'email';
+    }
+    
+    // Check if it's a date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+      return 'timestamp';
+    }
+    
+    // Check if it's a number/integer
+    if (/^-?\d+(\.\d+)?$/.test(value)) {
+      return 'integer';
+    }
+    
+    // Check if it's a boolean
+    if (/^(true|false|yes|no)$/i.test(value)) {
+      return 'boolean';
+    }
+    
+    // Default to text
+    return 'text';
+  };
+  
+  // Function to map UI field types to database field types
+  const mapFieldTypeToDbType = (uiType) => {
+    // The database only supports 'text', 'integer', 'boolean', 'timestamp'
+    switch (uiType) {
+      case 'url':
+      case 'email':
+        return 'text';
+      case 'integer':
+      case 'boolean':
+      case 'timestamp':
+      case 'text':
+        return uiType;
+      default:
+        return 'text';
+    }
+  };
   
   // Memoize the onDataFound callback for UPC lookup
   const handleProductDataFound = useCallback((productData) => {
@@ -131,6 +226,26 @@ const CreateItemByUpc = () => {
     type: 'upc',
     onDataFound: handleProductDataFound
   });
+  
+  // Sync UPC code from lookup component to form data
+  useEffect(() => {
+    if (upcCode) {
+      // If it's a URL, extract it properly for the form
+      if (/^https?:\/\//.test(upcCode)) {
+        setFormData(prev => ({ 
+          ...prev, 
+          itemUrl: upcCode,
+          // Make sure we don't submit a URL as a UPC code
+          upcCode: '' 
+        }));
+      } else {
+        // It's a valid UPC code
+        setFormData(prev => ({ ...prev, upcCode }));
+      }
+    }
+  }, [upcCode, setFormData]);
+  
+  // We no longer need a custom validateForm or handleFormSubmit as we're using the hook's implementation
   
   if (loading) {
     return (
@@ -204,7 +319,7 @@ const CreateItemByUpc = () => {
                     value={formData.name}
                     onChange={handleChange}
                     error={!!errors.name}
-                    helperText={errors.name}
+                    helperText={errors.name || `${formData.name.length} of 100 characters used`}
                     required
                     inputProps={{ maxLength: 100 }}
                   />
@@ -220,7 +335,7 @@ const CreateItemByUpc = () => {
                     multiline
                     rows={3}
                     error={!!errors.description}
-                    helperText={errors.description}
+                    helperText={errors.description || `${formData.description.length} of 1000 characters used`}
                     inputProps={{ maxLength: 1000 }}
                   />
                 </Grid>
@@ -416,6 +531,61 @@ const CreateItemByUpc = () => {
                     label="Insured"
                   />
                 </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <FormControlLabel
+                    control={<Checkbox name="isArchived" checked={formData.isArchived} onChange={handleChange} />}
+                    label="Archived"
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Item URL"
+                    name="itemUrl"
+                    value={formData.itemUrl || ''}
+                    onChange={handleChange}
+                    placeholder="https://example.com/product"
+                    InputProps={{
+                      endAdornment: formData.itemUrl ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => window.open(formData.itemUrl, '_blank')}
+                            edge="end"
+                            size="small"
+                          >
+                            <OpenInNewIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Manual URL"
+                    name="manualUrl"
+                    value={formData.manualUrl || ''}
+                    onChange={handleChange}
+                    placeholder="https://example.com/manual"
+                    InputProps={{
+                      endAdornment: formData.manualUrl ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => window.open(formData.manualUrl, '_blank')}
+                            edge="end"
+                            size="small"
+                          >
+                            <OpenInNewIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null
+                    }}
+                  />
+                </Grid>
               </Grid>
             </Paper>
             
@@ -483,7 +653,77 @@ const CreateItemByUpc = () => {
                     />
                   </Grid>
                 )}
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Warranty Notes"
+                    name="warrantyNotes"
+                    value={formData.warrantyNotes}
+                    onChange={handleChange}
+                    multiline
+                    rows={2}
+                  />
+                </Grid>
               </Grid>
+            </Paper>
+            
+            {/* Custom Fields */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  Custom Fields
+                </Typography>
+                
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={handleAddCustomField}
+                >
+                  Add Field
+                </Button>
+              </Box>
+              
+              {formData.customFields.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  No custom fields added yet. Click "Add Field" to create one.
+                </Typography>
+              ) : (
+                <Grid container spacing={2}>
+                  {formData.customFields.map((field, index) => (
+                    <React.Fragment key={index}>
+                      <Grid item xs={5}>
+                        <TextField
+                          fullWidth
+                          label="Field Name"
+                          value={field.name}
+                          onChange={(e) => handleCustomFieldChange(index, 'name', e.target.value)}
+                          size="small"
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={5}>
+                        <TextField
+                          fullWidth
+                          label="Field Value"
+                          value={field.value}
+                          onChange={(e) => handleCustomFieldChange(index, 'value', e.target.value)}
+                          size="small"
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={2}>
+                        <IconButton 
+                          color="error" 
+                          onClick={() => handleRemoveCustomField(index)}
+                          sx={{ mt: 1 }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Grid>
+                    </React.Fragment>
+                  ))}
+                </Grid>
+              )}
             </Paper>
             
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
 import bulkService from '../../services/bulkService';
@@ -47,8 +47,11 @@ const Items = () => {
   
   // Bulk add state
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  
+  // Flag to track if this is the initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Use the custom hook for search functionality
+  // Use the custom hook for search functionality 
   const {
     loading,
     items,
@@ -74,6 +77,26 @@ const Items = () => {
   } = useItemSearch({
     onError: setErrorAlert
   });
+  
+  // Use a ref to track if we've already done the initial refresh
+  const hasRefreshedRef = React.useRef(false);
+  
+  // Refresh items data only on initial mount, not on every render
+  useEffect(() => {
+    // Only refresh once when component first mounts
+    if (!hasRefreshedRef.current) {
+      hasRefreshedRef.current = true;
+      
+      // Perform refresh after a small delay to ensure component is fully mounted
+      const refreshTimer = setTimeout(() => {
+        refreshItems().then(() => {
+          setIsInitialLoad(false);
+        });
+      }, 300);
+      
+      return () => clearTimeout(refreshTimer);
+    }
+  }, []); // Empty dependency array means this only runs once on mount
 
   const handleActionMenuOpen = (event, itemId) => {
     setActionMenuAnchor(event.currentTarget);
