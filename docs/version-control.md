@@ -34,17 +34,30 @@ The version is displayed as a badge next to the Admin Dashboard title. The versi
 
 ### Automatic Version Incrementing
 
-On each Git commit:
-1. The pre-commit hook runs the version management script
-2. If needed, the PATCH version is automatically incremented by 1
-3. The version.json file is updated and staged
-4. The commit message is prefixed with the current version and a synopsis ([v0.0.2 - Added new feature])
+The system uses three Git hooks working together:
 
-The system is smart enough to:
-- Auto-increment the patch version when appropriate
-- Detect if you've manually updated the version number
-- Always ensure the commit version matches the actual version in version.json
-- Include a brief synopsis of changes in the commit message
+#### Pre-commit Hook
+1. Runs before changes are committed
+2. Executes the version management script
+3. If needed, increments the PATCH version by 1
+4. Updates and stages the version.json file
+
+#### Prepare-commit-msg Hook
+1. Runs when Git is preparing the commit message template
+2. Available as a fallback mechanism for version stamping
+
+#### Commit-msg Hook
+1. Runs after the commit message is entered but before the commit is finalized
+2. Reads the current version from version.json
+3. Prepends the version number to your commit message
+4. Formats the commit message as: "v0.0.2: Added new feature"
+
+This multi-hook approach ensures:
+- The version number is always incremented appropriately
+- Manual version updates (for major/minor releases) are respected
+- The commit message always starts with the exact version number
+- The original commit message is preserved intact
+- The displayed version on the dashboard is always in sync with the commit version
 
 ### Manual Version Updates
 
@@ -68,7 +81,9 @@ Make sure to update all three fields:
 - `client/src/version.json` - Stores the current version number
 - `scripts/increment-version.js` - Script that increments the version
 - `scripts/hooks/pre-commit` - Git hook that runs the increment script
-- `scripts/setup-version-control.js` - Setup script
+- `scripts/hooks/prepare-commit-msg` - Git hook for message preparation
+- `scripts/hooks/commit-msg` - Git hook that formats commit messages with version info
+- `scripts/setup-version-control.js` - Setup script that installs all hooks
 
 ## Troubleshooting
 

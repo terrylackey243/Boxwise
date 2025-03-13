@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Simple prepare-commit-msg hook to add version
+# Specifically designed to work across different environments
+
+COMMIT_MSG_FILE=$1
+
+# Exit if not a normal commit
+if [ -n "$2" ]; then
+  exit 0
+fi
+
+# Get project root and version file path
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+VERSION_FILE="$PROJECT_ROOT/client/src/version.json"
+
+# Get version using standard tools
+if [ -f "$VERSION_FILE" ]; then
+  # Extract version using simple grep and sed
+  VERSION=$(grep -o '"version": *"[^"]*"' "$VERSION_FILE" | sed 's/"version": *"\([^"]*\)"/\1/')
+  
+  if [ -n "$VERSION" ]; then
+    # Read original message
+    ORIGINAL_MSG=$(cat "$COMMIT_MSG_FILE")
+    
+    # Create a temp file for the new message
+    TMP_FILE=$(mktemp)
+    
+    # Write version prepended message to temp file
+    echo "v$VERSION: $ORIGINAL_MSG" > "$TMP_FILE"
+    
+    # Copy temp file content to commit message file
+    cat "$TMP_FILE" > "$COMMIT_MSG_FILE"
+    rm "$TMP_FILE"
+    
+    # Leave a log for debugging
+    echo "$(date): Added version v$VERSION to commit" > "/tmp/git-hook-log.txt"
+  fi
+fi
+
+exit 0

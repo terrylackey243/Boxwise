@@ -14,6 +14,8 @@ const { execSync } = require('child_process');
 
 const projectRoot = path.join(__dirname, '..');
 const preCommitSource = path.join(projectRoot, 'scripts', 'hooks', 'pre-commit');
+const prepareCommitMsgSource = path.join(projectRoot, 'scripts', 'hooks', 'prepare-commit-msg');
+const commitMsgSource = path.join(projectRoot, 'scripts', 'hooks', 'commit-msg');
 const incrementVersionScript = path.join(projectRoot, 'scripts', 'increment-version.js');
 
 // Get the .git hooks directory
@@ -30,11 +32,15 @@ try {
 }
 
 const preCommitTarget = path.join(gitHooksDir, 'pre-commit');
+const prepareCommitMsgTarget = path.join(gitHooksDir, 'prepare-commit-msg');
+const commitMsgTarget = path.join(gitHooksDir, 'commit-msg');
 
 // Make sure the scripts are executable
 try {
   console.log('Making scripts executable...');
   execSync(`chmod +x "${preCommitSource}"`);
+  execSync(`chmod +x "${prepareCommitMsgSource}"`);
+  execSync(`chmod +x "${commitMsgSource}"`);
   execSync(`chmod +x "${incrementVersionScript}"`);
   console.log('✅ Scripts are now executable');
 } catch (error) {
@@ -42,36 +48,49 @@ try {
   process.exit(1);
 }
 
-// Check if pre-commit hook already exists
-if (fs.existsSync(preCommitTarget)) {
-  console.log('⚠️ Pre-commit hook already exists in .git/hooks/');
-  console.log('Backing up existing hook...');
-  
-  const backupPath = `${preCommitTarget}.backup.${Date.now()}`;
-  fs.renameSync(preCommitTarget, backupPath);
-  console.log(`✅ Existing hook backed up to ${backupPath}`);
-}
-
-// Create symlink for pre-commit hook
-try {
-  console.log('Installing pre-commit hook...');
-  
-  // On Windows, we need to copy the file instead of creating a symlink
-  if (process.platform === 'win32') {
-    fs.copyFileSync(preCommitSource, preCommitTarget);
-    console.log('✅ Pre-commit hook copied to .git/hooks/');
-  } else {
-    // Create a relative symlink
-    const relativePreCommitSource = path.relative(
-      path.dirname(preCommitTarget),
-      preCommitSource
-    );
-    fs.symlinkSync(relativePreCommitSource, preCommitTarget);
-    console.log('✅ Pre-commit hook symlink created in .git/hooks/');
+// Install hooks
+const installHook = (sourcePath, targetPath, hookName) => {
+  // Check if hook already exists
+  if (fs.existsSync(targetPath)) {
+    console.log(`⚠️ ${hookName} hook already exists in .git/hooks/`);
+    console.log('Backing up existing hook...');
+    
+    const backupPath = `${targetPath}.backup.${Date.now()}`;
+    fs.renameSync(targetPath, backupPath);
+    console.log(`✅ Existing ${hookName} hook backed up to ${backupPath}`);
   }
-} catch (error) {
-  console.error(`Error installing pre-commit hook: ${error.message}`);
-  console.error('You may need to manually copy the hook to .git/hooks/pre-commit');
+
+  // Create symlink or copy file
+  try {
+    console.log(`Installing ${hookName} hook...`);
+    
+    // On Windows, we need to copy the file instead of creating a symlink
+    if (process.platform === 'win32') {
+      fs.copyFileSync(sourcePath, targetPath);
+      console.log(`✅ ${hookName} hook copied to .git/hooks/`);
+    } else {
+      // Create a relative symlink
+      const relativeSource = path.relative(
+        path.dirname(targetPath),
+        sourcePath
+      );
+      fs.symlinkSync(relativeSource, targetPath);
+      console.log(`✅ ${hookName} hook symlink created in .git/hooks/`);
+    }
+  } catch (error) {
+    console.error(`Error installing ${hookName} hook: ${error.message}`);
+    console.error(`You may need to manually copy the hook to .git/hooks/${hookName}`);
+    return false;
+  }
+  return true;
+};
+
+// Install all hooks
+const preCommitSuccess = installHook(preCommitSource, preCommitTarget, 'pre-commit');
+const prepareCommitMsgSuccess = installHook(prepareCommitMsgSource, prepareCommitMsgTarget, 'prepare-commit-msg');
+const commitMsgSuccess = installHook(commitMsgSource, commitMsgTarget, 'commit-msg');
+
+if (!preCommitSuccess || !prepareCommitMsgSuccess || !commitMsgSuccess) {
   process.exit(1);
 }
 
