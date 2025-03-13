@@ -35,10 +35,16 @@ The version is displayed as a badge next to the Admin Dashboard title. The versi
 ### Automatic Version Incrementing
 
 On each Git commit:
-1. The pre-commit hook runs the version increment script
-2. The PATCH version is automatically incremented by 1
+1. The pre-commit hook runs the version management script
+2. If needed, the PATCH version is automatically incremented by 1
 3. The version.json file is updated and staged
-4. The commit message is prefixed with the new version and a synopsis ([v0.0.2 - Added new feature])
+4. The commit message is prefixed with the current version and a synopsis ([v0.0.2 - Added new feature])
+
+The system is smart enough to:
+- Auto-increment the patch version when appropriate
+- Detect if you've manually updated the version number
+- Always ensure the commit version matches the actual version in version.json
+- Include a brief synopsis of changes in the commit message
 
 ### Manual Version Updates
 

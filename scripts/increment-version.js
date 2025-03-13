@@ -63,12 +63,44 @@ function stageVersionFile() {
 }
 
 /**
- * Get the current commit message from COMMIT_EDITMSG file
- * and update it to include the version
+ * Get the current version and add it to the commit message.
+ * If the version hasn't been manually updated, this increments it.
+ * This ensures the commit message always reflects the actual version.
  */
 function updateCommitMessage() {
-  const newVersion = incrementVersion();
-  console.log(`Incremented version to ${newVersion}`);
+  let versionInfo = readVersionFile();
+  let currentVersion = versionInfo.version;
+  
+  // Check if we need to increment (for auto-incrementing workflow)
+  // But also support manual version updates by not automatically incrementing
+  // if the version has already been updated since the last commit
+  
+  // Get the version from the last commit to see if we need to increment
+  let lastVersion = null;
+  try {
+    // Try to get the version from the last commit message
+    const lastCommitMsg = execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trim();
+    const versionMatch = lastCommitMsg.match(/\[v(\d+\.\d+\.\d+)/);
+    
+    if (versionMatch) {
+      lastVersion = versionMatch[1];
+      console.log(`Last commit version: ${lastVersion}`);
+    }
+  } catch (error) {
+    // If this fails, we'll just increment
+    console.log('Could not determine last version from commit history');
+  }
+  
+  // Only increment if the current version is the same as the last commit version
+  // This allows manual updates to take precedence
+  if (lastVersion && currentVersion === lastVersion) {
+    const newVersion = incrementVersion();
+    console.log(`Incremented version to ${newVersion}`);
+    versionInfo = readVersionFile(); // Re-read after increment
+    currentVersion = versionInfo.version;
+  } else {
+    console.log(`Using existing version: ${currentVersion}`);
+  }
   
   // Stage the version file so it's included in the commit
   stageVersionFile();
@@ -102,9 +134,9 @@ function updateCommitMessage() {
         }
         
         // Format: [v0.0.2 - Added new feature]
-        commitMsg = `[v${newVersion} - ${synopsis}]${commitMsg.substring(synopsis.length)}`;
+        commitMsg = `[v${currentVersion} - ${synopsis}]${commitMsg.substring(synopsis.length)}`;
         fs.writeFileSync(commitMsgFile, commitMsg, 'utf8');
-        console.log(`Updated commit message with version: ${newVersion} and synopsis`);
+        console.log(`Updated commit message with version: ${currentVersion} and synopsis`);
       }
     }
   } catch (error) {
