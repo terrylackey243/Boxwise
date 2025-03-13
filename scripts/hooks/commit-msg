@@ -20,13 +20,37 @@ if [ -f "$VERSION_FILE" ]; then
     # Read current commit message
     CURRENT_MSG=$(cat "$COMMIT_MSG_FILE")
     
-    # Create new message with version prefix
-    NEW_MSG="v$VERSION: $CURRENT_MSG"
+    # Extract the first line as the synopsis
+    FIRST_LINE=$(echo "$CURRENT_MSG" | head -n 1)
+    
+    # Truncate synopsis if too long (50 chars is standard for Git)
+    if [ ${#FIRST_LINE} -gt 50 ]; then
+      SYNOPSIS="${FIRST_LINE:0:47}..."
+    else
+      SYNOPSIS="$FIRST_LINE"
+    fi
+    
+    # Get the rest of the message (if any)
+    REST_OF_MSG=$(echo "$CURRENT_MSG" | tail -n +2)
+    
+    # Format new message with version and synopsis
+    if [ -n "$REST_OF_MSG" ]; then
+      # If there are multiple lines, keep the original format
+      NEW_MSG="v$VERSION: $SYNOPSIS
+
+$REST_OF_MSG"
+    else
+      # Just a one-liner
+      NEW_MSG="v$VERSION: $SYNOPSIS"
+    fi
     
     # Write new message back to commit message file
     echo "$NEW_MSG" > "$COMMIT_MSG_FILE"
     
-    echo "$(date): commit-msg hook added version v$VERSION" > "/tmp/git-commit-msg-hook.log"
+    echo "$(date): commit-msg hook added version v$VERSION with synopsis" > "/tmp/git-commit-msg-hook.log"
+    echo "Original: $CURRENT_MSG" >> "/tmp/git-commit-msg-hook.log"
+    echo "Synopsis: $SYNOPSIS" >> "/tmp/git-commit-msg-hook.log"
+    echo "New message: $NEW_MSG" >> "/tmp/git-commit-msg-hook.log"
   fi
 fi
 
