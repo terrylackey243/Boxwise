@@ -310,12 +310,34 @@ const useItemForm = ({ initialData = {}, mode = 'create', itemId = null, onSucce
       submissionData.customFields = Array.isArray(formData.customFields) 
         ? formData.customFields
             .filter(field => field && typeof field.name === 'string' && field.name.trim())
-            .map(field => ({
-              name: field.name.trim(),
-              value: field.value || '',
-              type: mapFieldTypeToDbType(field.type || detectFieldType(field.value || ''))
-            }))
+            .map(field => {
+              const fieldType = mapFieldTypeToDbType(field.type || detectFieldType(field.value || ''));
+              
+              // Convert the value according to the field type
+              let processedValue = field.value || '';
+              if (fieldType === 'integer' && processedValue) {
+                processedValue = Number(processedValue);
+              } else if (fieldType === 'boolean' && processedValue) {
+                processedValue = /^(true|yes)$/i.test(processedValue);
+              }
+              
+              return {
+                name: field.name.trim(),
+                value: processedValue,
+                type: fieldType
+              };
+            })
         : [];
+      
+      // Ensure purchase price is properly converted to a number or null
+      if (submissionData.purchaseDetails.purchasePrice === '') {
+        submissionData.purchaseDetails.purchasePrice = null;
+      } else if (submissionData.purchaseDetails.purchasePrice !== null) {
+        submissionData.purchaseDetails.purchasePrice = Number(submissionData.purchaseDetails.purchasePrice);
+      }
+      
+      // Log the submission data to help with debugging
+      console.log('Submitting item data:', JSON.stringify(submissionData));
       
       let response;
       

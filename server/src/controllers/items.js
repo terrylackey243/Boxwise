@@ -525,7 +525,7 @@ exports.loanItem = async (req, res) => {
     
     // Create a new loanDetails object to ensure proper structure
     const newLoanDetails = {
-      loanedTo: req.body.loanedTo.trim(),
+      loanedTo: req.body.loanedTo ? req.body.loanedTo.trim() : '',
       loanDate: new Date(),
       isLoaned: true,
       notes: req.body.notes || ''
@@ -566,7 +566,6 @@ exports.loanItem = async (req, res) => {
       success: true,
       data: updatedItem
     });
-    
   } catch (error) {
     console.error('CRITICAL ERROR in loanItem:', error);
     console.error('Stack trace:', error.stack);
