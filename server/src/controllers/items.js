@@ -39,18 +39,28 @@ exports.getItems = asyncHandler(async (req, res, next) => {
     query.labels = req.query.label;
   }
   
-  // Add search if provided
+  // Add search if provided - Google-like search (matches any combination of words)
   if (req.query.search) {
-    query.$or = [
-      { name: { $regex: req.query.search, $options: 'i' } },
-      { description: { $regex: req.query.search, $options: 'i' } },
-      { assetId: { $regex: req.query.search, $options: 'i' } },
-      { serialNumber: { $regex: req.query.search, $options: 'i' } },
-      { modelNumber: { $regex: req.query.search, $options: 'i' } },
-      { manufacturer: { $regex: req.query.search, $options: 'i' } },
-      { upcCode: { $regex: req.query.search, $options: 'i' } },
-      { 'loanDetails.loanedTo': { $regex: req.query.search, $options: 'i' } }
-    ];
+    const searchTerms = req.query.search.trim().split(/\s+/);
+    
+    // Create an array of conditions where each term must match at least one field
+    const searchConditions = searchTerms.map(term => ({
+      $or: [
+        { name: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } },
+        { assetId: { $regex: term, $options: 'i' } },
+        { serialNumber: { $regex: term, $options: 'i' } },
+        { modelNumber: { $regex: term, $options: 'i' } },
+        { manufacturer: { $regex: term, $options: 'i' } },
+        { upcCode: { $regex: term, $options: 'i' } },
+        { 'loanDetails.loanedTo': { $regex: term, $options: 'i' } }
+      ]
+    }));
+    
+    // Item must match all terms (each term can match any field)
+    if (searchConditions.length > 0) {
+      query.$and = searchConditions;
+    }
   }
   
   // Execute query with pagination

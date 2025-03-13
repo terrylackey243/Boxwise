@@ -303,7 +303,8 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       return;
     }
     
-    const searchLower = searchValue.toLowerCase();
+    // Split search value into individual words/terms for Google-like search
+    const searchTerms = searchValue.toLowerCase().trim().split(/\s+/);
     
     // Always search across all items in the database, regardless of filters
     // Force loading the complete item set if we don't have it yet
@@ -311,28 +312,31 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       loadAllItemsForSearch();
       // Fall back to current items until the complete set is loaded
       const itemsToSearch = allItems;
-      performInitialSearch(searchLower, itemsToSearch);
+      performInitialSearch(searchTerms, itemsToSearch);
       return;
     }
     
     // Use the complete item set for searching
     const itemsToSearch = completeItemSet;
     
-    console.log(`Searching through ${itemsToSearch.length} items (using complete item set)`);
+    console.log(`Searching through ${itemsToSearch.length} items (using complete item set) for terms: ${searchTerms.join(', ')}`);
     
-    // Filter items based on the search value
+    // Filter items based on the search terms - Google-like search
     const filtered = itemsToSearch.filter(item => {
-      // Check if any of these fields contain the search term
-      return (
-        (item.name && item.name.toLowerCase().includes(searchLower)) ||
-        (item.description && item.description.toLowerCase().includes(searchLower)) ||
-        (item.assetId && item.assetId.toLowerCase().includes(searchLower)) ||
-        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchLower)) ||
-        (item.modelNumber && item.modelNumber.toLowerCase().includes(searchLower)) ||
-        (item.manufacturer && item.manufacturer.toLowerCase().includes(searchLower)) ||
-        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower)) ||
-        (item.loanDetails && item.loanDetails.loanedTo && item.loanDetails.loanedTo.toLowerCase().includes(searchLower))
-      );
+      // Item must match ALL search terms (each term can match any field)
+      return searchTerms.every(term => {
+        // Check if any of these fields contain the search term
+        return (
+          (item.name && item.name.toLowerCase().includes(term)) ||
+          (item.description && item.description.toLowerCase().includes(term)) ||
+          (item.assetId && item.assetId.toLowerCase().includes(term)) ||
+          (item.serialNumber && item.serialNumber.toLowerCase().includes(term)) ||
+          (item.modelNumber && item.modelNumber.toLowerCase().includes(term)) ||
+          (item.manufacturer && item.manufacturer.toLowerCase().includes(term)) ||
+          (item.upcCode && item.upcCode.toLowerCase().includes(term)) ||
+          (item.loanDetails && item.loanDetails.loanedTo && item.loanDetails.loanedTo.toLowerCase().includes(term))
+        );
+      });
     });
     
     // Show all matching items without pagination
@@ -344,22 +348,25 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
   }, [allItems, completeItemSet, loadAllItemsForSearch]);
   
   // Helper function to perform initial search while complete set is loading
-  const performInitialSearch = (searchLower, itemsToSearch) => {
-    console.log(`Performing initial search through ${itemsToSearch.length} items`);
+  const performInitialSearch = (searchTerms, itemsToSearch) => {
+    console.log(`Performing initial search through ${itemsToSearch.length} items for terms: ${searchTerms.join(', ')}`);
     
-    // Filter items based on the search value
+    // Filter items based on the search terms - Google-like search
     const filtered = itemsToSearch.filter(item => {
-      // Check if any of these fields contain the search term
-      return (
-        (item.name && item.name.toLowerCase().includes(searchLower)) ||
-        (item.description && item.description.toLowerCase().includes(searchLower)) ||
-        (item.assetId && item.assetId.toLowerCase().includes(searchLower)) ||
-        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchLower)) ||
-        (item.modelNumber && item.modelNumber.toLowerCase().includes(searchLower)) ||
-        (item.manufacturer && item.manufacturer.toLowerCase().includes(searchLower)) ||
-        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower)) ||
-        (item.loanDetails && item.loanDetails.loanedTo && item.loanDetails.loanedTo.toLowerCase().includes(searchLower))
-      );
+      // Item must match ALL search terms (each term can match any field)
+      return searchTerms.every(term => {
+        // Check if any of these fields contain the search term
+        return (
+          (item.name && item.name.toLowerCase().includes(term)) ||
+          (item.description && item.description.toLowerCase().includes(term)) ||
+          (item.assetId && item.assetId.toLowerCase().includes(term)) ||
+          (item.serialNumber && item.serialNumber.toLowerCase().includes(term)) ||
+          (item.modelNumber && item.modelNumber.toLowerCase().includes(term)) ||
+          (item.manufacturer && item.manufacturer.toLowerCase().includes(term)) ||
+          (item.upcCode && item.upcCode.toLowerCase().includes(term)) ||
+          (item.loanDetails && item.loanDetails.loanedTo && item.loanDetails.loanedTo.toLowerCase().includes(term))
+        );
+      });
     });
     
     // Show all matching items without pagination
