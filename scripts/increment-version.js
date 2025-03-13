@@ -80,7 +80,8 @@ function updateCommitMessage() {
   try {
     // Try to get the version from the last commit message
     const lastCommitMsg = execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trim();
-    const versionMatch = lastCommitMsg.match(/\[v(\d+\.\d+\.\d+)/);
+    // Updated regex to match both [v0.0.5] and v0.0.5: formats
+    const versionMatch = lastCommitMsg.match(/(?:\[v|\bv)(\d+\.\d+\.\d+)(?:\]|:)/);
     
     if (versionMatch) {
       lastVersion = versionMatch[1];
