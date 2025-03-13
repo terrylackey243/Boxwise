@@ -38,7 +38,7 @@ On each Git commit:
 1. The pre-commit hook runs the version increment script
 2. The PATCH version is automatically incremented by 1
 3. The version.json file is updated and staged
-4. The commit message is prefixed with the new version ([v0.0.2])
+4. The commit message is prefixed with the new version and a synopsis ([v0.0.2 - Added new feature])
 
 ### Manual Version Updates
 

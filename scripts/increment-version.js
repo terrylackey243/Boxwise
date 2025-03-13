@@ -73,7 +73,7 @@ function updateCommitMessage() {
   // Stage the version file so it's included in the commit
   stageVersionFile();
   
-  // Try to add version to commit message
+  // Try to add version to commit message along with a synopsis
   try {
     // Get the path to the git directory
     const gitDir = execSync('git rev-parse --git-dir', { encoding: 'utf8' }).trim();
@@ -83,11 +83,28 @@ function updateCommitMessage() {
     if (fs.existsSync(commitMsgFile)) {
       let commitMsg = fs.readFileSync(commitMsgFile, 'utf8');
       
-      // Only prepend version if it doesn't already have a version tag
-      if (!commitMsg.match(/^\[v\d+\.\d+\.\d+\]/)) {
-        commitMsg = `[v${newVersion}] ${commitMsg}`;
+      // Only modify if it doesn't already have a version tag
+      if (!commitMsg.match(/^\[v\d+\.\d+\.\d+/)) {
+        // Extract first line as the synopsis (trimming any comment lines starting with #)
+        let synopsis = commitMsg.split('\n')[0].trim();
+        
+        // Remove any comment lines (starting with #) at the beginning
+        while (synopsis.startsWith('#')) {
+          const lines = commitMsg.split('\n');
+          lines.shift(); // Remove first line
+          commitMsg = lines.join('\n');
+          synopsis = commitMsg.split('\n')[0].trim();
+        }
+        
+        // Limit synopsis length if too long (for readability)
+        if (synopsis.length > 50) {
+          synopsis = synopsis.substring(0, 47) + '...';
+        }
+        
+        // Format: [v0.0.2 - Added new feature]
+        commitMsg = `[v${newVersion} - ${synopsis}]${commitMsg.substring(synopsis.length)}`;
         fs.writeFileSync(commitMsgFile, commitMsg, 'utf8');
-        console.log(`Updated commit message with version: ${newVersion}`);
+        console.log(`Updated commit message with version: ${newVersion} and synopsis`);
       }
     }
   } catch (error) {
