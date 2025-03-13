@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink, Navigate } from 'react-router-dom';
 import axios from '../../utils/axiosConfig';
+import versionInfo from '../../version.json';
 import {
   Container,
   Grid,
@@ -267,9 +268,17 @@ const AdminDashboard = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Admin Dashboard
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Admin Dashboard
+          </Typography>
+          <Chip 
+            size="small" 
+            label={`v${versionInfo.version}`} 
+            color="primary" 
+            sx={{ mt: -1 }} 
+          />
+        </Box>
         <Typography variant="subtitle1" color="text.secondary">
           Manage users, view statistics, and monitor system activity
         </Typography>

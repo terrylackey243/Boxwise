@@ -9,7 +9,8 @@
     "start:server": "cd server && npm run dev",
     "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
     "init:db": "cd scripts && node init-db.js",
-    "reset:db": "cd scripts && ./reset-db.sh"
+    "reset:db": "cd scripts && ./reset-db.sh",
+    "setup:version": "node scripts/setup-version-control.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

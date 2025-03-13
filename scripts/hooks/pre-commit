@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# Pre-commit hook to auto-increment the version and update commit message
+# To install, copy or symlink to .git/hooks/pre-commit and ensure it's executable:
+# chmod +x .git/hooks/pre-commit
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+
+# Run the increment-version.js script
+node "$PROJECT_ROOT/scripts/increment-version.js"
+
+# Exit with the status of the version increment script
+exit $?
