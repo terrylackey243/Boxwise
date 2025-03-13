@@ -97,10 +97,14 @@ const ItemDetail = () => {
       try {
         setLoading(true);
         
-        // Make API call to fetch the item
-        const response = await axios.get(`/api/items/${id}`);
+        // Make API call to fetch the item with a cache-busting parameter
+        const timestamp = new Date().getTime();
+        const response = await axios.get(`/api/items/${id}?_=${timestamp}`);
         
         if (response.data.success) {
+          console.log('Fetched item data:', response.data.data);
+          console.log('Loan details in fetched item:', response.data.data.loanDetails);
+          
           setItem(response.data.data);
           
           // Fetch location details if the item has a location
@@ -238,21 +242,36 @@ const ItemDetail = () => {
 
     setSubmittingLoan(true);
     setLoanFormError('');
+    
+    console.log('Loan form data being submitted:', loanFormData);
 
     try {
       // Make API call to loan the item
       const response = await axios.post(`/api/items/${id}/loan`, loanFormData);
       
+      console.log('Loan API response:', response.data);
+      
       if (response.data.success) {
+        // Log the returned item data to see the loanDetails
+        console.log('Updated item data after loan:', response.data.data);
+        console.log('Loan details in response:', response.data.data.loanDetails);
+        
+        // Update the item state with the response data
         setItem(response.data.data);
         setSuccessAlert('Item loaned successfully');
         handleLoanDialogClose();
+        
+        // Force a reload to ensure we have the latest data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         setLoanFormError('Error loaning item: ' + response.data.message);
       }
     } catch (err) {
+      console.error('Loan error:', err);
+      console.error('Loan error response:', err.response?.data);
       setLoanFormError('Error loaning item: ' + (err.response?.data?.message || err.message));
-      console.error(err);
     } finally {
       setSubmittingLoan(false);
     }
@@ -264,15 +283,26 @@ const ItemDetail = () => {
       const response = await axios.post(`/api/items/${id}/return`);
       
       if (response.data.success) {
+        console.log('Return API response:', response.data);
+        console.log('Updated item data after return:', response.data.data);
+        console.log('Loan details in response after return:', response.data.data.loanDetails);
+        
+        // Update the item state with the response data
         setItem(response.data.data);
         setSuccessAlert('Item returned successfully');
         handleReturnDialogClose();
+        
+        // Force a reload to ensure we have the latest data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         setErrorAlert('Error returning item: ' + response.data.message);
       }
     } catch (err) {
+      console.error('Return error:', err);
+      console.error('Return error response:', err.response?.data);
       setErrorAlert('Error returning item: ' + (err.response?.data?.message || err.message));
-      console.error(err);
     }
   };
 
@@ -555,7 +585,7 @@ const ItemDetail = () => {
                                 {loc.name}
                               </Link>
                               {index < locationHierarchy.length - 1 && (
-                                <NavigateNextIcon fontSize="small" sx={{ mx: 0.5 }} />
+                                <NavigateNextIcon key={`nav-${index}`} fontSize="small" sx={{ mx: 0.5 }} />
                               )}
                             </React.Fragment>
                           ))}
@@ -854,7 +884,7 @@ const ItemDetail = () => {
                           }
                         } else {
                           // Regular URL/email detection for non-Markdown values
-                          const isUrl = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(field.value);
+                          const isUrl = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/.test(field.value);
                           const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
                           
                           if (isUrl) {

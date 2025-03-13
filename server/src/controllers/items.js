@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const Location = require('../models/Location');
 const Category = require('../models/Category');
@@ -47,7 +48,8 @@ exports.getItems = asyncHandler(async (req, res, next) => {
       { serialNumber: { $regex: req.query.search, $options: 'i' } },
       { modelNumber: { $regex: req.query.search, $options: 'i' } },
       { manufacturer: { $regex: req.query.search, $options: 'i' } },
-      { upcCode: { $regex: req.query.search, $options: 'i' } }
+      { upcCode: { $regex: req.query.search, $options: 'i' } },
+      { 'loanDetails.loanedTo': { $regex: req.query.search, $options: 'i' } }
     ];
   }
   
@@ -74,7 +76,7 @@ exports.getItems = asyncHandler(async (req, res, next) => {
   // Use projection to limit returned fields for better performance
   // Only select fields that are needed for the items list view
   const items = await Item.find(query)
-    .select('name description quantity assetId location category labels isArchived updatedAt createdAt')
+    .select('name description quantity assetId location category labels isArchived updatedAt createdAt loanDetails')
     .populate('location', 'name')
     .populate('category', 'name')
     .populate('labels', 'name color')
@@ -82,9 +84,11 @@ exports.getItems = asyncHandler(async (req, res, next) => {
     .skip(startIndex)
     .limit(limit);
   
-  // Add cache headers for better performance
-  // Cache for 5 minutes
-  res.set('Cache-Control', 'public, max-age=300');
+  // Disable caching for items to ensure fresh data is always returned
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
   
   res.status(200).json({
     success: true,
@@ -113,8 +117,11 @@ exports.getItem = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Not authorized to access this item`, 403));
   }
   
-  // Cache individual item responses for 10 minutes
-  res.set('Cache-Control', 'public, max-age=600');
+  // Disable caching for individual items to ensure fresh data
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
   
   res.status(200).json({
     success: true,
@@ -461,69 +468,207 @@ exports.searchByUPC = asyncHandler(async (req, res, next) => {
 // @desc    Loan an item to someone
 // @route   POST /api/items/:id/loan
 // @access  Private
-exports.loanItem = asyncHandler(async (req, res, next) => {
-  const item = await Item.findById(req.params.id);
-  
-  if (!item) {
-    return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+exports.loanItem = async (req, res) => {
+  try {
+    // Enhanced debugging
+    console.log('Loan endpoint called');
+    console.log('User:', req.user?.id, req.user?.email);
+    console.log('Item ID:', req.params.id);
+    console.log('Request body:', JSON.stringify(req.body));
+    
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('Invalid item ID format');
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid item ID format'
+      });
+    }
+    
+    // Validate required fields
+    if (!req.body.loanedTo || typeof req.body.loanedTo !== 'string' || !req.body.loanedTo.trim()) {
+      console.error('Missing or invalid loanedTo field');
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid name for who the item is loaned to'
+      });
+    }
+    
+    // Find the item first to check if it exists
+    const existingItem = await Item.findById(req.params.id);
+    
+    if (!existingItem) {
+      console.error('Item not found:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: `Item not found with id of ${req.params.id}`
+      });
+    }
+    
+    // Check authorization
+    if (existingItem.group.toString() !== req.user.group.toString()) {
+      console.error('Auth mismatch - User group:', req.user.group, 'Item group:', existingItem.group);
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to loan this item'
+      });
+    }
+    
+    // Create a new loanDetails object to ensure proper structure
+    const newLoanDetails = {
+      loanedTo: req.body.loanedTo.trim(),
+      loanDate: new Date(),
+      isLoaned: true,
+      notes: req.body.notes || ''
+    };
+    
+    console.log('Setting loanDetails to:', newLoanDetails);
+    
+    // Update the item using direct MongoDB operator to ensure the value is correctly set
+    const updatedItem = await Item.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          loanDetails: newLoanDetails,
+          updatedAt: new Date(),
+          updatedBy: req.user.id
+        }
+      },
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedItem) {
+      console.error('Failed to update item after validation passed');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update the item'
+      });
+    }
+    
+    // Verify loan info was saved
+    console.log('Loan successful for item:', req.params.id);
+    console.log('Updated item loanDetails:', updatedItem.loanDetails);
+    
+    // Double-check the update persisted in the database
+    const verifiedItem = await Item.findById(req.params.id);
+    console.log('Verified loanDetails from DB:', verifiedItem.loanDetails);
+    
+    return res.status(200).json({
+      success: true,
+      data: updatedItem
+    });
+    
+  } catch (error) {
+    console.error('CRITICAL ERROR in loanItem:', error);
+    console.error('Stack trace:', error.stack);
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Server error processing loan request',
+      error: error.message
+    });
   }
-  
-  // Check if item belongs to user's group
-  if (item.group.toString() !== req.user.group.toString()) {
-    return next(new ErrorResponse(`Not authorized to loan this item`, 403));
-  }
-  
-  // Check if required fields are provided
-  if (!req.body.loanedTo) {
-    return next(new ErrorResponse('Please provide who the item is loaned to', 400));
-  }
-  
-  // Update item with loan information using the loanDetails object
-  item.loanDetails = {
-    loanedTo: req.body.loanedTo,
-    loanDate: Date.now(),
-    isLoaned: true,
-    notes: req.body.notes || ''
-  };
-  
-  await item.save();
-  
-  res.status(200).json({
-    success: true,
-    data: item
-  });
-});
+};
 
 // @desc    Return a loaned item
 // @route   POST /api/items/:id/return
 // @access  Private
-exports.returnItem = asyncHandler(async (req, res, next) => {
-  const item = await Item.findById(req.params.id);
-  
-  if (!item) {
-    return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
+exports.returnItem = async (req, res) => {
+  try {
+    // Enhanced debugging
+    console.log('Return endpoint called');
+    console.log('User:', req.user?.id, req.user?.email);
+    console.log('Item ID:', req.params.id);
+    console.log('Request body:', JSON.stringify(req.body));
+    
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('Invalid item ID format');
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid item ID format'
+      });
+    }
+    
+    // Find the item first to check if it exists
+    const existingItem = await Item.findById(req.params.id);
+    
+    if (!existingItem) {
+      console.error('Item not found:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: `Item not found with id of ${req.params.id}`
+      });
+    }
+    
+    // Check authorization
+    if (existingItem.group.toString() !== req.user.group.toString()) {
+      console.error('Auth mismatch - User group:', req.user.group, 'Item group:', existingItem.group);
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to return this item'
+      });
+    }
+    
+    // Check if item is actually loaned
+    if (!existingItem.loanDetails || !existingItem.loanDetails.isLoaned) {
+      console.error('Item not on loan:', req.params.id);
+      return res.status(400).json({
+        success: false,
+        message: 'This item is not currently loaned out'
+      });
+    }
+
+    // Prepare notes - combine existing notes with return notes
+    const existingNotes = existingItem.loanDetails?.notes || '';
+    const returnNotes = req.body.returnNotes ? 
+      `\nReturn notes: ${req.body.returnNotes}` : '';
+    const combinedNotes = existingNotes + returnNotes;
+    
+    // Prepare the updated loanDetails object
+    const updatedLoanDetails = {
+      loanedTo: existingItem.loanDetails.loanedTo,
+      loanDate: existingItem.loanDetails.loanDate,
+      isLoaned: false,
+      returnDate: new Date(),
+      notes: combinedNotes
+    };
+    
+    console.log('Setting updated loanDetails to:', updatedLoanDetails);
+    
+    // Update using $set for the entire loanDetails object to ensure consistency
+    const updatedItem = await Item.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          loanDetails: updatedLoanDetails,
+          updatedAt: new Date(),
+          updatedBy: req.user.id
+        }
+      },
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedItem) {
+      console.error('Failed to update item after validation passed');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update the item'
+      });
+    }
+    
+    console.log('Return successful for item:', req.params.id);
+    return res.status(200).json({
+      success: true,
+      data: updatedItem
+    });
+    
+  } catch (error) {
+    console.error('CRITICAL ERROR in returnItem:', error);
+    console.error('Stack trace:', error.stack);
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Server error processing return request',
+      error: error.message
+    });
   }
-  
-  // Check if item belongs to user's group
-  if (item.group.toString() !== req.user.group.toString()) {
-    return next(new ErrorResponse(`Not authorized to return this item`, 403));
-  }
-  
-  // Check if item is actually loaned
-  if (!item.loanDetails || !item.loanDetails.isLoaned) {
-    return next(new ErrorResponse(`This item is not currently loaned out`, 400));
-  }
-  
-  // Update item with return information
-  item.loanDetails.isLoaned = false;
-  item.loanDetails.returnDate = Date.now();
-  item.loanDetails.notes = (item.loanDetails.notes || '') + 
-    (req.body.returnNotes ? `\nReturn notes: ${req.body.returnNotes}` : '');
-  
-  await item.save();
-  
-  res.status(200).json({
-    success: true,
-    data: item
-  });
-});
+};

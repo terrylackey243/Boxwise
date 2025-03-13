@@ -74,6 +74,8 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
         params.set('sort', 'name');
         params.set('order', 'asc');
         
+        // Add cache-busting parameter to ensure fresh data
+        params.set('_', new Date().getTime());
         const response = await axios.get(`/api/items?${params.toString()}`);
         
         if (response.data.success) {
@@ -177,6 +179,11 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
       if (sortBy) {
         params.set('sort', sortBy);
         params.set('order', orderBy);
+      }
+      
+      // Add cache-busting parameter if provided
+      if (options.cacheBuster) {
+        params.set('_', options.cacheBuster);
       }
       
       console.log('Loading items with params:', params.toString());
@@ -323,7 +330,8 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
         (item.serialNumber && item.serialNumber.toLowerCase().includes(searchLower)) ||
         (item.modelNumber && item.modelNumber.toLowerCase().includes(searchLower)) ||
         (item.manufacturer && item.manufacturer.toLowerCase().includes(searchLower)) ||
-        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower))
+        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower)) ||
+        (item.loanDetails && item.loanDetails.loanedTo && item.loanDetails.loanedTo.toLowerCase().includes(searchLower))
       );
     });
     
@@ -349,7 +357,8 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
         (item.serialNumber && item.serialNumber.toLowerCase().includes(searchLower)) ||
         (item.modelNumber && item.modelNumber.toLowerCase().includes(searchLower)) ||
         (item.manufacturer && item.manufacturer.toLowerCase().includes(searchLower)) ||
-        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower))
+        (item.upcCode && item.upcCode.toLowerCase().includes(searchLower)) ||
+        (item.loanDetails && item.loanDetails.loanedTo && item.loanDetails.loanedTo.toLowerCase().includes(searchLower))
       );
     });
     
@@ -498,8 +507,16 @@ const useItemSearch = ({ onError, initialSortField = 'name', initialSortDirectio
 
   // Function to manually refresh items - used by the Items component
   const refreshItems = async () => {
+    // Add a cache-busting parameter to ensure we get fresh data from the server
+    const cacheBuster = new Date().getTime();
+    
     // Use the current pagination setting when refreshing items
-    return loadItems({ limit: rowsPerPage });
+    console.log('Forcing refresh of items with cache-busting');
+    return loadItems({ 
+      limit: rowsPerPage,
+      cacheBuster: cacheBuster,
+      forceRefresh: true 
+    });
   };
 
   return {

@@ -97,7 +97,13 @@ const Row = memo(({ data, index, style }) => {
       >
         <TableCell>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body1">
+            <Typography 
+              variant="body1"
+              sx={{ 
+                color: (item.loanDetails && item.loanDetails.isLoaned === true) ? 'purple' : 'inherit',
+                fontWeight: (item.loanDetails && item.loanDetails.isLoaned === true) ? 'bold' : 'normal'
+              }}
+            >
               {item.name || 'Unnamed Item'}
             </Typography>
             {item.isArchived === true && (
@@ -108,12 +114,12 @@ const Row = memo(({ data, index, style }) => {
                 sx={{ ml: 1 }}
               />
             )}
-            {item.loanDetails && item.loanDetails.isLoaned && (
+            {item.loanDetails && item.loanDetails.isLoaned === true && (
               <Chip
                 label="Loaned"
                 size="small"
-                color="primary"
-                sx={{ ml: 1 }}
+                color="secondary"
+                sx={{ ml: 1, bgcolor: 'purple' }}
               />
             )}
           </Box>
