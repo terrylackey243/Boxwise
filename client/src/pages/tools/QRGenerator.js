@@ -263,12 +263,14 @@ const QRGenerator = () => {
               margin-bottom: 5px;
               font-size: 14px;
               color: #666;
+              text-align: center;
             }
             .qr-location {
               margin-bottom: 20px;
               font-size: 14px;
               color: #666;
               font-weight: bold;
+              text-align: center;
             }
             @media print {
               @page {
@@ -283,7 +285,7 @@ const QRGenerator = () => {
         </head>
         <body>
           <div class="qr-container">
-            <div class="qr-title">Boxwise QR Code</div>
+            
             <div class="qr-subtitle">
               ${itemName}
             </div>
