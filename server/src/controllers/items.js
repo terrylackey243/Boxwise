@@ -322,154 +322,13 @@ exports.deleteItem = asyncHandler(async (req, res, next) => {
 // @route   POST /api/items/:id/attachments
 // @access  Private
 exports.uploadItemAttachment = asyncHandler(async (req, res, next) => {
-  try {
-    console.log('Upload attachment endpoint called');
-    console.log('User ID:', req.user.id);
-    console.log('Item ID:', req.params.id);
-    
-    // Validate MongoDB IDs
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return next(new ErrorResponse('Invalid item ID format', 400));
-    }
-    
-    const item = await Item.findById(req.params.id);
-    
-    if (!item) {
-      return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
-    }
-    
-    // Check if item belongs to user's group
-    if (item.group.toString() !== req.user.group.toString()) {
-      return next(new ErrorResponse('Not authorized to upload attachments for this item', 403));
-    }
-    
-    // Check if file is uploaded
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return next(new ErrorResponse('Please upload a file', 400));
-    }
-    
-    const file = req.files.file;
-    console.log('File details:', {
-      name: file.name,
-      size: file.size,
-      mimetype: file.mimetype
-    });
-    
-    // Check file type
-    const fileTypes = /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|txt/;
-    const mimeType = fileTypes.test(file.mimetype);
-    
-    if (!mimeType) {
-      return next(new ErrorResponse('Please upload a valid file type', 400));
-    }
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return next(new ErrorResponse('File size cannot exceed 5MB', 400));
-    }
-    
-    // Create custom filename
-    const fileName = `${req.params.id}_${Date.now()}${path.parse(file.name).ext}`;
-    const uploadPath = `${process.env.FILE_UPLOAD_PATH}/${fileName}`;
-    
-    console.log('Upload path:', uploadPath);
-    
-    // Use a Promise to handle the file move operation
-    const moveFile = () => {
-      return new Promise((resolve, reject) => {
-        file.mv(uploadPath, (err) => {
-          if (err) {
-            console.error('File upload error:', err);
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
-    };
-    
-    // Move the file
-    await moveFile();
-    
-    // Get file type
-    const fileType = file.mimetype.split('/')[0] === 'image' ? 'image' : 'document';
-    
-    // Check if this should be the primary photo
-    const isPrimary = req.body.isPrimary === 'true';
-    
-    // Create the attachment object with all required fields
-    const newAttachment = {
-      name: file.name,
-      fileType: fileType,
-      filePath: fileName,
-      uploadDate: new Date(),
-      isPrimaryPhoto: isPrimary && fileType === 'image'
-    };
-    
-    console.log('New attachment:', newAttachment);
-    
-    // If this is set as primary, unset any existing primary photos
-    if (isPrimary && fileType === 'image') {
-      for (let i = 0; i < item.attachments.length; i++) {
-        if (item.attachments[i].isPrimaryPhoto) {
-          item.attachments[i].isPrimaryPhoto = false;
-        }
-      }
-    }
-    
-    // Add attachment to item
-    item.attachments.push(newAttachment);
-    
-    // Update the updatedBy and updatedAt fields
-    item.updatedBy = req.user.id;
-    item.updatedAt = new Date();
-    
-    console.log("Attempting to use more robust MongoDB operations to handle type conversion");
-    
-    // Use a completely different approach that directly handles the string->array conversion
-    // First, check if the attachments field is a string using MongoDB's $type operator
-    // If it is, convert to an array, otherwise push to the existing array
-    const updatedItem = await Item.findOneAndUpdate(
-      { _id: req.params.id },
-      [
-        {
-          $set: {
-            // This is MongoDB's aggregation pipeline with conditional expression
-            attachments: {
-              $cond: {
-                if: { $eq: [{ $type: "$attachments" }, "string"] },
-                then: [newAttachment], // Convert to array with new attachment
-                else: {
-                  $cond: {
-                    if: { $isArray: "$attachments" },
-                    then: { $concatArrays: ["$attachments", [newAttachment]] }, // Add to existing array
-                    else: [newAttachment] // Create new array if field doesn't exist
-                  }
-                }
-              }
-            },
-            updatedBy: req.user.id,
-            updatedAt: new Date()
-          }
-        }
-      ],
-      { new: true }
-    );
-    
-    if (!updatedItem) {
-      return next(new ErrorResponse('Failed to update item with attachment', 500));
-    }
-    
-    console.log('Attachment added successfully');
-    
-    res.status(200).json({
-      success: true,
-      data: newAttachment
-    });
-  } catch (error) {
-    console.error('Error in uploadItemAttachment:', error);
-    return next(new ErrorResponse(`Problem with file upload: ${error.message}`, 500));
-  }
+  // Return a message indicating file uploads are temporarily disabled
+  return next(
+    new ErrorResponse(
+      'File uploads are temporarily disabled while we transition to a new cloud storage system. Please check back later.',
+      503 // Service Unavailable
+    )
+  );
 });
 
 // @desc    Quick add item (simplified item creation for mobile)
@@ -505,84 +364,13 @@ exports.quickAddItem = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/items/:id/attachments/:attachmentId
 // @access  Private
 exports.deleteItemAttachment = asyncHandler(async (req, res, next) => {
-  try {
-    console.log('Delete attachment endpoint called');
-    console.log('User ID:', req.user.id);
-    console.log('Item ID:', req.params.id);
-    console.log('Attachment ID:', req.params.attachmentId);
-    
-    // Validate MongoDB IDs
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return next(new ErrorResponse('Invalid item ID format', 400));
-    }
-    
-    const item = await Item.findById(req.params.id);
-    
-    if (!item) {
-      return next(new ErrorResponse(`Item not found with id of ${req.params.id}`, 404));
-    }
-    
-    // Check if item belongs to user's group
-    if (item.group.toString() !== req.user.group.toString()) {
-      return next(new ErrorResponse('Not authorized to delete attachments for this item', 403));
-    }
-    
-    // Check if attachments field is an array
-    if (!Array.isArray(item.attachments)) {
-      return next(new ErrorResponse('Item does not have any attachments', 404));
-    }
-    
-    // Find the attachment by its ID
-    const attachmentIndex = item.attachments.findIndex(
-      att => att._id.toString() === req.params.attachmentId
-    );
-    
-    if (attachmentIndex === -1) {
-      return next(new ErrorResponse('Attachment not found', 404));
-    }
-    
-    // Get the file path to delete from filesystem
-    const filePath = item.attachments[attachmentIndex].filePath;
-    const fullPath = path.join(process.env.FILE_UPLOAD_PATH || 'uploads', filePath);
-    
-    // Delete the file from filesystem
-    try {
-      const fs = require('fs');
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-        console.log(`File deleted from filesystem: ${fullPath}`);
-      } else {
-        console.log(`File not found on filesystem: ${fullPath}`);
-      }
-    } catch (err) {
-      console.error('Error deleting file from filesystem:', err);
-      // Continue even if file delete fails - we still want to remove from DB
-    }
-    
-    // Get attachment ID and directly remove from the array
-    // Simpler approach: Find and update the item directly by removing the attachment with matching index
-    item.attachments.splice(attachmentIndex, 1);
-    item.updatedBy = req.user.id;
-    item.updatedAt = new Date();
-    
-    // Save the updated item
-    const savedItem = await item.save();
-    
-    if (!savedItem) {
-      console.error('Failed to save item after removing attachment');
-      return next(new ErrorResponse('Failed to save item after removing attachment', 500));
-    }
-    
-    console.log('Attachment deleted successfully');
-    
-    res.status(200).json({
-      success: true,
-      data: {}
-    });
-  } catch (error) {
-    console.error('Error in deleteItemAttachment:', error);
-    return next(new ErrorResponse(`Problem deleting attachment: ${error.message}`, 500));
-  }
+  // Return a message indicating attachment management is temporarily disabled
+  return next(
+    new ErrorResponse(
+      'File attachment management is temporarily disabled while we transition to a new cloud storage system. Existing attachments are still viewable but cannot be deleted at this time.',
+      503 // Service Unavailable
+    )
+  );
 });
 
 // @desc    Generate QR code for item

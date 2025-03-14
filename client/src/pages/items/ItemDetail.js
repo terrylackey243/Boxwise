@@ -941,14 +941,16 @@ const ItemDetail = () => {
                 Attachments
               </Typography>
               
-              <Button
-                variant="outlined"
-                startIcon={<AttachFileIcon />}
-                onClick={() => setAttachmentDialogOpen(true)}
-              >
-                Add Attachment
-              </Button>
+              <Chip 
+                label="Cloud Storage Coming Soon" 
+                color="primary" 
+                variant="outlined" 
+              />
             </Box>
+            
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Attachment uploads are temporarily disabled while we transition to a new cloud storage system. Existing attachments are still viewable.
+            </Alert>
             
             {item.attachments && item.attachments.length > 0 ? (
               <List>
@@ -1021,14 +1023,9 @@ const ItemDetail = () => {
                 <Typography color="text.secondary">
                   No attachments yet
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AttachFileIcon />}
-                  onClick={() => setAttachmentDialogOpen(true)}
-                  sx={{ mt: 2 }}
-                >
-                  Add Attachment
-                </Button>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Attachment uploads will be available soon with our new cloud storage system.
+                </Typography>
               </Box>
             )}
           </Paper>
