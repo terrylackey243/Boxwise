@@ -10,6 +10,7 @@ const {
   loanItem,
   returnItem,
   uploadItemAttachment,
+  deleteItemAttachment,
   quickAddItem,
   getNextAssetId,
   getItemCount
@@ -42,6 +43,9 @@ router.route('/upc/:upc')
 
 router.route('/:id/attachments')
   .post(protect, restrictViewers, uploadItemAttachment);
+
+router.route('/:id/attachments/:attachmentId')
+  .delete(protect, restrictViewers, deleteItemAttachment);
 
 router.route('/:id/qrcode')
   .get(protect, generateQRCode);

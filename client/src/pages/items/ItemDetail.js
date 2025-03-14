@@ -8,7 +8,6 @@ import {
   Typography,
   Box,
   Button,
-  Divider,
   CircularProgress,
   Chip,
   Table,
@@ -24,7 +23,16 @@ import {
   Breadcrumbs,
   Link,
   TextField,
-  Alert
+  Alert,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Avatar,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -37,10 +45,16 @@ import {
   Person as PersonIcon,
   CheckCircle as CheckCircleIcon,
   NavigateNext as NavigateNextIcon,
-  Alarm as AlarmIcon,
   Build as BuildIcon,
   VerifiedUser as WarrantyIcon,
-  ContentCopy as DuplicateIcon
+  ContentCopy as DuplicateIcon,
+  AttachFile as AttachFileIcon,
+  Image as ImageIcon,
+  Description as DocumentIcon,
+  Download as DownloadIcon,
+  Delete as DeleteAttachmentIcon,
+  Visibility as ViewIcon,
+  Photo as PrimaryPhotoIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
 
@@ -85,12 +99,19 @@ const ItemDetail = () => {
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [reminderType, setReminderType] = useState('');
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
+  const [deleteAttachmentDialogOpen, setDeleteAttachmentDialogOpen] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   const [loanFormData, setLoanFormData] = useState({
     loanedTo: '',
     notes: ''
   });
   const [loanFormError, setLoanFormError] = useState('');
   const [submittingLoan, setSubmittingLoan] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isPrimaryPhoto, setIsPrimaryPhoto] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -325,6 +346,49 @@ const ItemDetail = () => {
     }
   };
 
+  const handleDeleteAttachment = (attachmentId) => {
+    // Find attachment details
+    const attachment = item.attachments.find(att => att._id === attachmentId);
+    if (attachment) {
+      setAttachmentToDelete(attachment);
+      setDeleteAttachmentDialogOpen(true);
+    }
+  };
+
+  const handleConfirmDeleteAttachment = async () => {
+    if (!attachmentToDelete) return;
+    
+    try {
+      // Close dialog right away
+      setDeleteAttachmentDialogOpen(false);
+      
+      // Get the ID before resetting attachmentToDelete
+      const idToDelete = attachmentToDelete._id;
+      setAttachmentToDelete(null);
+      
+      // Show a temporary message while we handle the operation
+      setSuccessAlert('Deleting attachment...');
+      
+      // Wait a moment before trying to delete (gives time for UI to update)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      try {
+        // Try to delete on server
+        await axios.delete(`/api/items/${id}/attachments/${idToDelete}`);
+      } catch (apiError) {
+        console.error('Server error deleting attachment:', apiError);
+      }
+      
+      // Regardless of server success, force a complete page reload
+      // This is the nuclear option but will ensure fresh data
+      window.location.href = window.location.href;
+      
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setErrorAlert('Unexpected error: ' + err.message);
+    }
+  };
+
   const handleArchiveToggle = async () => {
     try {
       // Make API call to archive/unarchive the item
@@ -403,6 +467,59 @@ const ItemDetail = () => {
       console.error(err);
     } finally {
       setDuplicateDialogOpen(false);
+    }
+  };
+
+  const handleUploadAttachment = async () => {
+    if (!selectedFile) return;
+    
+    setUploadingAttachment(true);
+    
+    try {
+      // Create form data for the file upload
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
+      // Add isPrimary flag if this is an image and should be primary
+      if (selectedFile.type.startsWith('image/') && isPrimaryPhoto) {
+        formData.append('isPrimary', 'true');
+      }
+      
+      // Make API call to upload the attachment
+      const response = await axios.post(
+        `/api/items/${id}/attachments`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Update the item state with the new attachment
+        setItem(prev => ({
+          ...prev,
+          attachments: [...(prev.attachments || []), response.data.data]
+        }));
+        
+        setSuccessAlert('Attachment uploaded successfully');
+        setAttachmentDialogOpen(false);
+        setSelectedFile(null);
+        setIsPrimaryPhoto(false);
+        
+        // Force a reload to ensure we have the latest data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        setErrorAlert('Error uploading attachment: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setErrorAlert('Error uploading attachment: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setUploadingAttachment(false);
     }
   };
 
@@ -717,7 +834,7 @@ const ItemDetail = () => {
               </Table>
             </TableContainer>
           </Paper>
-          
+
           {/* Purchase Details */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -774,22 +891,10 @@ const ItemDetail = () => {
                     color="secondary"
                     startIcon={<WarrantyIcon />}
                     onClick={() => handleReminderDialogOpen('warranty')}
-                    size="small"
-                    sx={{ mr: 1 }}
                   >
-                    Warranty Reminder
+                    Set Warranty Reminder
                   </Button>
                 )}
-                
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<BuildIcon />}
-                  onClick={() => handleReminderDialogOpen('maintenance')}
-                  size="small"
-                >
-                  Maintenance Reminder
-                </Button>
               </Box>
             </Box>
             
@@ -800,16 +905,18 @@ const ItemDetail = () => {
                     <TableCell component="th" scope="row" sx={{ width: '30%', fontWeight: 'bold' }}>
                       Lifetime Warranty
                     </TableCell>
-                    <TableCell>{item.warrantyDetails && item.warrantyDetails.hasLifetimeWarranty ? 'Yes' : 'No'}</TableCell>
+                    <TableCell>
+                      {item.warrantyDetails?.hasLifetimeWarranty ? 'Yes' : 'No'}
+                    </TableCell>
                   </TableRow>
                   
-                  {(!item.warrantyDetails || !item.warrantyDetails.hasLifetimeWarranty) && (
+                  {!item.warrantyDetails?.hasLifetimeWarranty && (
                     <TableRow>
                       <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
-                        Warranty Expires
+                        Warranty Expiration
                       </TableCell>
                       <TableCell>
-                        {item.warrantyDetails && item.warrantyDetails.warrantyExpires 
+                        {item.warrantyDetails?.warrantyExpires 
                           ? new Date(item.warrantyDetails.warrantyExpires).toLocaleDateString() 
                           : '-'}
                       </TableCell>
@@ -820,242 +927,279 @@ const ItemDetail = () => {
                     <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                       Warranty Notes
                     </TableCell>
-                    <TableCell>{item.warrantyDetails && item.warrantyDetails.warrantyNotes || '-'}</TableCell>
+                    <TableCell>{item.warrantyDetails?.warrantyNotes || '-'}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
           </Paper>
           
-          {/* Custom Fields */}
-          {item.customFields && item.customFields.length > 0 && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Custom Fields
+          {/* Attachments */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Attachments
               </Typography>
               
-              <TableContainer>
-                <Table size="small">
-                  <TableBody>
-                    {item.customFields.map((field, index) => {
-                      // Format the display value based on field type
-                      // Handle case where field.value might be undefined
-                      let displayValue = field.value !== undefined ? field.value : '';
-                      let linkUrl = '';
-                      
-                      // Handle different field types
-                      if (field.type === 'boolean' && field.value !== undefined) {
-                        // Convert boolean values to Yes/No
-                        displayValue = field.value === 'true' || field.value === true ? 'Yes' : 'No';
-                      } else if (field.type === 'timestamp' && field.value !== undefined) {
-                        // Format date for display
-                        try {
-                          const date = new Date(field.value);
-                          if (!isNaN(date.getTime())) {
-                            displayValue = date.toLocaleDateString();
-                          }
-                        } catch (e) {
-                          // If date parsing fails, use the original value
-                          console.error('Error parsing date:', e);
-                        }
-                      } else if (field.type === 'integer' && field.value !== undefined) {
-                        // Format number with commas for thousands
-                        try {
-                          const num = parseInt(field.value);
-                          if (!isNaN(num)) {
-                            displayValue = num.toLocaleString();
-                          }
-                        } catch (e) {
-                          // If number parsing fails, use the original value
-                          console.error('Error parsing integer:', e);
-                        }
-                      } else if (field.value !== undefined) {
-                        // Handle text fields, including URLs and Markdown links
-                        const markdownLinkMatch = field.value.toString().match(/\[(.+?)\]\((.+?)\)/);
-                        
-                        if (markdownLinkMatch) {
-                          // Extract the text and URL from the Markdown syntax
-                          displayValue = markdownLinkMatch[1];
-                          linkUrl = markdownLinkMatch[2];
-                          
-                          // Ensure URL has http/https
-                          if (!linkUrl.startsWith('http')) {
-                            linkUrl = `https://${linkUrl}`;
-                          }
-                        } else {
-                          // Regular URL/email detection for non-Markdown values
-                          const isUrl = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/.test(field.value);
-                          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
-                          
-                          if (isUrl) {
-                            // Format URL for proper linking (ensure it has http/https)
-                            linkUrl = !field.value.startsWith('http') 
-                              ? `https://${field.value}` 
-                              : field.value;
-                          } else if (isEmail) {
-                            // Format email for mailto link
-                            linkUrl = `mailto:${field.value}`;
-                          }
-                        }
+              <Button
+                variant="outlined"
+                startIcon={<AttachFileIcon />}
+                onClick={() => setAttachmentDialogOpen(true)}
+              >
+                Add Attachment
+              </Button>
+            </Box>
+            
+            {item.attachments && item.attachments.length > 0 ? (
+              <List>
+                {item.attachments.map((attachment) => (
+                  <ListItem key={attachment._id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        {attachment.mimeType?.startsWith('image/') ? (
+                          <ImageIcon />
+                        ) : (
+                          <DocumentIcon />
+                        )}
+                      </Avatar>
+                    </ListItemAvatar>
+                    
+                    <ListItemText 
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {attachment.name || attachment.filename || 'Attachment'}
+                          {attachment.isPrimary && (
+                            <Chip 
+                              size="small" 
+                              label="Primary" 
+                              color="primary" 
+                              sx={{ ml: 1 }}
+                              icon={<PrimaryPhotoIcon fontSize="small" />} 
+                            />
+                          )}
+                        </Box>
                       }
+                      secondary={attachment.uploadDate ? 
+                        `Added ${new Date(attachment.uploadDate).toLocaleDateString()}` : 
+                        'Recently added'
+                      }
+                    />
+                    
+                    <ListItemSecondaryAction>
+                      <IconButton 
+                        edge="end" 
+                        aria-label="view"
+                        href={`/uploads/${attachment.filePath}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ViewIcon />
+                      </IconButton>
                       
-                      return (
-                        <TableRow key={index}>
-                          <TableCell component="th" scope="row" sx={{ width: '30%', fontWeight: 'bold' }}>
-                            {field.name}
-                          </TableCell>
-                          <TableCell>
-                            {linkUrl ? (
-                              <Link href={linkUrl} target="_blank" rel="noopener noreferrer">
-                                {displayValue}
-                              </Link>
-                            ) : (
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                {displayValue}
-                                {field.type && field.type !== 'text' && (
-                                  <Chip 
-                                    label={field.type} 
-                                    size="small"
-                                    color={
-                                      field.type === 'timestamp' ? 'success' :
-                                      field.type === 'integer' ? 'info' :
-                                      field.type === 'boolean' ? 'warning' :
-                                      'default'
-                                    }
-                                    sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
-                                  />
-                                )}
-                              </Box>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          )}
+                      <IconButton 
+                        edge="end" 
+                        aria-label="download"
+                        href={`/uploads/${attachment.filePath}`}
+                        download={attachment.name || "attachment"}
+                      >
+                        <DownloadIcon />
+                      </IconButton>
+                      
+                      <IconButton 
+                        edge="end" 
+                        aria-label="delete"
+                        onClick={() => handleDeleteAttachment(attachment._id)}
+                      >
+                        <DeleteAttachmentIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography color="text.secondary">
+                  No attachments yet
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<AttachFileIcon />}
+                  onClick={() => setAttachmentDialogOpen(true)}
+                  sx={{ mt: 2 }}
+                >
+                  Add Attachment
+                </Button>
+              </Box>
+            )}
+          </Paper>
+          
+          {/* Attachment Upload Dialog */}
+          <Dialog open={attachmentDialogOpen} onClose={() => setAttachmentDialogOpen(false)}>
+            <DialogTitle>Upload Attachment</DialogTitle>
+            <DialogContent>
+              <DialogContentText sx={{ mb: 2 }}>
+                Select a file to attach to this item. Supported file types include images, PDFs, and documents.
+              </DialogContentText>
+              
+              <input
+                type="file"
+                onChange={(e) => setSelectedFile(e.target.files[0])}
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+              />
+              
+              <Button
+                variant="outlined"
+                component="span"
+                onClick={() => fileInputRef.current.click()}
+                startIcon={<AttachFileIcon />}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                {selectedFile ? selectedFile.name : 'Select File'}
+              </Button>
+              
+              {selectedFile && selectedFile.type.startsWith('image/') && (
+                <Box sx={{ mb: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={isPrimaryPhoto}
+                        onChange={(e) => setIsPrimaryPhoto(e.target.checked)}
+                      />
+                    }
+                    label="Set as primary photo"
+                  />
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setAttachmentDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={handleUploadAttachment}
+                disabled={!selectedFile || uploadingAttachment}
+                color="primary"
+              >
+                {uploadingAttachment ? <CircularProgress size={24} /> : 'Upload'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+          
+          {/* Delete Attachment Dialog */}
+          <Dialog open={deleteAttachmentDialogOpen} onClose={() => setDeleteAttachmentDialogOpen(false)}>
+            <DialogTitle>Delete Attachment</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                Are you sure you want to delete this attachment?
+                {attachmentToDelete && (
+                  <Box component="span" sx={{ fontWeight: 'bold', display: 'block', mt: 1 }}>
+                    {attachmentToDelete.filename}
+                  </Box>
+                )}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleteAttachmentDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleConfirmDeleteAttachment} color="error">Delete</Button>
+            </DialogActions>
+          </Dialog>
         </Grid>
         
         {/* Sidebar */}
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Item Information
-            </Typography>
-            
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Created
-              </Typography>
-              <Typography variant="body1">
-                {new Date(item.createdAt).toLocaleString()}
-              </Typography>
-            </Box>
-            
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Last Updated
-              </Typography>
-              <Typography variant="body1">
-                {new Date(item.updatedAt).toLocaleString()}
-              </Typography>
-            </Box>
-          </Paper>
-          
-          {/* Loan Details */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
+          {/* Loan Status */}
+          {item.loanDetails && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
                 Loan Status
               </Typography>
               
-              {item.loanDetails && item.loanDetails.isLoaned ? (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<CheckCircleIcon />}
-                  onClick={handleReturnDialogOpen}
-                >
-                  Return Item
-                </Button>
+              {item.loanDetails.isLoaned ? (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography>
+                      Loaned to <strong>{item.loanDetails.loanedTo}</strong>
+                    </Typography>
+                  </Box>
+                  
+                  {item.loanDetails.loanDate && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Loaned on {new Date(item.loanDetails.loanDate).toLocaleDateString()}
+                    </Typography>
+                  )}
+                  
+                  {item.loanDetails.notes && (
+                    <Box sx={{ mt: 2, mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Notes:
+                      </Typography>
+                      <Typography variant="body2">
+                        {item.loanDetails.notes}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  <Button
+                    variant="contained"
+                    startIcon={<CheckCircleIcon />}
+                    onClick={handleReturnDialogOpen}
+                    fullWidth
+                    sx={{ mt: 2 }}
+                  >
+                    Mark as Returned
+                  </Button>
+                </>
               ) : (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<PersonIcon />}
-                  onClick={handleLoanDialogOpen}
-                >
-                  Loan Item
-                </Button>
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <CheckCircleIcon sx={{ mr: 1, color: 'success.main' }} />
+                    <Typography>Not currently loaned</Typography>
+                  </Box>
+                  
+                  <Button
+                    variant="outlined"
+                    startIcon={<PersonIcon />}
+                    onClick={handleLoanDialogOpen}
+                    fullWidth
+                  >
+                    Loan This Item
+                  </Button>
+                </>
               )}
+            </Paper>
+          )}
+          
+          {/* Reminders Section */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Reminders
+              </Typography>
             </Box>
             
-            {item.loanDetails && item.loanDetails.isLoaned ? (
-              <TableContainer>
-                <Table size="small">
-                  <TableBody>
-                    <TableRow>
-                      <TableCell component="th" scope="row" sx={{ width: '30%', fontWeight: 'bold' }}>
-                        Status
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label="Loaned Out" 
-                          color="primary" 
-                          size="small"
-                        />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
-                        Loaned To
-                      </TableCell>
-                      <TableCell>{item.loanDetails.loanedTo}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
-                        Loan Date
-                      </TableCell>
-                      <TableCell>
-                        {item.loanDetails.loanDate ? new Date(item.loanDetails.loanDate).toLocaleDateString() : '-'}
-                      </TableCell>
-                    </TableRow>
-                    {item.loanDetails.notes && (
-                      <TableRow>
-                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
-                          Notes
-                        </TableCell>
-                        <TableCell>{item.loanDetails.notes}</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                This item is not currently loaned out.
-              </Typography>
-            )}
-          </Paper>
-          
-          {/* Attachments */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Attachments
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary">
-              No attachments yet
+            <Typography paragraph>
+              Set up reminders for important dates related to this item.
             </Typography>
             
             <Button
               variant="outlined"
+              startIcon={<BuildIcon />}
+              onClick={() => handleReminderDialogOpen('maintenance')}
               fullWidth
-              sx={{ mt: 2 }}
+              sx={{ mb: 1 }}
             >
-              Add Attachment
+              Maintenance Reminder
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<WarrantyIcon />}
+              onClick={() => handleReminderDialogOpen('warranty')}
+              fullWidth
+              disabled={!item.warrantyDetails || !item.warrantyDetails.warrantyExpires}
+            >
+              Warranty Reminder
             </Button>
           </Paper>
         </Grid>
@@ -1080,20 +1224,16 @@ const ItemDetail = () => {
         </DialogActions>
       </Dialog>
       
-      {/* Archive Confirmation Dialog */}
+      {/* Archive/Unarchive Confirmation Dialog */}
       <Dialog
         open={archiveDialogOpen}
         onClose={handleArchiveDialogClose}
       >
-        <DialogTitle>
-          {item.isArchived ? 'Unarchive' : 'Archive'} Item
-        </DialogTitle>
+        <DialogTitle>{item.isArchived ? 'Unarchive' : 'Archive'} Item</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {item.isArchived
-              ? `Are you sure you want to unarchive "${item.name}"? This will make it active again.`
-              : `Are you sure you want to archive "${item.name}"? Archived items are hidden from the main view.`
-            }
+            Are you sure you want to {item.isArchived ? 'unarchive' : 'archive'} "{item.name}"?
+            {!item.isArchived && ' Archived items will still be accessible but will be hidden from the main items list.'}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -1108,63 +1248,57 @@ const ItemDetail = () => {
       <Dialog
         open={loanDialogOpen}
         onClose={handleLoanDialogClose}
-        maxWidth="sm"
-        fullWidth
       >
         <DialogTitle>Loan Item</DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
+          <DialogContentText>
             Enter the details of who this item is being loaned to.
           </DialogContentText>
           
           {loanFormError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
               {loanFormError}
             </Alert>
           )}
           
           <TextField
-            autoFocus
             margin="dense"
-            id="loanedTo"
             name="loanedTo"
             label="Loaned To"
-            type="text"
             fullWidth
             variant="outlined"
             value={loanFormData.loanedTo}
             onChange={handleLoanFormChange}
             required
-            sx={{ mb: 2 }}
+            sx={{ mt: 2 }}
           />
           
           <TextField
             margin="dense"
-            id="notes"
             name="notes"
             label="Notes"
-            type="text"
             fullWidth
             variant="outlined"
             value={loanFormData.notes}
             onChange={handleLoanFormChange}
             multiline
             rows={3}
+            sx={{ mt: 2 }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleLoanDialogClose}>Cancel</Button>
           <Button 
             onClick={handleLoanItem} 
-            color="primary" 
+            color="primary"
             disabled={submittingLoan}
           >
-            {submittingLoan ? 'Saving...' : 'Loan Item'}
+            {submittingLoan ? <CircularProgress size={24} /> : 'Loan Item'}
           </Button>
         </DialogActions>
       </Dialog>
       
-      {/* Return Dialog */}
+      {/* Return Confirmation Dialog */}
       <Dialog
         open={returnDialogOpen}
         onClose={handleReturnDialogClose}
@@ -1172,7 +1306,7 @@ const ItemDetail = () => {
         <DialogTitle>Return Item</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to mark this item as returned?
+            Are you sure you want to mark this item as returned from {item.loanDetails?.loanedTo}?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -1192,14 +1326,13 @@ const ItemDetail = () => {
         <DialogContent>
           <DialogContentText>
             {reminderType === 'warranty' 
-              ? `Create a reminder for the warranty expiration of "${item.name}".`
-              : `Create a maintenance reminder for "${item.name}".`
-            }
+              ? `Create a reminder for the warranty expiration on ${item.warrantyDetails?.warrantyExpires ? new Date(item.warrantyDetails.warrantyExpires).toLocaleDateString() : 'this item'}.` 
+              : 'Create a maintenance reminder for this item.'}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleReminderDialogClose}>Cancel</Button>
-          <Button onClick={handleCreateReminder} color="primary" autoFocus>
+          <Button onClick={handleCreateReminder} color="primary">
             Create Reminder
           </Button>
         </DialogActions>
