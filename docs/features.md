@@ -24,7 +24,7 @@ This document provides an overview of the features available in the Boxwise inve
   - Start number configuration
   - Zero padding for numbers
   - Custom separator between name and number
-- **Location Search**: Find locations using fuzzy search
+- **Location Search**: Find locations using fuzzy search across names and hierarchical paths
 - **Items Per Location**: See counts of items in each location
 - **QR Code Generation**: Generate QR codes for locations to facilitate scanning
 - **Batch QR Printing**: Print multiple location QR codes at once with customizable label sizes and layouts
@@ -63,12 +63,6 @@ This document provides an overview of the features available in the Boxwise inve
 - **User Achievements**: Track and reward user participation
 - **Achievement Tracking**: System for monitoring achievement progress
 
-### Bulk Operations
-- **Spreadsheet-like Interface**: Familiar interface for bulk operations on items, locations, categories, and labels
-- **Data Validation**: Validation of bulk data before submission
-- **Multi-selection**: Select multiple entities (like locations) for batch operations
-- **Preview**: Preview effects of bulk operations before committing
-
 ## Interface Features
 
 ### Responsive Design
@@ -76,13 +70,15 @@ This document provides an overview of the features available in the Boxwise inve
 - **Desktop Optimized**: Full-featured desktop experience
 
 ### Bulk Operations
-- **Spreadsheet-like Interface**: Familiar interface for bulk operations
+- **Spreadsheet-like Interface**: Familiar interface for bulk operations on items, locations, categories, and labels
 - **Data Validation**: Validation of bulk data before submission
+- **Multi-selection**: Select multiple entities (like locations) for batch operations
 - **Preview**: Preview effects of bulk operations before committing
 
 ### Search Capabilities
 - **Global Search**: Search across all entity types
-- **Fuzzy Search**: Find items even with partial or slightly incorrect search terms
+- **Fuzzy Search**: Find items and locations even with partial or slightly incorrect search terms
+- **Hierarchical Search**: Search within nested location structures using full path context
 - **Advanced Filters**: Filter search results by various attributes
 
 ## Technical Features
