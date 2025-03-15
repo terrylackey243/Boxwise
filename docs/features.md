@@ -32,12 +32,12 @@ This document provides an overview of the features available in the Boxwise inve
 ### Category Management
 - **Category System**: Organize items by customizable categories
 - **Category Icons & Colors**: Visual identifiers for categories
-- **Bulk Category Addition**: Add multiple categories at once
+- **Bulk Category Addition**: Add multiple categories at once through a spreadsheet-like interface
 
 ### Label Management
 - **Custom Labels**: Create and manage labels to tag items
 - **Label Colors**: Assign colors to labels for visual organization
-- **Bulk Label Addition**: Add multiple labels at once
+- **Bulk Label Addition**: Add multiple labels at once through a spreadsheet-like interface
 - **Multi-label Support**: Assign multiple labels to items
 
 ## Additional Features
@@ -62,6 +62,12 @@ This document provides an overview of the features available in the Boxwise inve
 ### Achievements
 - **User Achievements**: Track and reward user participation
 - **Achievement Tracking**: System for monitoring achievement progress
+
+### Bulk Operations
+- **Spreadsheet-like Interface**: Familiar interface for bulk operations on items, locations, categories, and labels
+- **Data Validation**: Validation of bulk data before submission
+- **Multi-selection**: Select multiple entities (like locations) for batch operations
+- **Preview**: Preview effects of bulk operations before committing
 
 ## Interface Features
 
