@@ -15,13 +15,13 @@ import {
   CardContent,
   CircularProgress,
   Tooltip,
-  Autocomplete
+  Select,
+  MenuItem,
+  InputLabel
 } from '@mui/material';
 import {
   Print as PrintIcon,
-  Preview as PreviewIcon,
-  CheckBox as CheckBoxIcon,
-  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon
+  Preview as PreviewIcon
 } from '@mui/icons-material';
 import QRCode from 'react-qr-code';
 
@@ -272,68 +272,43 @@ const BatchLocationQR = ({ locations }) => {
       
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <Autocomplete
-            multiple
-            disableCloseOnSelect
-            options={flattenedLocations}
-            getOptionLabel={(option) => option.hierarchyPath || option.name}
-            value={flattenedLocations.filter(loc => 
-              selectedLocations.includes(loc._id)
-            )}
-            onChange={(event, newValues) => {
-              setSelectedLocations(newValues.map(value => value._id));
-            }}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                label="Select Locations" 
-                placeholder="Search locations..."
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-            )}
-            renderOption={(props, option, { selected }) => (
-              <Box component="li" {...props}>
-                <Checkbox
-                  icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
-                  checkedIcon={<CheckBoxIcon fontSize="small" />}
-                  style={{ marginRight: 8 }}
-                  checked={selected}
-                />
-                <Box>
-                  <Typography variant="body1">{option.name}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    {option.hierarchyPath}
-                  </Typography>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="locations-select-label">Select Locations</InputLabel>
+            <Select
+              labelId="locations-select-label"
+              id="locations-select"
+              multiple
+              value={selectedLocations}
+              label="Select Locations"
+              onChange={(e) => setSelectedLocations(e.target.value)}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => {
+                    const location = flattenedLocations.find(loc => loc._id === value);
+                    return <Chip key={value} label={location ? location.name : value} size="small" />;
+                  })}
                 </Box>
-              </Box>
-            )}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  label={option.name}
-                  size="small"
-                  {...getTagProps({ index })}
-                />
-              ))
-            }
-            isOptionEqualToValue={(option, value) => option._id === value._id}
-            filterOptions={(options, state) => {
-              // Simple fuzzy search matching name or hierarchyPath
-              const inputValue = state.inputValue.toLowerCase().trim();
-              if (!inputValue) return options;
-              
-              return options.filter(option => 
-                option.name.toLowerCase().includes(inputValue) ||
-                (option.hierarchyPath && 
-                 option.hierarchyPath.toLowerCase().includes(inputValue))
-              );
-            }}
-            loading={loadingLocations}
-            loadingText="Loading locations..."
-            noOptionsText="No locations found"
-            sx={{ mb: 2 }}
-          />
+              )}
+              disabled={loadingLocations}
+            >
+              {(() => {
+                // Sort locations alphabetically by hierarchyPath for easier navigation
+                const sortedLocations = [...flattenedLocations].sort((a, b) => 
+                  (a.hierarchyPath || a.name).localeCompare(b.hierarchyPath || b.name)
+                );
+                
+                return sortedLocations.map(location => (
+                  <MenuItem key={location._id} value={location._id}>
+                    <Checkbox checked={selectedLocations.includes(location._id)} />
+                    <ListItemText 
+                      primary={location.name} 
+                      secondary={location.hierarchyPath} 
+                    />
+                  </MenuItem>
+                ));
+              })()}
+            </Select>
+          </FormControl>
           
           <Grid container spacing={2}>
             <Grid item xs={6}>

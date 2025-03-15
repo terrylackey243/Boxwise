@@ -85,6 +85,8 @@ const QRGenerator = () => {
 
   useEffect(() => {
     // Generate QR code value based on selected type and ID
+    console.log("QR Effect triggered with:", { qrType, selectedId });
+    
     if (selectedId) {
       let selectedItem;
       
@@ -94,20 +96,52 @@ const QRGenerator = () => {
       switch (qrType) {
         case 'item':
           selectedItem = items.find(item => item._id === selectedId);
+          console.log("Selected item:", selectedItem);
           if (selectedItem) {
             // URL to the item detail page
             setQrValue(`${baseUrl}/items/${selectedId}`);
           }
           break;
         case 'location':
+          console.log("Looking for location with ID:", selectedId);
+          console.log("Available locations:", locations);
+          
+          // First try to find at the top level
           selectedItem = locations.find(location => location._id === selectedId);
+          
+          // If not found, try to find in the nested hierarchy
+          if (!selectedItem) {
+            const findLocationRecursive = (locationArray, id) => {
+              if (!locationArray || !Array.isArray(locationArray)) return null;
+              
+              for (const location of locationArray) {
+                if (location._id === id) return location;
+                
+                if (location.children && location.children.length > 0) {
+                  const foundInChildren = findLocationRecursive(location.children, id);
+                  if (foundInChildren) return foundInChildren;
+                }
+              }
+              
+              return null;
+            };
+            
+            selectedItem = findLocationRecursive(locations, selectedId);
+          }
+          
+          console.log("Found location:", selectedItem);
+          
           if (selectedItem) {
             // URL to the location detail page
+            console.log("Setting QR value for location:", `${baseUrl}/locations/${selectedId}`);
             setQrValue(`${baseUrl}/locations/${selectedId}`);
+          } else {
+            console.error("Location not found with ID:", selectedId);
           }
           break;
         case 'label':
           selectedItem = labels.find(label => label._id === selectedId);
+          console.log("Selected label:", selectedItem);
           if (selectedItem) {
             // URL to filter items by this label
             setQrValue(`${baseUrl}/items?label=${selectedId}`);
@@ -154,7 +188,29 @@ const QRGenerator = () => {
           locationName = selectedItem.location.name || '';
         }
       } else if (qrType === 'location') {
-        const selectedLocation = locations.find(location => location._id === selectedId);
+        // First try to find at the top level
+        let selectedLocation = locations.find(location => location._id === selectedId);
+        
+        // If not found, try to find in the nested hierarchy
+        if (!selectedLocation) {
+          const findLocationRecursive = (locationArray, id) => {
+            if (!locationArray || !Array.isArray(locationArray)) return null;
+            
+            for (const location of locationArray) {
+              if (location._id === id) return location;
+              
+              if (location.children && location.children.length > 0) {
+                const foundInChildren = findLocationRecursive(location.children, id);
+                if (foundInChildren) return foundInChildren;
+              }
+            }
+            
+            return null;
+          };
+          
+          selectedLocation = findLocationRecursive(locations, selectedId);
+        }
+        
         name = selectedLocation?.name || '';
       } else if (qrType === 'label') {
         const selectedLabel = labels.find(label => label._id === selectedId);
@@ -233,7 +289,29 @@ const QRGenerator = () => {
         locationName = selectedItem.location.name || '';
       }
     } else if (qrType === 'location') {
-      const selectedLocation = locations.find(location => location._id === selectedId);
+      // First try to find at the top level
+      let selectedLocation = locations.find(location => location._id === selectedId);
+      
+      // If not found, try to find in the nested hierarchy
+      if (!selectedLocation) {
+        const findLocationRecursive = (locationArray, id) => {
+          if (!locationArray || !Array.isArray(locationArray)) return null;
+          
+          for (const location of locationArray) {
+            if (location._id === id) return location;
+            
+            if (location.children && location.children.length > 0) {
+              const foundInChildren = findLocationRecursive(location.children, id);
+              if (foundInChildren) return foundInChildren;
+            }
+          }
+          
+          return null;
+        };
+        
+        selectedLocation = findLocationRecursive(locations, selectedId);
+      }
+      
       itemName = selectedLocation?.name || '';
     } else if (qrType === 'label') {
       const selectedLabel = labels.find(label => label._id === selectedId);
@@ -350,7 +428,29 @@ const QRGenerator = () => {
           locationName = selectedItem.location.name || '';
         }
       } else if (qrType === 'location') {
-        const selectedLocation = locations.find(location => location._id === selectedId);
+        // First try to find at the top level
+        let selectedLocation = locations.find(location => location._id === selectedId);
+        
+        // If not found, try to find in the nested hierarchy
+        if (!selectedLocation) {
+          const findLocationRecursive = (locationArray, id) => {
+            if (!locationArray || !Array.isArray(locationArray)) return null;
+            
+            for (const location of locationArray) {
+              if (location._id === id) return location;
+              
+              if (location.children && location.children.length > 0) {
+                const foundInChildren = findLocationRecursive(location.children, id);
+                if (foundInChildren) return foundInChildren;
+              }
+            }
+            
+            return null;
+          };
+          
+          selectedLocation = findLocationRecursive(locations, selectedId);
+        }
+        
         name = selectedLocation?.name || '';
       } else if (qrType === 'label') {
         const selectedLabel = labels.find(label => label._id === selectedId);
@@ -508,65 +608,50 @@ const QRGenerator = () => {
                 </FormControl>
               ) : qrType === 'location' ? (
                 <FormControl fullWidth sx={{ mb: 2 }}>
-                  {(() => {
-                    // Flatten locations with hierarchy paths
-                    const flattenLocations = (locationArray, result = [], parentPath = '') => {
-                      if (!locationArray || !Array.isArray(locationArray)) return result;
-                      
-                      locationArray.forEach(location => {
-                        if (!location) return;
+                  <InputLabel id="location-label">Location</InputLabel>
+                  <Select
+                    labelId="location-label"
+                    id="location-select"
+                    value={selectedId}
+                    label="Location"
+                    onChange={handleIdChange}
+                    disabled={!qrType}
+                  >
+                    {(() => {
+                      // Flatten locations with hierarchy paths
+                      const flattenLocations = (locationArray, result = [], parentPath = '') => {
+                        if (!locationArray || !Array.isArray(locationArray)) return result;
                         
-                        const path = parentPath ? `${parentPath} > ${location.name}` : location.name;
-                        result.push({
-                          ...location,
-                          hierarchyPath: path
-                        });
-                        
-                        if (location.children && location.children.length > 0) {
-                          flattenLocations(location.children, result, path);
-                        }
-                      });
-                      return result;
-                    };
-                    
-                    const flatLocations = flattenLocations(locations || []);
-                    
-                    return (
-                      <Autocomplete
-                        options={flatLocations}
-                        getOptionLabel={(option) => option.hierarchyPath || option.name}
-                        value={flatLocations.find(loc => loc._id === selectedId) || null}
-                        onChange={(event, newValue) => {
-                          setSelectedId(newValue ? newValue._id : '');
-                        }}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Location" />
-                        )}
-                        renderOption={(props, option) => (
-                          <Box component="li" {...props}>
-                            <Box>
-                              <Typography variant="body1">{option.name}</Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                {option.hierarchyPath}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        )}
-                        isOptionEqualToValue={(option, value) => option._id === value._id}
-                        filterOptions={(options, state) => {
-                          // Simple fuzzy search matching name or hierarchyPath
-                          const inputValue = state.inputValue.toLowerCase().trim();
-                          if (!inputValue) return options;
+                        locationArray.forEach(location => {
+                          if (!location) return;
                           
-                          return options.filter(option => 
-                            option.name.toLowerCase().includes(inputValue) ||
-                            (option.hierarchyPath && 
-                             option.hierarchyPath.toLowerCase().includes(inputValue))
-                          );
-                        }}
-                      />
-                    );
-                  })()}
+                          const path = parentPath ? `${parentPath} > ${location.name}` : location.name;
+                          result.push({
+                            ...location,
+                            hierarchyPath: path
+                          });
+                          
+                          if (location.children && location.children.length > 0) {
+                            flattenLocations(location.children, result, path);
+                          }
+                        });
+                        return result;
+                      };
+                      
+                      const flatLocations = flattenLocations(locations || []);
+                      
+                      // Sort locations alphabetically by hierarchyPath for easier navigation
+                      flatLocations.sort((a, b) => 
+                        (a.hierarchyPath || a.name).localeCompare(b.hierarchyPath || b.name)
+                      );
+                      
+                      return flatLocations.map(location => (
+                        <MenuItem key={location._id} value={location._id}>
+                          {location.hierarchyPath || location.name}
+                        </MenuItem>
+                      ));
+                    })()}
+                  </Select>
                 </FormControl>
               ) : (
                 <FormControl fullWidth sx={{ mb: 2 }}>
@@ -673,7 +758,30 @@ const QRGenerator = () => {
                         {qrType === 'item' 
                           ? items.find(item => item._id === selectedId)?.name
                           : qrType === 'location'
-                            ? locations.find(location => location._id === selectedId)?.name
+                            ? (() => {
+                                // Find location in hierarchical structure
+                                const findLocationNameRecursive = (locationArray, id) => {
+                                  if (!locationArray || !Array.isArray(locationArray)) return null;
+                                  
+                                  for (const location of locationArray) {
+                                    if (location._id === id) return location.name;
+                                    
+                                    if (location.children && location.children.length > 0) {
+                                      const foundInChildren = findLocationNameRecursive(location.children, id);
+                                      if (foundInChildren) return foundInChildren;
+                                    }
+                                  }
+                                  
+                                  return null;
+                                };
+                                
+                                // First try to find at top level
+                                const topLevelLocation = locations.find(location => location._id === selectedId);
+                                if (topLevelLocation) return topLevelLocation.name;
+                                
+                                // If not found, search recursively
+                                return findLocationNameRecursive(locations, selectedId) || 'Unknown Location';
+                              })()
                             : labels.find(label => label._id === selectedId)?.name
                         }
                       </Typography>
