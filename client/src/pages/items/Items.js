@@ -195,12 +195,8 @@ const Items = () => {
         quantity
       });
       
-      // Update the local state immediately to avoid a full refresh
-      const updatedItems = items.map(item => 
-        item._id === itemId ? { ...item, quantity } : item
-      );
-      setItems(updatedItems);
-      setFilteredItems(updatedItems);
+      // Refresh items from the server to ensure all clients see the latest data
+      await refreshItems();
       
       // No success message, just let the UI update speak for itself
     } catch (err) {

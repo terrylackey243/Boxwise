@@ -102,6 +102,8 @@ const ItemDetail = () => {
   const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
   const [deleteAttachmentDialogOpen, setDeleteAttachmentDialogOpen] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
+  const [calculatorValue, setCalculatorValue] = useState('');
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [loanFormData, setLoanFormData] = useState({
     loanedTo: '',
     notes: ''
@@ -295,6 +297,62 @@ const ItemDetail = () => {
       setLoanFormError('Error loaning item: ' + (err.response?.data?.message || err.message));
     } finally {
       setSubmittingLoan(false);
+    }
+  };
+
+  const handleCalculatorOpen = () => {
+    setCalculatorValue('');
+    setCalculatorOpen(true);
+  };
+
+  const handleCalculatorClose = () => {
+    setCalculatorOpen(false);
+  };
+
+  const handleCalculatorChange = (e) => {
+    setCalculatorValue(e.target.value);
+  };
+
+  const handleQuantityCalculation = async (operation) => {
+    try {
+      if (!calculatorValue || isNaN(Number(calculatorValue))) {
+        return;
+      }
+
+      const changeAmount = Number(calculatorValue);
+      if (changeAmount <= 0) {
+        return;
+      }
+
+      // Calculate new quantity based on operation
+      let newQuantity;
+      if (operation === 'add') {
+        newQuantity = (item.quantity || 0) + changeAmount;
+      } else if (operation === 'subtract') {
+        newQuantity = Math.max(0, (item.quantity || 0) - changeAmount);
+      } else {
+        return;
+      }
+
+      // Make API call to update only the quantity field
+      const response = await axios.put(`/api/items/${id}`, {
+        quantity: newQuantity
+      });
+      
+      if (response.data.success) {
+        // Update item state with the new quantity
+        setItem({
+          ...item,
+          quantity: newQuantity
+        });
+        // Close the calculator dialog without showing a success message
+        handleCalculatorClose();
+      } else {
+        setErrorAlert('Error updating quantity: ' + response.data.message);
+      }
+    } catch (err) {
+      setErrorAlert('Error updating quantity: ' + (err.response?.data?.message || err.message));
+      console.error(err);
     }
   };
 
@@ -760,7 +818,20 @@ const ItemDetail = () => {
                     <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
                       Quantity
                     </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body1" component="span">{item.quantity || 0}</Typography>
+                        <Button 
+                          size="small" 
+                          variant="contained" 
+                          color="primary"
+                          sx={{ ml: 2 }}
+                          onClick={handleCalculatorOpen}
+                        >
+                          Calculator
+                        </Button>
+                      </Box>
+                    </TableCell>
                   </TableRow>
                   
                   <TableRow>
@@ -1351,6 +1422,53 @@ const ItemDetail = () => {
           <Button onClick={handleDuplicateItem} color="primary" autoFocus>
             Duplicate
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Quantity Calculator Dialog */}
+      <Dialog
+        open={calculatorOpen}
+        onClose={handleCalculatorClose}
+      >
+        <DialogTitle>Update Quantity</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Current quantity: <strong>{item.quantity || 0}</strong>
+          </DialogContentText>
+          
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <TextField
+              label="Amount to change"
+              type="number"
+              fullWidth
+              value={calculatorValue}
+              onChange={handleCalculatorChange}
+              InputProps={{ inputProps: { min: 1 } }}
+            />
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={() => handleQuantityCalculation('add')}
+              disabled={!calculatorValue || isNaN(Number(calculatorValue)) || Number(calculatorValue) <= 0}
+            >
+              Add ({calculatorValue ? `= ${(item.quantity || 0) + Number(calculatorValue)}` : ''})
+            </Button>
+            
+            <Button 
+              variant="contained" 
+              color="secondary"
+              onClick={() => handleQuantityCalculation('subtract')}
+              disabled={!calculatorValue || isNaN(Number(calculatorValue)) || Number(calculatorValue) <= 0}
+            >
+              Subtract ({calculatorValue ? `= ${Math.max(0, (item.quantity || 0) - Number(calculatorValue))}` : ''})
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCalculatorClose}>Cancel</Button>
         </DialogActions>
       </Dialog>
     </Container>

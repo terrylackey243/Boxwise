@@ -25,7 +25,7 @@ import {
 import { withMemoization, itemPropsAreEqual } from '../optimizations/MemoizedComponents';
 
 // Memoized row component to prevent unnecessary re-renders
-const Row = memo(({ data, index, style }) => {
+  const Row = memo(({ data, index, style }) => {
   const {
     items,
     onActionClick,
@@ -45,7 +45,7 @@ const Row = memo(({ data, index, style }) => {
     if (item) {
       setQuantityValue(item.quantity || 0);
     }
-  }, [item]);
+  }, [item, item?.quantity]); // Also depend on item.quantity to update when it changes
   
   // Return early after all hooks have been called
   if (!item) return null;

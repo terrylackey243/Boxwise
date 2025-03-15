@@ -27,6 +27,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions
 } from '@mui/material';
 import {
@@ -122,6 +123,59 @@ const EditItem = () => {
   });
   
   const [errors, setErrors] = useState({});
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [calculatorValue, setCalculatorValue] = useState('');
+
+  const handleCalculatorOpen = () => {
+    setCalculatorValue('');
+    setCalculatorOpen(true);
+  };
+
+  const handleCalculatorClose = () => {
+    setCalculatorOpen(false);
+  };
+
+  const handleCalculatorChange = (e) => {
+    setCalculatorValue(e.target.value);
+  };
+
+  const handleQuantityCalculation = (operation) => {
+    if (!calculatorValue || isNaN(Number(calculatorValue))) {
+      return;
+    }
+
+    const changeAmount = Number(calculatorValue);
+    if (changeAmount <= 0) {
+      return;
+    }
+
+    // Calculate new quantity based on operation
+    let newQuantity;
+    if (operation === 'add') {
+      newQuantity = (formData.quantity || 0) + changeAmount;
+    } else if (operation === 'subtract') {
+      newQuantity = Math.max(0, (formData.quantity || 0) - changeAmount);
+    } else {
+      return;
+    }
+
+    // Update form data with new quantity
+    setFormData(prevData => ({
+      ...prevData,
+      quantity: newQuantity
+    }));
+
+    // Clear any quantity errors
+    if (errors.quantity) {
+      setErrors(prevErrors => ({
+        ...prevErrors,
+        quantity: null
+      }));
+    }
+
+    // Close the calculator dialog
+    handleCalculatorClose();
+  };
 
   // Function to flatten the hierarchical locations data
   const flattenLocations = (locationArray, result = []) => {
@@ -819,17 +873,28 @@ const EditItem = () => {
                 </Grid>
                 
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Quantity"
-                    name="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    error={!!errors.quantity}
-                    helperText={errors.quantity}
-                    InputProps={{ inputProps: { min: 1 } }}
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <TextField
+                      fullWidth
+                      label="Quantity"
+                      name="quantity"
+                      type="number"
+                      value={formData.quantity}
+                      onChange={handleChange}
+                      error={!!errors.quantity}
+                      helperText={errors.quantity}
+                      InputProps={{ inputProps: { min: 1 } }}
+                    />
+                    <Button 
+                      size="small" 
+                      variant="contained" 
+                      color="primary"
+                      sx={{ ml: 2, height: 40 }}
+                      onClick={handleCalculatorOpen}
+                    >
+                      Calculator
+                    </Button>
+                  </Box>
                 </Grid>
                 
                 <Grid item xs={12} sm={6}>
@@ -1448,6 +1513,53 @@ const EditItem = () => {
           >
             Create
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Quantity Calculator Dialog */}
+      <Dialog
+        open={calculatorOpen}
+        onClose={handleCalculatorClose}
+      >
+        <DialogTitle>Update Quantity</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Current quantity: <strong>{formData.quantity || 0}</strong>
+          </DialogContentText>
+          
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <TextField
+              label="Amount to change"
+              type="number"
+              fullWidth
+              value={calculatorValue}
+              onChange={handleCalculatorChange}
+              InputProps={{ inputProps: { min: 1 } }}
+            />
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={() => handleQuantityCalculation('add')}
+              disabled={!calculatorValue || isNaN(Number(calculatorValue)) || Number(calculatorValue) <= 0}
+            >
+              Add ({calculatorValue ? `= ${(formData.quantity || 0) + Number(calculatorValue)}` : ''})
+            </Button>
+            
+            <Button 
+              variant="contained" 
+              color="secondary"
+              onClick={() => handleQuantityCalculation('subtract')}
+              disabled={!calculatorValue || isNaN(Number(calculatorValue)) || Number(calculatorValue) <= 0}
+            >
+              Subtract ({calculatorValue ? `= ${Math.max(0, (formData.quantity || 0) - Number(calculatorValue))}` : ''})
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCalculatorClose}>Cancel</Button>
         </DialogActions>
       </Dialog>
     </Container>
