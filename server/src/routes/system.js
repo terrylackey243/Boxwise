@@ -12,7 +12,8 @@ const {
   getBackups,
   restoreBackup,
   getSystemConfig,
-  updateSystemConfig
+  updateSystemConfig,
+  updateVersion
 } = require('../controllers/system');
 
 // System status routes
@@ -31,5 +32,8 @@ router.post('/restore', protect, authorize('admin', 'owner'), restoreBackup);
 // Configuration routes
 router.get('/config', protect, authorize('admin', 'owner'), getSystemConfig);
 router.put('/config', protect, authorize('admin', 'owner'), updateSystemConfig);
+
+// Version control routes
+router.put('/version', protect, authorize('admin', 'owner'), updateVersion);
 
 module.exports = router;

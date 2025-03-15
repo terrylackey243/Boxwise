@@ -25,7 +25,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  LinearProgress
+  LinearProgress,
+  Chip,
+  Tooltip,
+  ButtonGroup
 } from '@mui/material';
 import {
   Backup as BackupIcon,
@@ -38,14 +41,24 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
   RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  Restore as RestoreIcon
+  Restore as RestoreIcon,
+  Update as UpdateIcon,
+  Edit as EditIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import axios from '../../utils/axiosConfig';
+import versionInfo from '../../version.json';
 
 const SystemAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [currentVersion, setCurrentVersion] = useState(versionInfo);
+  const [manualVersion, setManualVersion] = useState({
+    major: versionInfo.major,
+    minor: versionInfo.minor,
+    patch: versionInfo.patch
+  });
   const [systemStatus, setSystemStatus] = useState({
     serverStatus: 'running',
     databaseStatus: 'running',
@@ -335,6 +348,82 @@ const SystemAdmin = () => {
     setRestoreDialog({ ...restoreDialog, open: false });
   };
 
+  // Version management functions
+  const updateVersion = async (newVersion) => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    
+    try {
+      // Update version.json file
+      const response = await axios.put('/api/admin/system/version', newVersion);
+      
+      if (response.data.success) {
+        setCurrentVersion(response.data.data);
+        setManualVersion({
+          major: response.data.data.major,
+          minor: response.data.data.minor,
+          patch: response.data.data.patch
+        });
+        
+        setResult({
+          success: true,
+          message: `Version updated to ${response.data.data.version} successfully.`
+        });
+      } else {
+        setError(response.data.message || 'Failed to update version.');
+      }
+    } catch (err) {
+      console.error('Error updating version:', err);
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Failed to update version. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleIncrementVersion = (component) => {
+    const newVersion = { ...currentVersion };
+    
+    if (component === 'major') {
+      newVersion.major += 1;
+      newVersion.minor = 0;
+      newVersion.patch = 0;
+    } else if (component === 'minor') {
+      newVersion.minor += 1;
+      newVersion.patch = 0;
+    } else if (component === 'patch') {
+      newVersion.patch += 1;
+    }
+    
+    newVersion.version = `${newVersion.major}.${newVersion.minor}.${newVersion.patch}`;
+    updateVersion(newVersion);
+  };
+  
+  const handleManualVersionChange = (component, value) => {
+    // Ensure value is a number and non-negative
+    const numValue = Math.max(0, parseInt(value) || 0);
+    
+    setManualVersion(prev => ({
+      ...prev,
+      [component]: numValue
+    }));
+  };
+  
+  const handleSaveManualVersion = () => {
+    const newVersion = {
+      major: manualVersion.major,
+      minor: manualVersion.minor,
+      patch: manualVersion.patch,
+      version: `${manualVersion.major}.${manualVersion.minor}.${manualVersion.patch}`
+    };
+    
+    updateVersion(newVersion);
+  };
+
   return (
     <Container maxWidth="lg">
       <Box my={4}>
@@ -505,6 +594,120 @@ const SystemAdmin = () => {
           )}
         </Paper>
         
+        {/* Version Control Section */}
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Version Control
+            </Typography>
+            <Chip 
+              size="medium" 
+              label={`v${currentVersion.version}`} 
+              color="primary" 
+            />
+          </Box>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Increment Version
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Update version components individually. Increasing Major or Minor will reset lower components to zero.
+                  </Typography>
+                  <ButtonGroup variant="outlined" sx={{ mt: 1 }}>
+                    <Tooltip title="Increase Major Version">
+                      <Button 
+                        onClick={() => handleIncrementVersion('major')}
+                        disabled={loading}
+                      >
+                        Major ({currentVersion.major} → {currentVersion.major + 1}.0.0)
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Increase Minor Version">
+                      <Button 
+                        onClick={() => handleIncrementVersion('minor')}
+                        disabled={loading}
+                      >
+                        Minor ({currentVersion.minor} → {currentVersion.major}.{currentVersion.minor + 1}.0)
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Increase Patch Version">
+                      <Button 
+                        onClick={() => handleIncrementVersion('patch')}
+                        disabled={loading}
+                      >
+                        Patch ({currentVersion.patch} → {currentVersion.major}.{currentVersion.minor}.{currentVersion.patch + 1})
+                      </Button>
+                    </Tooltip>
+                  </ButtonGroup>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Manual Version Entry
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Set specific version numbers manually.
+                  </Typography>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={3}>
+                      <TextField
+                        label="Major"
+                        type="number"
+                        value={manualVersion.major}
+                        onChange={(e) => handleManualVersionChange('major', e.target.value)}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={3}>
+                      <TextField
+                        label="Minor"
+                        type="number"
+                        value={manualVersion.minor}
+                        onChange={(e) => handleManualVersionChange('minor', e.target.value)}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={3}>
+                      <TextField
+                        label="Patch"
+                        type="number"
+                        value={manualVersion.patch}
+                        onChange={(e) => handleManualVersionChange('patch', e.target.value)}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Button
+                        variant="contained"
+                        startIcon={<SaveIcon />}
+                        onClick={handleSaveManualVersion}
+                        disabled={loading}
+                        fullWidth
+                      >
+                        Save
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Paper>
+
         {/* System Configuration */}
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

@@ -556,3 +556,68 @@ exports.updateSystemConfig = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Error updating system configuration: ${error.message}`, 500));
   }
 });
+
+// @desc    Update version information
+// @route   PUT /api/admin/system/version
+// @access  Private/Admin
+exports.updateVersion = asyncHandler(async (req, res, next) => {
+  // Only allow admin or owner to update version information
+  if (req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return next(new ErrorResponse('Not authorized to update version information', 403));
+  }
+
+  try {
+    const { major, minor, patch, version } = req.body;
+    
+    // Validate input
+    if (typeof major !== 'number' || 
+        typeof minor !== 'number' || 
+        typeof patch !== 'number' || 
+        typeof version !== 'string' ||
+        major < 0 || minor < 0 || patch < 0) {
+      return next(new ErrorResponse('Invalid version values', 400));
+    }
+    
+    // Verify version string matches components
+    const expectedVersion = `${major}.${minor}.${patch}`;
+    if (version !== expectedVersion) {
+      return next(new ErrorResponse('Version string does not match components', 400));
+    }
+    
+    // Get path to version.json file (in client/src directory)
+    const clientDir = path.resolve(__dirname, '../../../client/src');
+    const versionFilePath = path.join(clientDir, 'version.json');
+    
+    // Ensure version.json file exists
+    if (!fs.existsSync(versionFilePath)) {
+      return next(new ErrorResponse('Version file not found', 404));
+    }
+    
+    // Create version object
+    const versionObject = {
+      version,
+      major,
+      minor,
+      patch
+    };
+    
+    // Write updated version to file
+    fs.writeFileSync(
+      versionFilePath,
+      JSON.stringify(versionObject, null, 2) + '\n',
+      'utf8'
+    );
+    
+    // Log the update
+    console.log(`Version updated to ${version} by ${req.user.name} (${req.user.email})`);
+    
+    res.status(200).json({
+      success: true,
+      message: `Version updated to ${version} successfully`,
+      data: versionObject
+    });
+  } catch (error) {
+    console.error('Error updating version information:', error);
+    return next(new ErrorResponse(`Error updating version: ${error.message}`, 500));
+  }
+});
