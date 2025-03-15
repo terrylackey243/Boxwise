@@ -15,6 +15,7 @@ const {
   getNextAssetId,
   getItemCount
 } = require('../controllers/items');
+const { bulkAddItems } = require('../controllers/bulk');
 const Item = require('../models/Item');
 
 const router = express.Router();
@@ -31,6 +32,9 @@ router.route('/')
 
 router.route('/quick-add')
   .post(protect, restrictViewers, checkSubscriptionLimits, quickAddItem);
+
+router.route('/bulk')
+  .post(protect, restrictViewers, checkSubscriptionLimits, bulkAddItems);
 
 router.route('/next-asset-id')
   .get(protect, getNextAssetId);

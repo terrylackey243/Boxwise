@@ -30,7 +30,7 @@ import {
   Label as LabelIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
-import BulkAddDialog from '../../components/bulk/BulkAddDialog';
+import SpreadsheetBulkAddDialog from '../../components/bulk/SpreadsheetBulkAddDialog';
 
 const Labels = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -284,8 +284,8 @@ const Labels = () => {
         </MenuItem>
       </Menu>
       
-      {/* Bulk Add Dialog */}
-      <BulkAddDialog
+      {/* Spreadsheet Bulk Add Dialog */}
+      <SpreadsheetBulkAddDialog
         open={bulkAddOpen}
         onClose={() => setBulkAddOpen(false)}
         onSubmit={async (labels) => {
@@ -333,8 +333,7 @@ const Labels = () => {
           },
           color: {
             label: 'Color (hex)',
-            required: true,
-            helperText: 'e.g. #FF5733'
+            required: true
           }
         }}
         defaultValues={{

@@ -31,7 +31,7 @@ import {
   Category as CategoryIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
-import BulkAddDialog from '../../components/bulk/BulkAddDialog';
+import SpreadsheetBulkAddDialog from '../../components/bulk/SpreadsheetBulkAddDialog';
 
 const Categories = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -261,8 +261,8 @@ const Categories = () => {
         </MenuItem>
       </Menu>
       
-      {/* Bulk Add Dialog */}
-      <BulkAddDialog
+      {/* Spreadsheet Bulk Add Dialog */}
+      <SpreadsheetBulkAddDialog
         open={bulkAddOpen}
         onClose={() => setBulkAddOpen(false)}
         onSubmit={async (categories) => {
@@ -291,11 +291,21 @@ const Categories = () => {
             label: 'Description',
             multiline: true,
             rows: 2
+          },
+          icon: {
+            label: 'Icon',
+            defaultValue: 'category'
+          },
+          color: {
+            label: 'Color (hex)',
+            defaultValue: '#6B46C1'
           }
         }}
         defaultValues={{
           name: '',
-          description: ''
+          description: '',
+          icon: 'category',
+          color: '#6B46C1'
         }}
       />
     </Container>

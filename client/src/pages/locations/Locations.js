@@ -40,7 +40,8 @@ import {
   FolderOpen as FolderOpenIcon
 } from '@mui/icons-material';
 import { AlertContext } from '../../context/AlertContext';
-import BulkAddDialog from '../../components/bulk/BulkAddDialog';
+import SpreadsheetBulkAddDialog from '../../components/bulk/SpreadsheetBulkAddDialog';
+import SequentialLocationsDialog from '../../components/bulk/SequentialLocationsDialog';
 
 const Locations = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -51,6 +52,7 @@ const Locations = () => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [expandedLocations, setExpandedLocations] = useState({});
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [sequentialAddOpen, setSequentialAddOpen] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -324,6 +326,14 @@ const Locations = () => {
             Bulk Add
           </Button>
           <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setSequentialAddOpen(true)}
+          >
+            Sequential Add
+          </Button>
+          <Button
             variant="contained"
             startIcon={<AddIcon />}
             component={RouterLink}
@@ -426,8 +436,8 @@ const Locations = () => {
         </MenuItem>
       </Menu>
       
-      {/* Bulk Add Dialog */}
-      <BulkAddDialog
+      {/* Spreadsheet Bulk Add Dialog */}
+      <SpreadsheetBulkAddDialog
         open={bulkAddOpen}
         onClose={() => setBulkAddOpen(false)}
         onSubmit={async (locations) => {
@@ -457,30 +467,38 @@ const Locations = () => {
             multiline: true,
             rows: 2
           },
-          parentId: {
+          parent: {
             label: 'Parent Location',
-            helperText: 'Leave blank for top-level location',
-            select: true,
-            SelectProps: {
-              renderValue: (value) => {
-                if (!value) return 'None (Top Level)';
-                const loc = flattenLocations(locations).find(l => l._id === value);
-                return loc ? loc.hierarchyPath : value;
-              }
-            },
-            options: [
-              { value: '', label: 'None (Top Level)' },
-              ...flattenLocations(locations).map(loc => ({
-                value: loc._id,
-                label: loc.hierarchyPath
-              }))
-            ]
+            type: 'location',
+            required: false
           }
         }}
         defaultValues={{
           name: '',
           description: '',
-          parentId: ''
+          parent: ''
+        }}
+      />
+      
+      {/* Sequential Locations Dialog */}
+      <SequentialLocationsDialog
+        open={sequentialAddOpen}
+        onClose={() => setSequentialAddOpen(false)}
+        onSubmit={async (locations) => {
+          try {
+            const result = await bulkService.bulkAdd('locations', locations);
+            
+            // Refresh the locations list immediately without showing a success message
+            const response = await axios.get('/api/locations');
+            if (response.data.success) {
+              setLocations(response.data.data || []);
+            }
+            
+            return result;
+          } catch (err) {
+            setErrorAlert('Error adding locations: ' + (err.message || 'Unknown error'));
+            throw err;
+          }
         }}
       />
     </Container>

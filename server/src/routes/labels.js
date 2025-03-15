@@ -1,9 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const { restrictViewers } = require('../middleware/viewerRestriction');
 const Label = require('../models/Label');
 const Item = require('../models/Item');
 const achievementService = require('../services/achievementService');
+const { bulkAddLabels } = require('../controllers/bulk');
+
+// @route   POST api/labels/bulk
+// @desc    Bulk add labels
+// @access  Private
+router.post('/bulk', protect, restrictViewers, bulkAddLabels);
 
 // @route   GET api/labels/count
 // @desc    Get count of labels

@@ -172,12 +172,27 @@ const SpreadsheetBulkAddDialog = ({
     setRows([...rows, newRow]);
   };
 
+  // For non-item entities, we don't have an action column with a delete button,
+  // so we'll simply replace the rows with a new set instead of deleting one
+  const resetRows = () => {
+    setRows([{ ...defaultValues, id: Date.now() }]);
+  };
+
+  // Allow adding multiple rows at once for non-item entities
+  const handleAddMultipleRows = (count) => {
+    const newRows = [];
+    for (let i = 0; i < count; i++) {
+      newRows.push({ ...defaultValues, id: Date.now() + i });
+    }
+    setRows([...rows, ...newRows]);
+  };
+
   // Handle removing a row from the spreadsheet
   const handleRemoveRow = (id) => {
     setRows(rows.filter(row => row.id !== id));
   };
 
-  // Handle field change for a specific row
+    // Handle field change for a specific row
   const handleFieldChange = (id, field, value) => {
     // Update the row with the new value
     setRows(rows.map(row => 
@@ -312,7 +327,18 @@ const SpreadsheetBulkAddDialog = ({
       }
       
       // Remove the temporary id and upcLookup properties before submitting
-      const rowsToSubmit = validRows.map(({ id, upcLookup, ...rest }) => rest);
+      // But ensure we include default icon and color for categories
+      const rowsToSubmit = validRows.map(({ id, upcLookup, ...rest }) => {
+        // For categories, ensure icon and color are included even though they're hidden
+        if (entityType === 'categories') {
+          return {
+            ...rest,
+            icon: rest.icon || defaultValues.icon || 'category',
+            color: rest.color || defaultValues.color || '#6B46C1'
+          };
+        }
+        return rest;
+      });
       
       // Call the onSubmit function with the rows
       await onSubmit(rowsToSubmit);
@@ -386,7 +412,7 @@ const SpreadsheetBulkAddDialog = ({
             InputProps={{ sx: { height: inputHeight } }}
           />
         );
-      } else if (config.type === 'boolean') {
+    } else if (config.type === 'boolean') {
         return (
           <Autocomplete
             options={[
@@ -432,7 +458,7 @@ const SpreadsheetBulkAddDialog = ({
     }
     
     // Handle regular fields
-    if (field === 'location') {
+    if (field === 'location' || (entityType === 'locations' && field === 'parent')) {
       return (
         <Autocomplete
           options={locations}
@@ -542,6 +568,90 @@ const SpreadsheetBulkAddDialog = ({
               size="small"
               sx={{ height: inputHeight }}
             />
+          )}
+          disablePortal={false}
+          size="small"
+          sx={{ height: inputHeight }}
+        />
+      );
+    } else if (field === 'color' && (entityType === 'labels' || entityType === 'categories')) {
+      // Common colors to choose from for labels and categories
+      const colorOptions = [
+        { name: 'Red', value: '#f44336' },
+        { name: 'Pink', value: '#e91e63' },
+        { name: 'Purple', value: '#9c27b0' },
+        { name: 'Deep Purple', value: '#673ab7' },
+        { name: 'Indigo', value: '#3f51b5' },
+        { name: 'Blue', value: '#2196f3' },
+        { name: 'Light Blue', value: '#03a9f4' },
+        { name: 'Cyan', value: '#00bcd4' },
+        { name: 'Teal', value: '#009688' },
+        { name: 'Green', value: '#4caf50' },
+        { name: 'Light Green', value: '#8bc34a' },
+        { name: 'Lime', value: '#cddc39' },
+        { name: 'Yellow', value: '#ffeb3b' },
+        { name: 'Amber', value: '#ffc107' },
+        { name: 'Orange', value: '#ff9800' },
+        { name: 'Deep Orange', value: '#ff5722' },
+        { name: 'Brown', value: '#795548' },
+        { name: 'Grey', value: '#9e9e9e' },
+        { name: 'Blue Grey', value: '#607d8b' },
+        { name: 'Black', value: '#000000' }
+      ];
+      
+      return (
+        <Autocomplete
+          options={colorOptions}
+          getOptionLabel={(option) => option.name}
+          value={
+            row[field] 
+              ? colorOptions.find(c => c.value === row[field]) || 
+                {name: 'Custom', value: row[field]} 
+              : null
+          }
+          onChange={(event, newValue) => {
+            handleFieldChange(row.id, field, newValue ? newValue.value : '');
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Select Color"
+              required={config.required}
+              size="small"
+              sx={{ height: inputHeight }}
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      width: 24, 
+                      height: 24, 
+                      mr: 1, 
+                      bgcolor: row[field] || '#fff',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(0,0,0,0.2)'
+                    }} 
+                  />
+                )
+              }}
+            />
+          )}
+          renderOption={(props, option) => (
+            <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box 
+                component="span" 
+                sx={{ 
+                  width: 20, 
+                  height: 20, 
+                  mr: 1, 
+                  bgcolor: option.value,
+                  borderRadius: '4px',
+                  border: '1px solid rgba(0,0,0,0.2)'
+                }} 
+              />
+              {option.name}
+            </Box>
           )}
           disablePortal={false}
           size="small"
@@ -700,7 +810,9 @@ const SpreadsheetBulkAddDialog = ({
       fullWidth
       PaperProps={{
         sx: {
-          maxHeight: '80vh',
+          maxHeight: 'calc(80vh + 96px)',
+          width: '90%', 
+          maxWidth: '1200px'
         }
       }}
     >
@@ -741,58 +853,99 @@ const SpreadsheetBulkAddDialog = ({
           </Box>
         ) : (
           <TableContainer component={Paper} sx={{ mb: 2, maxWidth: '100%', overflowX: 'auto' }}>
-            <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
+            <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '144px' }}>
-                    UPC Lookup
-                  </TableCell>
-                  {/* Asset ID column is hidden since it's auto-generated */}
-                  {Object.entries(fields).map(([field, config]) => (
-                    <TableCell key={field} sx={{ fontWeight: 'bold', minWidth: '144px' }}>
-                      {config.label} {config.required && <span style={{ color: 'red' }}>*</span>}
+                  {/* Show UPC Lookup column only for items */}
+                  {entityType === 'items' && (
+                    <TableCell sx={{ fontWeight: 'bold', minWidth: '144px' }}>
+                      UPC Lookup
                     </TableCell>
-                  ))}
-                  <TableCell align="center" sx={{ width: 60 }}>Actions</TableCell>
+                  )}
+                  {/* Asset ID column is hidden since it's auto-generated */}
+                  {Object.entries(fields).map(([field, config]) => {
+                    // Skip icon and color fields for categories
+                    if (entityType === 'categories' && (field === 'icon' || field === 'color')) {
+                      return null;
+                    }
+                    
+                    return (
+                      <TableCell 
+                        key={field} 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          minWidth: entityType === 'locations' ? 
+                                      (field === 'name' ? '100px' : 
+                                       field === 'description' ? '150px' : 
+                                       field === 'parent' ? '150px' : '100px') : 
+                                    '144px',
+                          width: entityType === 'locations' ? 
+                                  (field === 'name' ? '20%' : 
+                                   field === 'description' ? '30%' : 
+                                   field === 'parent' ? '30%' : '20%') : 
+                                (field === 'description') ? '25%' : 'auto'
+                        }}
+                      >
+                        {config.label} {config.required && <span style={{ color: 'red' }}>*</span>}
+                      </TableCell>
+                    );
+                  })}
+                  {/* Show Action column only for items */}
+                  {entityType === 'items' && (
+                    <TableCell align="center" sx={{ width: 60 }}>Actions</TableCell>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell>
-                      <TextField
-                        value={row.upcLookup || ''}
-                        onChange={(e) => handleFieldChange(row.id, 'upcLookup', e.target.value)}
-                        onBlur={(e) => handleUpcLookup(row.id, e.target.value)}
-                        placeholder="Enter UPC"
-                        fullWidth
-                        size="small"
-                        variant="outlined"
-                        sx={{ height: inputHeight }}
-                        InputProps={{ 
-                          sx: { height: inputHeight },
-                          endAdornment: lookingUpUpc && (
-                            <CircularProgress size={20} color="inherit" />
-                          )
-                        }}
-                      />
-                    </TableCell>
-                    {/* Asset ID field is hidden since it's auto-generated */}
-                    {Object.entries(fields).map(([field, config]) => (
-                      <TableCell key={`${row.id}-${field}`}>
-                        {renderCell(row, field, config)}
+                    {/* Show UPC Lookup column only for items */}
+                    {entityType === 'items' && (
+                      <TableCell>
+                        <TextField
+                          value={row.upcLookup || ''}
+                          onChange={(e) => handleFieldChange(row.id, 'upcLookup', e.target.value)}
+                          onBlur={(e) => handleUpcLookup(row.id, e.target.value)}
+                          placeholder="Enter UPC"
+                          fullWidth
+                          size="small"
+                          variant="outlined"
+                          sx={{ height: inputHeight }}
+                          InputProps={{ 
+                            sx: { height: inputHeight },
+                            endAdornment: lookingUpUpc && (
+                              <CircularProgress size={20} color="inherit" />
+                            )
+                          }}
+                        />
                       </TableCell>
-                    ))}
-                    <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleRemoveRow(row.id)}
-                        disabled={rows.length <= 1}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
+                    )}
+                    {/* Asset ID field is hidden since it's auto-generated */}
+                    {Object.entries(fields).map(([field, config]) => {
+                      // Skip icon and color fields for categories
+                      if (entityType === 'categories' && (field === 'icon' || field === 'color')) {
+                        return null;
+                      }
+                      
+                      return (
+                        <TableCell key={`${row.id}-${field}`}>
+                          {renderCell(row, field, config)}
+                        </TableCell>
+                      );
+                    })}
+                    {/* Show Action column only for items */}
+                    {entityType === 'items' && (
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleRemoveRow(row.id)}
+                          disabled={rows.length <= 1}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -800,15 +953,52 @@ const SpreadsheetBulkAddDialog = ({
           </TableContainer>
         )}
         
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={handleAddRow}
-          fullWidth
-          sx={{ mt: 1 }}
-        >
-          Add Row
-        </Button>
+        {entityType === 'items' ? (
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={handleAddRow}
+            fullWidth
+            sx={{ mt: 1 }}
+          >
+            Add Row
+          </Button>
+        ) : (
+          <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={handleAddRow}
+              fullWidth
+            >
+              Add 1 Row
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleAddMultipleRows(5)}
+              fullWidth
+            >
+              Add 5 Rows
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleAddMultipleRows(10)}
+              fullWidth
+            >
+              Add 10 Rows
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={resetRows}
+              fullWidth
+            >
+              Reset
+            </Button>
+          </Box>
+        )}
       </DialogContent>
       
       <DialogActions sx={{ p: 2 }}>

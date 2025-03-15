@@ -17,16 +17,21 @@ import {
   Card,
   CardContent,
   CardActions,
-  Tooltip
+  Tooltip,
+  Tabs,
+  Tab,
+  Autocomplete
 } from '@mui/material';
 import {
   QrCode as QrCodeIcon,
   Download as DownloadIcon,
   Print as PrintIcon,
-  ContentCopy as CopyIcon
+  ContentCopy as CopyIcon,
+  Inventory2 as InventoryIcon
 } from '@mui/icons-material';
 import QRCode from 'react-qr-code';
 import { AlertContext } from '../../context/AlertContext';
+import BatchLocationQR from '../../components/qr/BatchLocationQR';
 
 const QRGenerator = () => {
   const { setSuccessAlert, setErrorAlert } = useContext(AlertContext);
@@ -35,12 +40,17 @@ const QRGenerator = () => {
   const [locations, setLocations] = useState([]);
   const [labels, setLabels] = useState([]);
   
+  const [tabValue, setTabValue] = useState(0);
   const [qrType, setQrType] = useState('item');
   const [selectedId, setSelectedId] = useState('');
   const [qrValue, setQrValue] = useState('');
   const [qrSize, setQrSize] = useState(200);
   
   const qrRef = useRef(null);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,7 +60,7 @@ const QRGenerator = () => {
         // Fetch data from the API
         const [itemsRes, locationsRes, labelsRes] = await Promise.all([
           axios.get('/api/items?limit=100'),
-          axios.get('/api/locations?flat=true'),
+          axios.get('/api/locations'), // Remove flat=true to get hierarchical structure
           axios.get('/api/labels')
         ]);
         
@@ -432,10 +442,33 @@ const QRGenerator = () => {
           QR Code Generator
         </Typography>
         <Typography variant="body1" paragraph>
-          Generate QR codes for your items, locations, and labels. These QR codes can be scanned to quickly access information.
+          Generate and print QR codes for your items, locations, and labels. These QR codes can be scanned to quickly access information.
         </Typography>
         
-        <Divider sx={{ my: 3 }} />
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange} 
+            aria-label="QR code generator tabs"
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab 
+              icon={<QrCodeIcon fontSize="small" />} 
+              label="Single QR Code" 
+              id="tab-0" 
+              aria-controls="tabpanel-0" 
+            />
+            <Tab 
+              icon={<InventoryIcon fontSize="small" />} 
+              label="Batch Location QR Codes" 
+              id="tab-1" 
+              aria-controls="tabpanel-1" 
+            />
+          </Tabs>
+        </Box>
+        
+        {tabValue === 0 && (
         
         <Grid container spacing={4}>
           <Grid item xs={12} md={6}>
@@ -455,37 +488,105 @@ const QRGenerator = () => {
                 </Select>
               </FormControl>
               
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel id="qr-id-label">
-                  {qrType === 'item' ? 'Item' : qrType === 'location' ? 'Location' : 'Label'}
-                </InputLabel>
-                <Select
-                  labelId="qr-id-label"
-                  id="qr-id"
-                  value={selectedId}
-                  label={qrType === 'item' ? 'Item' : qrType === 'location' ? 'Location' : 'Label'}
-                  onChange={handleIdChange}
-                  disabled={!qrType}
-                >
-                  {qrType === 'item' && items.map(item => (
-                    <MenuItem key={item._id} value={item._id}>
-                      {item.name} ({item.assetId})
-                    </MenuItem>
-                  ))}
-                  
-                  {qrType === 'location' && locations.map(location => (
-                    <MenuItem key={location._id} value={location._id}>
-                      {location.name}
-                    </MenuItem>
-                  ))}
-                  
-                  {qrType === 'label' && labels.map(label => (
-                    <MenuItem key={label._id} value={label._id}>
-                      {label.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {qrType === 'item' ? (
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="qr-id-label">Item</InputLabel>
+                  <Select
+                    labelId="qr-id-label"
+                    id="qr-id"
+                    value={selectedId}
+                    label="Item"
+                    onChange={handleIdChange}
+                    disabled={!qrType}
+                  >
+                    {items.map(item => (
+                      <MenuItem key={item._id} value={item._id}>
+                        {item.name} ({item.assetId})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : qrType === 'location' ? (
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  {(() => {
+                    // Flatten locations with hierarchy paths
+                    const flattenLocations = (locationArray, result = [], parentPath = '') => {
+                      if (!locationArray || !Array.isArray(locationArray)) return result;
+                      
+                      locationArray.forEach(location => {
+                        if (!location) return;
+                        
+                        const path = parentPath ? `${parentPath} > ${location.name}` : location.name;
+                        result.push({
+                          ...location,
+                          hierarchyPath: path
+                        });
+                        
+                        if (location.children && location.children.length > 0) {
+                          flattenLocations(location.children, result, path);
+                        }
+                      });
+                      return result;
+                    };
+                    
+                    const flatLocations = flattenLocations(locations || []);
+                    
+                    return (
+                      <Autocomplete
+                        options={flatLocations}
+                        getOptionLabel={(option) => option.hierarchyPath || option.name}
+                        value={flatLocations.find(loc => loc._id === selectedId) || null}
+                        onChange={(event, newValue) => {
+                          setSelectedId(newValue ? newValue._id : '');
+                        }}
+                        renderInput={(params) => (
+                          <TextField {...params} label="Location" />
+                        )}
+                        renderOption={(props, option) => (
+                          <Box component="li" {...props}>
+                            <Box>
+                              <Typography variant="body1">{option.name}</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                {option.hierarchyPath}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        )}
+                        isOptionEqualToValue={(option, value) => option._id === value._id}
+                        filterOptions={(options, state) => {
+                          // Simple fuzzy search matching name or hierarchyPath
+                          const inputValue = state.inputValue.toLowerCase().trim();
+                          if (!inputValue) return options;
+                          
+                          return options.filter(option => 
+                            option.name.toLowerCase().includes(inputValue) ||
+                            (option.hierarchyPath && 
+                             option.hierarchyPath.toLowerCase().includes(inputValue))
+                          );
+                        }}
+                      />
+                    );
+                  })()}
+                </FormControl>
+              ) : (
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="qr-id-label">Label</InputLabel>
+                  <Select
+                    labelId="qr-id-label"
+                    id="qr-id"
+                    value={selectedId}
+                    label="Label"
+                    onChange={handleIdChange}
+                    disabled={!qrType}
+                  >
+                    {labels.map(label => (
+                      <MenuItem key={label._id} value={label._id}>
+                        {label.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
               
               <FormControl fullWidth>
                 <TextField
@@ -619,6 +720,11 @@ const QRGenerator = () => {
             </Card>
           </Grid>
         </Grid>
+        )}
+        
+        {tabValue === 1 && (
+          <BatchLocationQR locations={locations} />
+        )}
       </Paper>
     </Container>
   );

@@ -1,9 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const { restrictViewers } = require('../middleware/viewerRestriction');
 const Location = require('../models/Location');
 const Item = require('../models/Item');
 const achievementService = require('../services/achievementService');
+const { bulkAddLocations } = require('../controllers/bulk');
+
+// @route   POST api/locations/bulk
+// @desc    Bulk add locations
+// @access  Private
+router.post('/bulk', protect, restrictViewers, bulkAddLocations);
 
 // @route   GET api/locations/count
 // @desc    Get count of locations
