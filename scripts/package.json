@@ -4,9 +4,10 @@
   "description": "Scripts for Boxwise application",
   "main": "init-db.js",
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.8.1",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^5.9.2",
     "mongoose": "^7.0.3"

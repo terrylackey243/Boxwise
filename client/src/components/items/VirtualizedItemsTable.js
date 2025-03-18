@@ -1,7 +1,8 @@
-import React, { useState, useCallback, memo } from 'react';
+import React from 'react';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useNavigate } from 'react-router-dom';
+import VirtualizedRow from './VirtualizedRow';
 import {
   Table,
   TableHead,
@@ -10,209 +11,9 @@ import {
   TableBody,
   TableContainer,
   Paper,
-  IconButton,
   Box,
-  TextField,
-  ButtonGroup,
-  Chip,
   Typography
 } from '@mui/material';
-import {
-  AddCircleOutline as IncreaseIcon,
-  RemoveCircleOutline as DecreaseIcon,
-  MoreVert as MoreVertIcon
-} from '@mui/icons-material';
-import { withMemoization, itemPropsAreEqual } from '../optimizations/MemoizedComponents';
-
-// Memoized row component to prevent unnecessary re-renders
-  const Row = memo(({ data, index, style }) => {
-  const {
-    items,
-    onActionClick,
-    onUpdateQuantity,
-    canEdit = true,
-    isViewer = false,
-    navigate
-  } = data;
-  
-  // Initialize all hooks unconditionally (Rules of Hooks)
-  const [quantityValue, setQuantityValue] = useState(0);
-  
-  const item = items[index];
-  
-  // useEffect must be called unconditionally
-  React.useEffect(() => {
-    if (item) {
-      setQuantityValue(item.quantity || 0);
-    }
-  }, [item, item?.quantity]); // Also depend on item.quantity to update when it changes
-  
-  // Return early after all hooks have been called
-  if (!item) return null;
-  
-  const handleQuantityChange = (e) => {
-    const value = parseInt(e.target.value, 10);
-    if (!isNaN(value)) {
-      setQuantityValue(value);
-    }
-  };
-  
-  const handleBlur = () => {
-    onUpdateQuantity(item._id, quantityValue);
-  };
-  
-  const handleIncrement = (e) => {
-    e.stopPropagation();
-    const newValue = (item.quantity || 0) + 1;
-    setQuantityValue(newValue);
-    onUpdateQuantity(item._id, newValue);
-  };
-  
-  const handleDecrement = (e) => {
-    e.stopPropagation();
-    if (item.quantity > 0) {
-      const newValue = item.quantity - 1;
-      setQuantityValue(newValue);
-      onUpdateQuantity(item._id, newValue);
-    }
-  };
-  
-  const handleRowClick = () => {
-    navigate(`/items/${item._id}`);
-  };
-  
-  return (
-    <div style={style}>
-      <TableRow 
-        hover
-        onClick={handleRowClick}
-        sx={{
-          height: 53,
-          '&:nth-of-type(odd)': {
-            backgroundColor: 'background.default',
-          },
-          ...(item.isArchived ? { opacity: 0.5 } : {}),
-          '&:hover': { cursor: 'pointer' }
-        }}
-      >
-        <TableCell>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography 
-              variant="body1"
-              sx={{ 
-                color: (item.loanDetails && item.loanDetails.isLoaned === true) ? 'purple' : 'inherit',
-                fontWeight: (item.loanDetails && item.loanDetails.isLoaned === true) ? 'bold' : 'normal'
-              }}
-            >
-              {item.name || 'Unnamed Item'}
-            </Typography>
-            {item.isArchived === true && (
-              <Chip
-                label="Archived"
-                size="small"
-                color="default"
-                sx={{ ml: 1 }}
-              />
-            )}
-            {item.loanDetails && item.loanDetails.isLoaned === true && (
-              <Chip
-                label="Loaned"
-                size="small"
-                color="secondary"
-                sx={{ ml: 1, bgcolor: 'purple' }}
-              />
-            )}
-          </Box>
-        </TableCell>
-        <TableCell>{item.category?.name || 'No category'}</TableCell>
-        <TableCell>{item.location?.name || 'No location'}</TableCell>
-        <TableCell>
-          <Box sx={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-            {canEdit && !isViewer ? (
-              <>
-                <ButtonGroup size="small">
-                  <IconButton 
-                    size="small" 
-                    onClick={handleDecrement}
-                    disabled={item.quantity <= 0}
-                  >
-                    <DecreaseIcon fontSize="small" />
-                  </IconButton>
-                  
-                  <TextField
-                    variant="outlined"
-                    size="small"
-                    value={quantityValue}
-                    onChange={handleQuantityChange}
-                    onBlur={handleBlur}
-                    inputProps={{ 
-                      min: 0, 
-                      style: { textAlign: 'center' } 
-                    }}
-                    sx={{ 
-                      width: 60,
-                      '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
-                        '-webkit-appearance': 'none',
-                        margin: 0,
-                      },
-                      '& input[type=number]': {
-                        '-moz-appearance': 'textfield',
-                      },
-                    }}
-                  />
-                  
-                  <IconButton 
-                    size="small" 
-                    onClick={handleIncrement}
-                  >
-                    <IncreaseIcon fontSize="small" />
-                  </IconButton>
-                </ButtonGroup>
-              </>
-            ) : (
-              <Typography>{item.quantity || 0}</Typography>
-            )}
-          </Box>
-        </TableCell>
-        <TableCell>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {item.labels && item.labels.length > 0 ? (
-              item.labels.map((label) => (
-                <Chip
-                  key={label._id}
-                  label={label.name}
-                  size="small"
-                  sx={{
-                    bgcolor: label.color,
-                    color: 'white',
-                  }}
-                />
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No labels
-              </Typography>
-            )}
-          </Box>
-        </TableCell>
-        <TableCell>
-          {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
-        </TableCell>
-        <TableCell align="right">
-          <IconButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onActionClick(e, item._id);
-            }}
-            size="small"
-          >
-            <MoreVertIcon />
-          </IconButton>
-        </TableCell>
-      </TableRow>
-    </div>
-  );
-}, itemPropsAreEqual);
 
 /**
  * VirtualizedItemsTable - A virtualized table for displaying large item lists
@@ -290,10 +91,10 @@ const VirtualizedItemsTable = ({
               height={height}
               width={width}
               itemCount={items.length}
-              itemSize={53} // Match the TableRow height
+              itemSize={60} // Match the increased row height for thumbnails
               itemData={itemData}
             >
-              {Row}
+              {VirtualizedRow}
             </List>
           )}
         </AutoSizer>
@@ -302,5 +103,4 @@ const VirtualizedItemsTable = ({
   );
 };
 
-// Export memoized component to prevent unnecessary re-renders
-export default withMemoization(VirtualizedItemsTable);
+export default VirtualizedItemsTable;

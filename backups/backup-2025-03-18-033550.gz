@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-03-18T03:35:50.166Z",
+  "database": "test",
+  "collections": [
+    "users",
+    "groups",
+    "achievements",
+    "items",
+    "locations",
+    "labels",
+    "categories",
+    "reminders"
+  ],
+  "models": [
+    "User",
+    "Group",
+    "Achievement",
+    "Item",
+    "Location",
+    "Label",
+    "Category",
+    "Reminder"
+  ],
+  "connectionState": 1
+}

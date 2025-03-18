@@ -86,7 +86,7 @@ exports.getItems = asyncHandler(async (req, res, next) => {
   // Use projection to limit returned fields for better performance
   // Only select fields that are needed for the items list view
   const items = await Item.find(query)
-    .select('name description quantity assetId location category labels isArchived updatedAt createdAt loanDetails')
+    .select('name description quantity assetId location category labels isArchived updatedAt createdAt loanDetails attachments')
     .populate('location', 'name')
     .populate('category', 'name')
     .populate('labels', 'name color')

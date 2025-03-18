@@ -83,6 +83,17 @@ This document provides an overview of the features available in the Boxwise inve
 
 ## Technical Features
 
+### Cloud Storage
+- **Amazon S3 Integration**: Secure cloud storage for all file attachments
+- **Direct Upload**: File uploads go directly to cloud storage for improved performance
+- **Thumbnail Generation**: Automatic thumbnail display for primary photos in list views
+- **Secure Access Control**: Files are securely stored with proper access controls
+- **Scalable Storage**: Virtually unlimited storage capacity for growing organizations
+- **File Size Limits**: Maximum file size enforced to ensure optimal performance (5MB)
+- **Attachment Quantity Limits**: Maximum of 5 attachments per item to prevent overuse
+- **File Type Restrictions**: Support for common document and image formats only
+- **Image Compression**: Automatic compression of oversized images to meet size limits
+
 ### API
 - **RESTful API**: Well-structured API for programmatic access
 - **Authentication**: Secure API authentication

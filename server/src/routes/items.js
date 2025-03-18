@@ -9,12 +9,19 @@ const {
   searchByUPC,
   loanItem,
   returnItem,
-  uploadItemAttachment,
-  deleteItemAttachment,
   quickAddItem,
   getNextAssetId,
   getItemCount
 } = require('../controllers/items');
+
+// Import S3 attachment handlers from the new controller
+const {
+  getPresignedUploadUrl,
+  confirmItemAttachment,
+  getAttachmentUrl,
+  deleteItemAttachment,
+  uploadItemAttachment
+} = require('../controllers/items.attachments');
 const { bulkAddItems } = require('../controllers/bulk');
 const Item = require('../models/Item');
 
@@ -45,11 +52,19 @@ router.route('/count')
 router.route('/upc/:upc')
   .get(protect, searchByUPC);
 
+// S3 Pre-signed URL route for direct upload to S3
+router.route('/:id/presigned-upload')
+  .get(protect, restrictViewers, getPresignedUploadUrl);
+
+// Attachment routes
 router.route('/:id/attachments')
-  .post(protect, restrictViewers, uploadItemAttachment);
+  .post(protect, restrictViewers, confirmItemAttachment);
 
 router.route('/:id/attachments/:attachmentId')
   .delete(protect, restrictViewers, deleteItemAttachment);
+
+router.route('/:id/attachments/:attachmentId/url')
+  .get(protect, getAttachmentUrl);
 
 router.route('/:id/qrcode')
   .get(protect, generateQRCode);

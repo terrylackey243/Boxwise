@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import S3FileUpload from '../../components/items/S3FileUpload';
 import axios from '../../utils/axiosConfig';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -110,11 +111,46 @@ const ItemDetail = () => {
   });
   const [loanFormError, setLoanFormError] = useState('');
   const [submittingLoan, setSubmittingLoan] = useState(false);
-  const [uploadingAttachment, setUploadingAttachment] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isPrimaryPhoto, setIsPrimaryPhoto] = useState(false);
-  const fileInputRef = useRef(null);
-
+  
+  // State for primary photo URL
+  const [primaryPhotoUrl, setPrimaryPhotoUrl] = useState('');
+  const [primaryPhotoLoading, setPrimaryPhotoLoading] = useState(true);
+  
+  // Effect to fetch primary photo URL when component mounts or when item/attachments change
+  useEffect(() => {
+    const fetchPrimaryPhotoUrl = async () => {
+      // Reset URL and set loading when item/attachments change
+      setPrimaryPhotoUrl('');
+      setPrimaryPhotoLoading(true);
+      
+      // Check if item and attachments exist
+      if (!item || !item.attachments || item.attachments.length === 0) {
+        setPrimaryPhotoLoading(false);
+        return;
+      }
+      
+    // Find primary attachment (checking both isPrimary and isPrimaryPhoto for compatibility)
+    const primaryAttachment = item.attachments.find(att => att.isPrimary || att.isPrimaryPhoto);
+      if (!primaryAttachment) {
+        setPrimaryPhotoLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await axios.get(`/api/items/${id}/attachments/${primaryAttachment._id}/url`);
+        if (response.data.success) {
+          setPrimaryPhotoUrl(response.data.data.downloadUrl);
+        }
+      } catch (error) {
+        console.error('Error getting primary photo URL:', error);
+      } finally {
+        setPrimaryPhotoLoading(false);
+      }
+    };
+    
+    fetchPrimaryPhotoUrl();
+  }, [item, id]);
+  
   useEffect(() => {
     const fetchItem = async () => {
       try {
@@ -281,7 +317,6 @@ const ItemDetail = () => {
         
         // Update the item state with the response data
         setItem(response.data.data);
-        setSuccessAlert('Item loaned successfully');
         handleLoanDialogClose();
         
         // Force a reload to ensure we have the latest data
@@ -368,7 +403,6 @@ const ItemDetail = () => {
         
         // Update the item state with the response data
         setItem(response.data.data);
-        setSuccessAlert('Item returned successfully');
         handleReturnDialogClose();
         
         // Force a reload to ensure we have the latest data
@@ -423,9 +457,6 @@ const ItemDetail = () => {
       // Get the ID before resetting attachmentToDelete
       const idToDelete = attachmentToDelete._id;
       setAttachmentToDelete(null);
-      
-      // Show a temporary message while we handle the operation
-      setSuccessAlert('Deleting attachment...');
       
       // Wait a moment before trying to delete (gives time for UI to update)
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -514,8 +545,7 @@ const ItemDetail = () => {
       const response = await axios.post('/api/items', itemCopy);
       
       if (response.data.success) {
-        setSuccessAlert('Item duplicated successfully');
-        // Navigate to the new item in edit mode
+        // Navigate to the new item in edit mode without showing success message
         navigate(`/items/edit/${response.data.data._id}`);
       } else {
         setErrorAlert('Error duplicating item: ' + response.data.message);
@@ -528,57 +558,24 @@ const ItemDetail = () => {
     }
   };
 
-  const handleUploadAttachment = async () => {
-    if (!selectedFile) return;
+  const handleUploadSuccess = (uploadData) => {
+    // Update the item state with the new attachment
+    setItem(prev => ({
+      ...prev,
+      attachments: [...(prev.attachments || []), uploadData.attachment]
+    }));
     
-    setUploadingAttachment(true);
+    // Close dialog and reload without showing success message
+    setAttachmentDialogOpen(false);
     
-    try {
-      // Create form data for the file upload
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      
-      // Add isPrimary flag if this is an image and should be primary
-      if (selectedFile.type.startsWith('image/') && isPrimaryPhoto) {
-        formData.append('isPrimary', 'true');
-      }
-      
-      // Make API call to upload the attachment
-      const response = await axios.post(
-        `/api/items/${id}/attachments`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-      
-      if (response.data.success) {
-        // Update the item state with the new attachment
-        setItem(prev => ({
-          ...prev,
-          attachments: [...(prev.attachments || []), response.data.data]
-        }));
-        
-        setSuccessAlert('Attachment uploaded successfully');
-        setAttachmentDialogOpen(false);
-        setSelectedFile(null);
-        setIsPrimaryPhoto(false);
-        
-        // Force a reload to ensure we have the latest data
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        setErrorAlert('Error uploading attachment: ' + response.data.message);
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      setErrorAlert('Error uploading attachment: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setUploadingAttachment(false);
-    }
+    // Force a reload to ensure we have the latest data
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  };
+  
+  const handleUploadError = (errorMessage) => {
+    setErrorAlert('Error uploading attachment: ' + errorMessage);
   };
 
   if (loading) {
@@ -1012,15 +1009,26 @@ const ItemDetail = () => {
                 Attachments
               </Typography>
               
-              <Chip 
-                label="Cloud Storage Coming Soon" 
-                color="primary" 
-                variant="outlined" 
-              />
+              <Box>
+                <Button
+                  variant="contained"
+                  startIcon={<AttachFileIcon />}
+                  onClick={() => setAttachmentDialogOpen(true)}
+                  sx={{ mr: 2 }}
+                >
+                  Add Attachment
+                </Button>
+                
+                <Chip 
+                  label="Cloud Storage Enabled" 
+                  color="success" 
+                  variant="outlined" 
+                />
+              </Box>
             </Box>
             
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Attachment uploads are temporarily disabled while we transition to a new cloud storage system. Existing attachments are still viewable.
+            <Alert severity="success" sx={{ mb: 2 }}>
+              File uploads are now managed through secure cloud storage, allowing for larger uploads and improved reliability.
             </Alert>
             
             {item.attachments && item.attachments.length > 0 ? (
@@ -1041,7 +1049,7 @@ const ItemDetail = () => {
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           {attachment.name || attachment.filename || 'Attachment'}
-                          {attachment.isPrimary && (
+                          {(attachment.isPrimary || attachment.isPrimaryPhoto) && (
                             <Chip 
                               size="small" 
                               label="Primary" 
@@ -1062,9 +1070,20 @@ const ItemDetail = () => {
                       <IconButton 
                         edge="end" 
                         aria-label="view"
-                        href={`/uploads/${attachment.filePath}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        onClick={async () => {
+                          try {
+                            const response = await axios.get(`/api/items/${id}/attachments/${attachment._id}/url`);
+                            if (response.data.success) {
+                              // Open the URL in a new window
+                              window.open(response.data.data.downloadUrl, '_blank', 'noopener,noreferrer');
+                            } else {
+                              setErrorAlert('Error viewing file');
+                            }
+                          } catch (error) {
+                            console.error('Error getting view URL:', error);
+                            setErrorAlert('Error viewing file');
+                          }
+                        }}
                       >
                         <ViewIcon />
                       </IconButton>
@@ -1072,8 +1091,25 @@ const ItemDetail = () => {
                       <IconButton 
                         edge="end" 
                         aria-label="download"
-                        href={`/uploads/${attachment.filePath}`}
-                        download={attachment.name || "attachment"}
+                        onClick={async () => {
+                          try {
+                            const response = await axios.get(`/api/items/${id}/attachments/${attachment._id}/url`);
+                            if (response.data.success) {
+                              // Create a hidden link and trigger download
+                              const link = document.createElement('a');
+                              link.href = response.data.data.downloadUrl;
+                              link.download = attachment.name || 'attachment';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            } else {
+                              setErrorAlert('Error downloading file');
+                            }
+                          } catch (error) {
+                            console.error('Error getting download URL:', error);
+                            setErrorAlert('Error downloading file');
+                          }
+                        }}
                       >
                         <DownloadIcon />
                       </IconButton>
@@ -1095,7 +1131,7 @@ const ItemDetail = () => {
                   No attachments yet
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Attachment uploads will be available soon with our new cloud storage system.
+                  Click the "Add Attachment" button to upload files securely to cloud storage.
                 </Typography>
               </Box>
             )}
@@ -1105,51 +1141,21 @@ const ItemDetail = () => {
           <Dialog open={attachmentDialogOpen} onClose={() => setAttachmentDialogOpen(false)}>
             <DialogTitle>Upload Attachment</DialogTitle>
             <DialogContent>
-              <DialogContentText sx={{ mb: 2 }}>
-                Select a file to attach to this item. Supported file types include images, PDFs, and documents.
+              <DialogContentText>
+                Files are now securely uploaded to cloud storage. Select a file to attach to this item.
               </DialogContentText>
               
-              <input
-                type="file"
-                onChange={(e) => setSelectedFile(e.target.files[0])}
-                style={{ display: 'none' }}
-                ref={fileInputRef}
-              />
-              
-              <Button
-                variant="outlined"
-                component="span"
-                onClick={() => fileInputRef.current.click()}
-                startIcon={<AttachFileIcon />}
-                fullWidth
-                sx={{ mb: 2 }}
-              >
-                {selectedFile ? selectedFile.name : 'Select File'}
-              </Button>
-              
-              {selectedFile && selectedFile.type.startsWith('image/') && (
-                <Box sx={{ mb: 2 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={isPrimaryPhoto}
-                        onChange={(e) => setIsPrimaryPhoto(e.target.checked)}
-                      />
-                    }
-                    label="Set as primary photo"
-                  />
-                </Box>
-              )}
+              <Box sx={{ mt: 3 }}>
+                <S3FileUpload 
+                  itemId={id}
+                  onUploadSuccess={handleUploadSuccess}
+                  onUploadError={handleUploadError}
+                  existingAttachments={item.attachments || []}
+                />
+              </Box>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setAttachmentDialogOpen(false)}>Cancel</Button>
-              <Button 
-                onClick={handleUploadAttachment}
-                disabled={!selectedFile || uploadingAttachment}
-                color="primary"
-              >
-                {uploadingAttachment ? <CircularProgress size={24} /> : 'Upload'}
-              </Button>
+              <Button onClick={() => setAttachmentDialogOpen(false)}>Close</Button>
             </DialogActions>
           </Dialog>
           
@@ -1175,6 +1181,65 @@ const ItemDetail = () => {
         
         {/* Sidebar */}
         <Grid item xs={12} md={4}>
+          {/* Primary Photo Display */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Primary Photo
+            </Typography>
+            
+            {item.attachments && item.attachments.find(att => att.isPrimary || att.isPrimaryPhoto) ? (
+              <Box 
+                sx={{
+                  width: '100%', 
+                  height: 250, 
+                  display: 'flex', 
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                  borderRadius: 1,
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  mb: 1
+                }}
+              >
+                {primaryPhotoLoading ? (
+                  <CircularProgress />
+                ) : primaryPhotoUrl ? (
+                  <img 
+                    src={primaryPhotoUrl} 
+                    alt="Primary Photo" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '100%',
+                      objectFit: 'contain' 
+                    }} 
+                  />
+                ) : null}
+              </Box>
+            ) : (
+              <Box 
+                sx={{
+                  width: '100%', 
+                  height: 250, 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: 1,
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  mb: 1
+                }}
+              >
+                <ImageIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="body2" color="text.secondary" align="center">
+                  No primary photo set
+                </Typography>
+                <Typography variant="body2" color="text.secondary" align="center">
+                  Upload an image and mark it as primary
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+          
           {/* Loan Status */}
           {item.loanDetails && (
             <Paper sx={{ p: 3, mb: 3 }}>

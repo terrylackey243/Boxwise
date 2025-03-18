@@ -1,6 +1,6 @@
-import React, { useState, memo } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { withMemoization } from '../optimizations/MemoizedComponents';
+import ItemRow from './ItemRow';
 import {
   Box,
   Button,
@@ -103,154 +103,14 @@ const ItemsTable = ({
           
           <TableBody>
             {items.map((item) => (
-              <TableRow
+              <ItemRow
                 key={item._id}
-                hover
-                onClick={() => navigate(`/items/${item._id}`)}
-                sx={{
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  '&:hover': { cursor: 'pointer' },
-                  ...(item.isArchived === true && { opacity: 0.6 })
-                }}
-              >
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="body1">
-                      {item.name || 'Unnamed Item'}
-                    </Typography>
-                    {item.isArchived === true && (
-                      <Chip
-                        label="Archived"
-                        size="small"
-                        color="default"
-                        sx={{ ml: 1 }}
-                      />
-                    )}
-                    {item.loanDetails && item.loanDetails.isLoaned && (
-                      <Chip
-                        label="Loaned"
-                        size="small"
-                        color="primary"
-                        sx={{ ml: 1 }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                
-                <TableCell align="center">
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={editingQuantity[item._id] !== undefined ? editingQuantity[item._id] : (item.quantity || 1)}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value, 10) || 0;
-                        setEditingQuantity({
-                          ...editingQuantity,
-                          [item._id]: value
-                        });
-                      }}
-                      onBlur={() => {
-                        if (editingQuantity[item._id] !== undefined) {
-                          onUpdateQuantity(item._id, editingQuantity[item._id]);
-                          // Clear the editing state for this item
-                          const newEditingQuantity = { ...editingQuantity };
-                          delete newEditingQuantity[item._id];
-                          setEditingQuantity(newEditingQuantity);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.target.blur(); // Trigger the onBlur event
-                        }
-                      }}
-                      InputProps={{
-                        inputProps: { min: 0 }
-                      }}
-                      sx={{ 
-                        width: '70px', 
-                        mr: 1,
-                        '& input': {
-                          textAlign: 'center',
-                        },
-                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
-                          '-webkit-appearance': 'none',
-                          margin: 0,
-                        },
-                        '& input[type=number]': {
-                          '-moz-appearance': 'textfield',
-                        },
-                      }}
-                      onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on the TextField
-                    />
-                    <ButtonGroup size="small" onClick={(e) => e.stopPropagation()}>
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const currentQuantity = item.quantity || 1;
-                          onUpdateQuantity(item._id, currentQuantity + 1);
-                        }}
-                      >
-                        <IncreaseIcon />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const currentQuantity = item.quantity || 1;
-                          onUpdateQuantity(item._id, Math.max(0, currentQuantity - 1));
-                        }}
-                      >
-                        <DecreaseIcon />
-                      </IconButton>
-                    </ButtonGroup>
-                  </Box>
-                </TableCell>
-                <TableCell>{item.location?.name || 'No location'}</TableCell>
-                <TableCell>{item.category?.name || 'No category'}</TableCell>
-                
-                <TableCell>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {item.labels && item.labels.length > 0 ? (
-                      item.labels.map((label) => (
-                        <Chip
-                          key={label._id}
-                          label={label.name}
-                          size="small"
-                          sx={{
-                            bgcolor: label.color,
-                            color: 'white',
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No labels
-                      </Typography>
-                    )}
-                  </Box>
-                </TableCell>
-                
-                <TableCell>
-                  {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                
-                <TableCell align="right">
-                  <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onActionClick(e, item._id);
-                    }}
-                    size="small"
-                  >
-                    <MoreVertIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
+                item={item}
+                onActionClick={onActionClick}
+                onUpdateQuantity={onUpdateQuantity}
+                editingQuantity={editingQuantity}
+                setEditingQuantity={setEditingQuantity}
+              />
             ))}
           </TableBody>
         </Table>

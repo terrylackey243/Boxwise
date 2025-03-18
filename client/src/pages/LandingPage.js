@@ -322,6 +322,13 @@ const LandingPage = () => {
               description="Your inventory data is secure and private. User authentication and authorization ensure only authorized access."
             />
           </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FeatureCard
+              icon={<CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main' }} />}
+              title="Cloud Storage"
+              description="Store item photos and attachments securely in the cloud. View thumbnails in item lists and access your files from anywhere."
+            />
+          </Grid>
         </Grid>
       </Container>
 
