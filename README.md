@@ -1,4 +1,4 @@
-# xBoxwise Inventory Management System (Local Development Version)
+# Boxwise Inventory Management System (Local Development Version)
 
 Boxwise is a comprehensive inventory management system designed to help organizations track and manage their inventory efficiently. This version is configured for local development only.
 
