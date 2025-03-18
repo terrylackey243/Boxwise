@@ -1093,15 +1093,11 @@ const ItemDetail = () => {
                         aria-label="download"
                         onClick={async () => {
                           try {
-                            const response = await axios.get(`/api/items/${id}/attachments/${attachment._id}/url`);
+                            // Use the forceDownload parameter to get a download URL with Content-Disposition header
+                            const response = await axios.get(`/api/items/${id}/attachments/${attachment._id}/url?forceDownload=true`);
                             if (response.data.success) {
-                              // Create a hidden link and trigger download
-                              const link = document.createElement('a');
-                              link.href = response.data.data.downloadUrl;
-                              link.download = attachment.name || 'attachment';
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
+                              // Open in a new window using the URL that forces download
+                              window.open(response.data.data.downloadUrl, '_blank', 'noopener,noreferrer');
                             } else {
                               setErrorAlert('Error downloading file');
                             }

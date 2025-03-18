@@ -191,6 +191,7 @@ exports.confirmItemAttachment = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.getAttachmentUrl = asyncHandler(async (req, res, next) => {
   const { id, attachmentId } = req.params;
+  const { forceDownload } = req.query; // Check if download is explicitly requested
   
   try {
     // Find the item
@@ -212,8 +213,22 @@ exports.getAttachmentUrl = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse(`Attachment not found with id of ${attachmentId}`, 404));
     }
     
-    // Generate presigned URL
-    const downloadUrl = await s3Service.generatePresignedDownloadUrl(attachment.filePath);
+    // Get the file name for Content-Disposition header
+    const fileName = attachment.name || attachment.filename || 'attachment';
+    
+    let downloadUrl;
+    
+    if (forceDownload === 'true') {
+      // For force download, generate URL with Content-Disposition header
+      downloadUrl = await s3Service.generatePresignedDownloadUrl(
+        attachment.filePath,
+        3600,
+        `attachment; filename="${encodeURIComponent(fileName)}"`
+      );
+    } else {
+      // Regular download URL without forcing download
+      downloadUrl = await s3Service.generatePresignedDownloadUrl(attachment.filePath);
+    }
     
     // Check if this is a browser request by examining the Accept header
     // If it includes text/html, it's likely a browser request (view button click)

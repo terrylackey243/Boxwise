@@ -57,14 +57,20 @@ const generatePresignedUploadUrl = async (fileName, fileType, folder, groupId) =
  * 
  * @param {string} fileKey - The S3 key of the file
  * @param {number} expiresIn - URL expiration time in seconds (default: 1 hour)
+ * @param {string} contentDisposition - Optional content disposition header value
  * @returns {string} - Presigned URL for accessing the file
  */
-const generatePresignedDownloadUrl = async (fileKey, expiresIn = 3600) => {
+const generatePresignedDownloadUrl = async (fileKey, expiresIn = 3600, contentDisposition = null) => {
   const params = {
     Bucket: process.env.AWS_BUCKET_NAME,
     Key: fileKey,
     Expires: expiresIn
   };
+  
+  // Add the Content-Disposition header if provided
+  if (contentDisposition) {
+    params.ResponseContentDisposition = contentDisposition;
+  }
   
   try {
     return await s3.getSignedUrlPromise('getObject', params);
