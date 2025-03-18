@@ -128,4 +128,4 @@ Make sure to set these environment variables in your deployment platform:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Boxwise Proprietary License - see the LICENSE file for details. This license restricts redistribution, commercial use, and selling of the software while allowing personal, non-commercial use only.
