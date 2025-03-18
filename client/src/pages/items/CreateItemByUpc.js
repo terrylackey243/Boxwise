@@ -60,6 +60,9 @@ const CreateItemByUpc = () => {
   // State for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Track the source of product data
+  const [lookupSource, setLookupSource] = useState('');
+  
   // Get location ID from URL query parameters if it exists
   const queryParams = new URLSearchParams(location.search);
   const locationId = queryParams.get('location');
@@ -190,6 +193,11 @@ const CreateItemByUpc = () => {
   
   // Memoize the onDataFound callback for UPC lookup
   const handleProductDataFound = useCallback((productData) => {
+    // Save the source if available
+    if (productData.source) {
+      setLookupSource(productData.source);
+    }
+    
     // Update form data with product information
     setFormData(prevData => ({
       ...prevData,
@@ -210,7 +218,7 @@ const CreateItemByUpc = () => {
         setFormData(prevData => ({ ...prevData, category: matchedCategory._id }));
       }
     }
-  }, [setFormData, categories]);
+  }, [setFormData, categories, setLookupSource]);
   
   // Setup UPC lookup functionality
   const {
@@ -305,6 +313,7 @@ const CreateItemByUpc = () => {
               onScannerOpen={handleOpenScanner}
               onScannerClose={handleCloseScanner}
               onBarcodeDetected={handleBarcodeDetected}
+              source={lookupSource}
             />
             
             {/* Basic Information */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Paper,
   Typography,
@@ -8,7 +8,9 @@ import {
   InputAdornment,
   IconButton,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Chip,
+  Box
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -40,7 +42,8 @@ const LookupSection = ({
   scannerOpen = false,
   onScannerOpen,
   onScannerClose,
-  onBarcodeDetected
+  onBarcodeDetected,
+  source
 }) => {
   const hasCamera = useHasCamera();
 
@@ -105,6 +108,26 @@ const LookupSection = ({
               {lookupButtonText}
             </Button>
           </Grid>
+          
+          {/* Source Information - Displayed AFTER a successful lookup */}
+          {source && type === 'upc' && (
+            <Grid item xs={12}>
+              <Box sx={{ mt: 2, p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  Source: 
+                  <Chip 
+                    label={source === 'rapid-api' ? 'RAPID' : 'UPCitemDB'} 
+                    color={source === 'rapid-api' ? 'primary' : 'secondary'}
+                    size="small"
+                    sx={{ ml: 1, fontWeight: 'bold' }}
+                  />
+                </Typography>
+                <Typography variant="body2">
+                  Data lookup provided by {source === 'rapid-api' ? 'RapidAPI' : 'UPCitemDB'}
+                </Typography>
+              </Box>
+            </Grid>
+          )}
         </Grid>
       </Paper>
       

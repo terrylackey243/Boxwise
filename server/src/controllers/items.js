@@ -83,10 +83,10 @@ exports.getItems = asyncHandler(async (req, res, next) => {
     sortOptions[sortField] = sortOrder;
   }
   
-  // Use projection to limit returned fields for better performance
-  // Only select fields that are needed for the items list view
+  // Use projection to include all searchable fields for better search functionality
+  // Include all fields that can be searched against
   const items = await Item.find(query)
-    .select('name description quantity assetId location category labels isArchived updatedAt createdAt loanDetails attachments')
+    .select('name description quantity assetId location category labels isArchived updatedAt createdAt loanDetails attachments serialNumber modelNumber manufacturer upcCode')
     .populate('location', 'name')
     .populate('category', 'name')
     .populate('labels', 'name color')

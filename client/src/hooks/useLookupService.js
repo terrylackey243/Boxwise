@@ -61,10 +61,10 @@ const useLookupService = ({ type = 'upc', onDataFound }) => {
         const productData = response.data.data;
         const source = response.data.source || 'unknown';
         
-        // Call the callback with the product data
-        if (onDataFound) {
-          onDataFound(productData);
-        }
+          // Call the callback with the product data and source information
+          if (onDataFound) {
+            onDataFound({...productData, source: source || 'rapid-api'});
+          }
         
         // Success is indicated by the form auto-populating, no need for explicit alert
       } else {
@@ -81,10 +81,10 @@ const useLookupService = ({ type = 'upc', onDataFound }) => {
           const productData = response.data.data;
           const source = response.data.source || 'unknown';
           
-          // Call the callback with the product data
+          // Call the callback with the product data and source information
           if (onDataFound) {
-          onDataFound(productData);
-        }
+            onDataFound({...productData, source});
+          }
         
         // Success is indicated by the form auto-populating, no need for explicit alert
         } else {
@@ -121,10 +121,11 @@ const useLookupService = ({ type = 'upc', onDataFound }) => {
       
       if (response.data.success) {
         const productData = response.data.data;
+        const source = response.data.source || 'url-lookup';
         
-        // Call the callback with the product data
+        // Call the callback with the product data and source information
         if (onDataFound) {
-          onDataFound(productData);
+          onDataFound({...productData, source});
         }
         
         // No success message needed - the UI update speaks for itself
